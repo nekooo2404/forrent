@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+::selection {
+  background: #1c1b1b;
+  color: #f4f0ef;
+}
+
+button,
+a,
+input {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.admin-surface {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(212, 175, 55, 0.12), transparent 28rem),
+    radial-gradient(circle at 82% 16%, rgba(28, 27, 27, 0.08), transparent 24rem),
+    linear-gradient(180deg, #fbf8f5 0%, #f3efec 100%);
+}
+
+.admin-surface::before {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  content: "";
+  opacity: 0.32;
+  background-image:
+    linear-gradient(rgba(28, 27, 27, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(28, 27, 27, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.admin-surface > * {
+  position: relative;
+  z-index: 1;
+}
