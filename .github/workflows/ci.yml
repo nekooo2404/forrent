@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: sqlite:///ci.sqlite3
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+      DJANGO_SECRET_KEY: ci-secret-key-at-least-32-bytes-long
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      CSRF_TRUSTED_ORIGINS: http://localhost:3000
+      CELERY_TASK_ALWAYS_EAGER: "True"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -r requirements.txt pip-audit
+      - run: python manage.py check --settings=config.settings.local
+      - run: pytest apps/accounts apps/blogs apps/contacts apps/commissions apps/rooms apps/viewing_requests
+      - run: pip-audit --strict
+
+  frontend:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [frontend-client, frontend-admin]
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm run lint
+      - run: npm run build
