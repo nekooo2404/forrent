@@ -33,6 +33,7 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         app: [frontend-client, frontend-admin]
     defaults:

@@ -21,10 +21,11 @@ import { useAdminAuth } from "./admin-shell";
 import {
   AdminEmptyState,
   AdminInlineMessage,
-  AdminLoadingState,
   AdminPageHeader,
+  AdminPagination,
   AdminPanel,
   AdminRoomBadge,
+  AdminTableSkeleton,
   adminButtonPrimary,
   adminButtonSecondary,
   adminInputClass,
@@ -41,6 +42,8 @@ type RoomFormState = {
   commission_percent: string;
   description: string;
   image_urls: string;
+  thumbnail: File | null;
+  uploaded_images: File[];
   internal_note: string;
   price: string;
   room_type: string;
@@ -68,6 +71,8 @@ const emptyForm: RoomFormState = {
   commission_percent: "0",
   description: "",
   image_urls: "",
+  thumbnail: null,
+  uploaded_images: [],
   internal_note: "",
   price: "",
   room_type: "CCMN",
@@ -90,11 +95,16 @@ const roomStatuses = [
   { label: "Ẩn khỏi public", value: "HIDDEN" },
 ];
 
+const pageSize = 20;
+
 export function AdminRoomManager() {
   const { token } = useAdminAuth();
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
+  const [count, setCount] = useState(0);
+  const [page, setPage] = useState(1);
   const [lookups, setLookups] = useState<RoomLookups>({ amenities: [], areaRanges: [], cities: [], wards: [] });
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -106,17 +116,17 @@ export function AdminRoomManager() {
 
   const cityById = useMemo(() => new Map(lookups.cities.map((city) => [city.id, city])), [lookups.cities]);
   const wardById = useMemo(() => new Map(lookups.wards.map((ward) => [ward.id, ward])), [lookups.wards]);
-  const areaById = useMemo(() => new Map(lookups.areaRanges.map((area) => [area.id, area])), [lookups.areaRanges]);
-
-  async function loadRooms(nextSearch = search) {
+  async function loadRooms(nextSearch = search, nextStatus = statusFilter, nextPage = page) {
     setIsLoading(true);
     setError("");
     try {
       const [roomResponse, cities, wards, amenities, areaRanges] = await Promise.all([
         adminList<AdminRoom>("rooms", token, {
           ordering: "-created_at",
-          page_size: 50,
+          page: nextPage,
+          page_size: pageSize,
           search: nextSearch,
+          status: nextStatus,
         }),
         adminList<AdminCity>("cities", token, { page_size: 100, ordering: "name" }),
         adminList<AdminWard>("wards", token, { page_size: 100, ordering: "name" }),
@@ -125,6 +135,8 @@ export function AdminRoomManager() {
       ]);
 
       setRooms(roomResponse.results);
+      setCount(roomResponse.count);
+      setPage(nextPage);
       setLookups({
         amenities: amenities.results,
         areaRanges: areaRanges.results,
@@ -139,7 +151,7 @@ export function AdminRoomManager() {
   }
 
   useEffect(() => {
-    loadRooms("");
+    loadRooms("", "", 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
@@ -168,6 +180,8 @@ export function AdminRoomManager() {
       commission_percent: room.commission_percent,
       description: room.description,
       image_urls: "",
+      thumbnail: null,
+      uploaded_images: [],
       internal_note: room.internal_note,
       price: room.price,
       room_type: room.room_type,
@@ -188,19 +202,15 @@ export function AdminRoomManager() {
     setError("");
     setMessage("");
 
-    const payload = {
+    const payload = new FormData();
+    Object.entries({
       actual_area: form.actual_area,
       address: form.address.trim(),
-      amenities: form.amenities,
-      area_range: Number(form.area_range),
-      city: Number(form.city),
+      area_range: form.area_range,
+      city: form.city,
       commission_base_amount: form.commission_base_amount || "0",
       commission_percent: form.commission_percent || "0",
       description: form.description.trim(),
-      image_urls: form.image_urls
-        .split(/\r?\n/)
-        .map((value) => value.trim())
-        .filter(Boolean),
       internal_note: form.internal_note.trim(),
       price: form.price,
       room_type: form.room_type,
@@ -208,19 +218,27 @@ export function AdminRoomManager() {
       slug: form.slug.trim(),
       status: form.status,
       title: form.title.trim(),
-      ward: Number(form.ward),
-    };
+      ward: form.ward,
+    }).forEach(([key, value]) => payload.append(key, value));
+    form.amenities.forEach((amenity) => payload.append("amenities", String(amenity)));
+    form.image_urls
+      .split(/\r?\n/)
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .forEach((imageUrl) => payload.append("image_urls", imageUrl));
+    if (form.thumbnail) payload.append("thumbnail", form.thumbnail);
+    form.uploaded_images.forEach((image) => payload.append("uploaded_images", image));
 
     try {
       if (editingRoom) {
         await adminRequest<AdminRoom>(`rooms/${editingRoom.id}`, token, {
-          body: JSON.stringify(payload),
-          method: "PUT",
+          body: payload,
+          method: "PATCH",
         });
         setMessage("Phòng đã được cập nhật.");
       } else {
         await adminRequest<AdminRoom>("rooms", token, {
-          body: JSON.stringify(payload),
+          body: payload,
           method: "POST",
         });
         setMessage("Phòng mới đã được tạo.");
@@ -290,7 +308,7 @@ export function AdminRoomManager() {
             className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row"
             onSubmit={(event) => {
               event.preventDefault();
-              loadRooms(search);
+              loadRooms(search, statusFilter, 1);
             }}
           >
             <label className="relative min-w-[260px]">
@@ -303,6 +321,12 @@ export function AdminRoomManager() {
                 value={search}
               />
             </label>
+            <select className={adminSelectClass} onChange={(event) => setStatusFilter(event.target.value)} value={statusFilter}>
+              <option value="">Tất cả trạng thái</option>
+              {roomStatuses.map((item) => (
+                <option key={item.value} value={item.value}>{item.label}</option>
+              ))}
+            </select>
             <button className={adminButtonSecondary} type="submit">
               Tìm kiếm
             </button>
@@ -311,7 +335,7 @@ export function AdminRoomManager() {
         title="Danh sách phòng"
       >
         {isLoading ? (
-          <AdminLoadingState />
+          <AdminTableSkeleton />
         ) : rooms.length ? (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
@@ -392,6 +416,9 @@ export function AdminRoomManager() {
             title="Chưa có phòng"
           />
         )}
+        {!isLoading && count > pageSize ? (
+          <AdminPagination count={count} onPageChange={(nextPage) => loadRooms(search, statusFilter, nextPage)} page={page} pageSize={pageSize} />
+        ) : null}
       </AdminPanel>
 
       {isModalOpen ? (
@@ -402,6 +429,38 @@ export function AdminRoomManager() {
           lookups={lookups}
           onClose={() => setIsModalOpen(false)}
           onFormChange={setForm}
+          onImageDelete={async (imageId) => {
+            if (!editingRoom) return;
+            await adminRequest<Record<string, never>>(`rooms/${editingRoom.id}/images/${imageId}`, token, { method: "DELETE" });
+            setEditingRoom({
+              ...editingRoom,
+              images: editingRoom.images.filter((image) => image.id !== imageId),
+            });
+            await loadRooms();
+          }}
+          onImageSwap={async (imageId, imageSortOrder, targetImageId, targetSortOrder) => {
+            if (!editingRoom) return;
+            await Promise.all([
+              adminRequest<{ id: number; sort_order: number }>(`rooms/${editingRoom.id}/images/${imageId}`, token, {
+                body: JSON.stringify({ sort_order: targetSortOrder }),
+                method: "PATCH",
+              }),
+              adminRequest<{ id: number; sort_order: number }>(`rooms/${editingRoom.id}/images/${targetImageId}`, token, {
+                body: JSON.stringify({ sort_order: imageSortOrder }),
+                method: "PATCH",
+              }),
+            ]);
+            setEditingRoom({
+              ...editingRoom,
+              images: editingRoom.images
+                .map((image) => {
+                  if (image.id === imageId) return { ...image, sort_order: targetSortOrder };
+                  if (image.id === targetImageId) return { ...image, sort_order: imageSortOrder };
+                  return image;
+                })
+                .sort((left, right) => left.sort_order - right.sort_order || left.id - right.id),
+            });
+          }}
           onSubmit={handleSubmit}
         />
       ) : null}
@@ -416,6 +475,8 @@ function RoomFormModal({
   lookups,
   onClose,
   onFormChange,
+  onImageDelete,
+  onImageSwap,
   onSubmit,
 }: Readonly<{
   editingRoom: AdminRoom | null;
@@ -424,6 +485,8 @@ function RoomFormModal({
   lookups: RoomLookups;
   onClose: () => void;
   onFormChange: (next: RoomFormState) => void;
+  onImageDelete: (imageId: number) => Promise<void>;
+  onImageSwap: (imageId: number, imageSortOrder: number, targetImageId: number, targetSortOrder: number) => Promise<void>;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }>) {
   const wards = form.city ? lookups.wards.filter((ward) => String(ward.city) === form.city) : lookups.wards;
@@ -435,8 +498,8 @@ function RoomFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-primary/30 p-0 backdrop-blur-sm md:items-center md:p-6">
-      <section className="max-h-[94dvh] w-full max-w-5xl overflow-y-auto rounded-t-2xl bg-[#fbf8f5] shadow-elevated md:rounded-2xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-primary/10 bg-[#fbf8f5]/95 px-5 py-4 backdrop-blur">
+      <section className="admin-modal-panel max-h-[94dvh] w-full max-w-5xl overflow-y-auto rounded-t-2xl bg-surface shadow-elevated md:rounded-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-primary/10 bg-surface/95 px-5 py-4 backdrop-blur">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-secondary">{editingRoom ? "Edit listing" : "New listing"}</p>
             <h2 className="font-headline-sm text-2xl text-primary">{editingRoom ? "Cập nhật phòng" : "Tạo phòng mới"}</h2>
@@ -549,10 +612,92 @@ function RoomFormModal({
                 <ImageIcon size={18} strokeWidth={1.8} />
                 <h3 className="font-semibold">Ảnh gallery</h3>
               </div>
+              <Field label="Thumbnail">
+                <input
+                  accept="image/*"
+                  className={adminInputClass}
+                  onChange={(event) => update("thumbnail", event.target.files?.[0] ?? null)}
+                  type="file"
+                />
+              </Field>
+              <div className="mt-4" />
+              <Field label="Upload gallery">
+                <input
+                  accept="image/*"
+                  className={adminInputClass}
+                  multiple
+                  onChange={(event) => update("uploaded_images", Array.from(event.target.files ?? []))}
+                  type="file"
+                />
+              </Field>
+              <div className="mt-4" />
               <Field label="Image URLs, mỗi dòng một ảnh">
                 <textarea className={`${adminInputClass} min-h-28`} onChange={(event) => update("image_urls", event.target.value)} placeholder="https://..." value={form.image_urls} />
               </Field>
-              {editingRoom?.images.length ? <p className="mt-3 text-xs text-secondary">{editingRoom.images.length} ảnh hiện có đang lưu trên backend.</p> : null}
+              {form.thumbnail ? <p className="mt-3 text-xs text-secondary">Thumbnail mới: {form.thumbnail.name}</p> : null}
+              {form.uploaded_images.length ? (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {form.uploaded_images.map((image) => (
+                    <div className="rounded-md bg-surface-container-low p-2 text-xs text-secondary" key={`${image.name}-${image.size}`}>
+                      {image.name}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {editingRoom?.images.length ? (
+                <div className="mt-4 space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Ảnh đang có</p>
+                  {editingRoom.images.map((image, index) => (
+                    <div className="flex items-center gap-3 rounded-md border border-primary/10 bg-surface-container-low p-2" key={image.id}>
+                      {image.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img alt={`Ảnh phòng ${index + 1}`} className="size-14 rounded object-cover" src={image.image_url} />
+                      ) : (
+                        <div className="grid size-14 place-items-center rounded bg-surface-container text-xs text-secondary">URL</div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs text-primary">Ảnh #{index + 1}</p>
+                        <p className="text-xs text-secondary">Thứ tự {image.sort_order}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          className="rounded border border-primary/10 px-2 py-1 text-xs text-secondary disabled:opacity-40"
+                          disabled={index === 0}
+                          onClick={() =>
+                            onImageSwap(
+                              image.id,
+                              image.sort_order,
+                              editingRoom.images[index - 1].id,
+                              editingRoom.images[index - 1].sort_order,
+                            )
+                          }
+                          type="button"
+                        >
+                          Lên
+                        </button>
+                        <button
+                          className="rounded border border-primary/10 px-2 py-1 text-xs text-secondary disabled:opacity-40"
+                          disabled={index === editingRoom.images.length - 1}
+                          onClick={() =>
+                            onImageSwap(
+                              image.id,
+                              image.sort_order,
+                              editingRoom.images[index + 1].id,
+                              editingRoom.images[index + 1].sort_order,
+                            )
+                          }
+                          type="button"
+                        >
+                          Xuống
+                        </button>
+                        <button className="rounded border border-error/20 px-2 py-1 text-xs text-error" onClick={() => onImageDelete(image.id)} type="button">
+                          Xóa
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </section>
 
             <section className="rounded-xl border border-primary/10 bg-white p-4 shadow-sm">
