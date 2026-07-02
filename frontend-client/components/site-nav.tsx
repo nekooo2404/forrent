@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { ProfileMenu } from "@/components/profile-menu";
@@ -15,8 +16,16 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
   return (
     <nav className="glass-panel spotlight-card fixed top-0 z-50 w-full border-b border-outline-variant/10">
       <div className="mx-auto flex h-20 max-w-container-max items-center justify-between px-margin-mobile md:px-margin-desktop">
-        <Link className="shine-link font-headline-sm text-headline-sm uppercase tracking-normal text-primary" href="/homepage">
-          FORRENT
+        <Link aria-label="ForRent - Trang chủ" className="inline-flex h-11 w-[142px] shrink-0 items-center md:h-12 md:w-[158px]" href="/homepage">
+          <Image
+            alt="ForRent"
+            className="h-full w-full object-contain object-left"
+            height={241}
+            priority
+            sizes="(min-width: 768px) 158px, 142px"
+            src="/brand/forrent-logo.png"
+            width={760}
+          />
         </Link>
 
         <div className="hidden items-center gap-8 font-body-md text-body-md tracking-wide md:flex">
