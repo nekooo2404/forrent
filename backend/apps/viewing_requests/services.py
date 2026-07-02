@@ -1,27 +1,41 @@
 import logging
 
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from apps.rooms.models import Room
-from apps.viewing_requests.models import ViewingRequest
+from apps.viewing_requests.models import RoomLease, ViewingRequest, ViewingRequestActivity
 
 logger = logging.getLogger(__name__)
 
 
 class ViewingRequestService:
     @staticmethod
+    def _active_duplicate(*, room, user, phone, email):
+        return (
+            ViewingRequest.objects.select_for_update()
+            .filter(
+                Q(user=user) | Q(phone=phone) | Q(email__iexact=email),
+                room=room,
+                status__in=ViewingRequest.ACTIVE_STATUSES,
+            )
+            .first()
+        )
+
+    @staticmethod
     @transaction.atomic
     def create_viewing_request(*, user, room_id, preferred_viewing_date=None, preferred_viewing_time_slot=""):
-        room = Room.objects.select_for_update().filter(pk=room_id).exclude(status=Room.Status.HIDDEN).first()
+        room = Room.objects.select_for_update().filter(pk=room_id, status=Room.Status.AVAILABLE).first()
         if room is None:
-            raise ValidationError({"room_id": "Room does not exist or is not available for public viewing."})
+            raise ValidationError({"room_id": "Room does not exist or is not available for viewing."})
 
-        duplicate = (
-            ViewingRequest.objects.select_for_update()
-            .filter(user=user, room=room, status__in=ViewingRequest.ACTIVE_STATUSES)
-            .first()
+        duplicate = ViewingRequestService._active_duplicate(
+            room=room,
+            user=user,
+            phone=user.phone,
+            email=user.email,
         )
         if duplicate:
             raise ValidationError(
@@ -41,11 +55,34 @@ class ViewingRequestService:
             phone=user.phone,
             email=user.email,
             status=ViewingRequest.Status.NEW,
-            confirmed_at=timezone.now(),
             estimated_commission_amount=room.estimated_commission_amount,
             actual_commission_amount=0,
         )
         logger.info("Viewing request created: id=%s user_id=%s room_id=%s", viewing_request.id, user.id, room.id)
+        return viewing_request
+
+    @staticmethod
+    @transaction.atomic
+    def create_contact_viewing_request(*, user, room, full_name, phone, email):
+        room = Room.objects.select_for_update().filter(pk=room.pk, status=Room.Status.AVAILABLE).first()
+        if room is None:
+            raise ValidationError({"room": "Room does not exist or is not available for viewing."})
+
+        duplicate = ViewingRequestService._active_duplicate(room=room, user=user, phone=phone, email=email)
+        if duplicate:
+            return duplicate
+
+        viewing_request = ViewingRequest.objects.create(
+            user=user,
+            room=room,
+            full_name=full_name,
+            phone=phone,
+            email=email,
+            status=ViewingRequest.Status.NEW,
+            estimated_commission_amount=room.estimated_commission_amount,
+            actual_commission_amount=0,
+        )
+        logger.info("Viewing request converted from contact: id=%s user_id=%s room_id=%s", viewing_request.id, user.id, room.id)
         return viewing_request
 
     @staticmethod
@@ -75,6 +112,29 @@ class ViewingRequestService:
                 "updated_at",
             ]
         )
+        viewing_request.room.status = Room.Status.UNAVAILABLE
+        viewing_request.room.save(update_fields=["status", "updated_at"])
+        RoomLease.objects.get_or_create(
+            viewing_request=viewing_request,
+            defaults={
+                "room": viewing_request.room,
+                "tenant": viewing_request.user,
+                "move_in_at": viewing_request.moved_in_at,
+            },
+        )
+
+        from apps.commissions.models import CommissionPayout
+
+        CommissionPayout.objects.get_or_create(
+            viewing_request=viewing_request,
+            defaults={"amount": viewing_request.actual_commission_amount},
+        )
+        ViewingRequestActivity.objects.create(
+            viewing_request=viewing_request,
+            actor=actor,
+            action="CONFIRM_MOVED_IN",
+            note="Lead confirmed moved in.",
+        )
         logger.info(
             "Lead moved in confirmed: viewing_request_id=%s actor_id=%s commission=%s",
             viewing_request.id,
@@ -82,3 +142,48 @@ class ViewingRequestService:
             viewing_request.actual_commission_amount,
         )
         return viewing_request
+
+    @staticmethod
+    @transaction.atomic
+    def confirm_appointment(*, viewing_request_id, actor, appointment_date, appointment_time_slot, note=""):
+        viewing_request = ViewingRequest.objects.select_for_update().get(pk=viewing_request_id)
+        if viewing_request.status == ViewingRequest.Status.MOVED_IN:
+            raise ValidationError({"status": "Moved-in leads cannot change appointment details."})
+        viewing_request.confirmed_at = timezone.now()
+        viewing_request.appointment_date = appointment_date
+        viewing_request.appointment_time_slot = appointment_time_slot
+        if viewing_request.status == ViewingRequest.Status.NEW:
+            viewing_request.status = ViewingRequest.Status.CONTACTED
+        viewing_request.save(update_fields=["confirmed_at", "appointment_date", "appointment_time_slot", "status", "updated_at"])
+        ViewingRequestActivity.objects.create(
+            viewing_request=viewing_request,
+            actor=actor,
+            action="CONFIRM_APPOINTMENT",
+            note=note,
+        )
+        return viewing_request
+
+    @staticmethod
+    @transaction.atomic
+    def move_out(*, viewing_request_id, actor, note=""):
+        viewing_request = ViewingRequest.objects.select_for_update().select_related("room").get(pk=viewing_request_id)
+        lease = RoomLease.objects.select_for_update().filter(
+            viewing_request=viewing_request,
+            status=RoomLease.Status.ACTIVE,
+        ).first()
+        if lease is None:
+            raise ValidationError({"lease": "No active lease found for this lead."})
+        now = timezone.now()
+        lease.status = RoomLease.Status.ENDED
+        lease.move_out_at = now
+        lease.note = note
+        lease.save(update_fields=["status", "move_out_at", "note", "updated_at"])
+        viewing_request.room.status = Room.Status.AVAILABLE
+        viewing_request.room.save(update_fields=["status", "updated_at"])
+        ViewingRequestActivity.objects.create(
+            viewing_request=viewing_request,
+            actor=actor,
+            action="MOVE_OUT",
+            note=note,
+        )
+        return lease

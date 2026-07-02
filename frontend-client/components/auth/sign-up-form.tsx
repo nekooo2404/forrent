@@ -21,6 +21,7 @@ type SignUpFields = {
   dateOfBirth: string;
   phone: string;
   email: string;
+  otp: string;
   password: string;
   confirmPassword: string;
 };
@@ -30,6 +31,7 @@ const initialFields: SignUpFields = {
   dateOfBirth: "",
   phone: "",
   email: "",
+  otp: "",
   password: "",
   confirmPassword: "",
 };
@@ -73,6 +75,7 @@ export function SignUpForm() {
   const [formError, setFormError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
   const strength = useMemo(() => passwordStrength(fields.password), [fields.password]);
 
   function updateField(field: keyof SignUpFields) {
@@ -87,6 +90,7 @@ export function SignUpForm() {
 
   function fieldErrors() {
     return {
+      otp: !/^\d{6}$/.test(fields.otp) ? "Vui lòng nhập mã OTP 6 số." : "",
       fullName: !fields.fullName.trim() ? "Vui lòng nhập họ và tên của bạn." : "",
       dateOfBirth: !fields.dateOfBirth ? "Vui lòng chọn ngày sinh." : "",
       phone: !/^\d{10,11}$/.test(fields.phone) ? "Số điện thoại không hợp lệ." : "",
@@ -104,6 +108,7 @@ export function SignUpForm() {
       dateOfBirth: true,
       phone: true,
       email: true,
+      otp: true,
       password: true,
       confirmPassword: true,
     });
@@ -126,6 +131,7 @@ export function SignUpForm() {
           date_of_birth: fields.dateOfBirth,
           phone: fields.phone.trim(),
           email: fields.email.trim(),
+          otp: fields.otp.trim(),
           password: fields.password,
           confirm_password: fields.confirmPassword,
         }),
@@ -163,11 +169,40 @@ export function SignUpForm() {
 
   const errors = fieldErrors();
 
+  async function handleSendOtp() {
+    const emailError = fieldErrors().email;
+    setTouched((current) => ({ ...current, email: true }));
+    setFormError("");
+    setSuccessMessage("");
+    if (emailError) {
+      setFormError(emailError);
+      return;
+    }
+    setIsSendingOtp(true);
+    try {
+      const response = await fetch("/api/auth/otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: fields.email.trim(), purpose: "REGISTER" }),
+      });
+      const payload = (await response.json()) as AuthApiResponse<Record<string, never>>;
+      if (!response.ok || !payload.success) {
+        setFormError(firstErrorMessage(payload));
+        return;
+      }
+      setSuccessMessage("Mã OTP đã được gửi tới email của bạn.");
+    } catch {
+      setFormError("Không thể gửi mã OTP lúc này.");
+    } finally {
+      setIsSendingOtp(false);
+    }
+  }
+
   return (
     <div className="w-full max-w-md rounded-xl bg-surface-container-lowest p-8 shadow-elevated md:p-10">
       <div className="mb-10 text-center">
         <h1 className="mb-3 font-headline-md text-headline-md text-primary">Đăng ký tài khoản</h1>
-        <p className="font-body-md text-body-md text-on-surface-variant">Bắt đầu hành trình của bạn với chúng tôi.</p>
+        <p className="font-body-md text-body-md text-on-surface-variant">Tạo tài khoản để đặt lịch xem phòng và theo dõi yêu cầu của bạn.</p>
       </div>
 
       <form className="space-y-6" noValidate onSubmit={handleSubmit}>
@@ -220,6 +255,30 @@ export function SignUpForm() {
           value={fields.email}
         />
 
+        <div className="grid grid-cols-[1fr_auto] items-start gap-3">
+          <AuthInput
+            error={touched.otp ? errors.otp : ""}
+            id="otp"
+            inputMode="numeric"
+            label="Mã OTP"
+            maxLength={6}
+            name="otp"
+            onBlur={() => touchField("otp")}
+            onChange={updateField("otp")}
+            pattern="[0-9]{6}"
+            placeholder="123456"
+            value={fields.otp}
+          />
+          <button
+            className="mt-7 rounded border border-primary px-4 py-2 font-button text-button text-primary transition-colors hover:bg-primary hover:text-on-primary disabled:cursor-wait disabled:opacity-60"
+            disabled={isSendingOtp}
+            onClick={handleSendOtp}
+            type="button"
+          >
+            {isSendingOtp ? "Đang gửi" : "Gửi mã"}
+          </button>
+        </div>
+
         <div>
           <AuthInput
             error={touched.password ? errors.password : ""}
@@ -263,14 +322,14 @@ export function SignUpForm() {
         ) : null}
 
         {successMessage ? (
-          <div className="flex gap-3 border border-[#4a7c59] bg-[#4a7c59]/10 p-4 text-[#4a7c59]">
+          <div className="flex gap-3 border border-success/30 bg-success-container/40 p-4 text-success">
             <CheckCircle className="mt-0.5 flex-shrink-0" size={18} strokeWidth={1.8} />
             <p className="font-body-md text-sm">{successMessage}</p>
           </div>
         ) : null}
 
         <button
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded bg-primary py-4 font-button text-button uppercase text-on-primary shadow-lg transition-all duration-300 hover:opacity-90 disabled:cursor-wait disabled:opacity-70"
+          className="premium-button mt-4 flex w-full items-center justify-center gap-2 rounded bg-primary py-4 font-button text-button uppercase text-on-primary shadow-lg hover:opacity-90 disabled:cursor-wait disabled:opacity-70"
           disabled={isSubmitting}
           type="submit"
         >
@@ -282,7 +341,7 @@ export function SignUpForm() {
       <div className="mt-10 border-t border-outline-variant/10 pt-8 text-center">
         <p className="font-body-md text-body-md text-on-surface-variant">
           Đã có tài khoản?{" "}
-          <Link className="font-medium text-primary transition-all hover:underline" href="/log-in">
+          <Link className="font-medium text-primary transition-colors hover:underline" href="/log-in">
             Đăng nhập
           </Link>
         </p>

@@ -16,20 +16,26 @@ def create_user(email="tenant@example.com", phone="0911111111", role=None, passw
         password=password,
         full_name="Test User",
         role=role,
-        is_staff=role == User.Role.ADMIN,
-        is_superuser=role == User.Role.ADMIN,
+        is_staff=role == User.Role.SALER,
+        is_superuser=role == User.Role.SALER,
     )
 
 
 def create_admin(email="admin@example.com", phone="0900000000"):
-    return create_user(email=email, phone=phone, role=User.Role.ADMIN)
+    existing = User.objects.filter(email=email).first()
+    if existing:
+        return existing
+    return create_user(email=email, phone=phone, role=User.Role.SALER)
 
 
 def create_location_graph():
-    city = City.objects.create(name="Ha Noi", slug="ha-noi")
-    ward = Ward.objects.create(city=city, name="Cau Giay", slug="cau-giay")
-    amenity = Amenity.objects.create(name="Wifi", icon="wifi")
-    area_range = AreaRange.objects.create(name="20-30m2", min_area=Decimal("20"), max_area=Decimal("30"))
+    city, _ = City.objects.get_or_create(slug="ha-noi", defaults={"name": "Ha Noi"})
+    ward, _ = Ward.objects.get_or_create(city=city, slug="cau-giay", defaults={"name": "Cau Giay"})
+    amenity, _ = Amenity.objects.get_or_create(name="Wifi", defaults={"icon": "wifi"})
+    area_range, _ = AreaRange.objects.get_or_create(
+        name="20-30m2",
+        defaults={"min_area": Decimal("20"), "max_area": Decimal("30")},
+    )
     return city, ward, amenity, area_range
 
 
@@ -43,6 +49,10 @@ def create_room(created_by=None, status=Room.Status.AVAILABLE):
         ward=ward,
         address="So 1 Cau Giay",
         price=Decimal("5000000"),
+        deposit_amount=Decimal("5000000"),
+        electricity_price_per_kwh=Decimal("4000"),
+        water_price_per_person=Decimal("100000"),
+        service_fee=Decimal("150000"),
         actual_area=Decimal("25"),
         area_range=area_range,
         short_description="Phong dep",

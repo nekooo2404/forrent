@@ -4,12 +4,14 @@ import { CalendarDays, CheckCircle, Clock, X } from "lucide-react";
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
 
-import { getStoredAccessToken } from "@/lib/auth-storage";
+import { modalBackdrop, modalPanel, MotionDiv, MotionModal } from "@/components/motion";
+import { authFetch } from "@/lib/auth-storage";
 
 type SubmitState = "idle" | "confirming" | "submitting" | "success" | "error";
 type ViewingTimeSlot = "morning" | "afternoon" | "evening";
 
 type ViewingRequestPanelProps = {
+  disabled?: boolean;
   roomId: number | null;
 };
 
@@ -41,15 +43,20 @@ function errorText(payload: ViewingRequestApiResponse) {
   return "Không thể gửi yêu cầu xem phòng lúc này.";
 }
 
-export function ViewingRequestPanel({ roomId }: ViewingRequestPanelProps) {
+export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequestPanelProps) {
   const [state, setState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
   const [formSnapshot, setFormSnapshot] = useState<{ date: string; timeSlot: ViewingTimeSlot } | null>(null);
 
-  const isReady = useMemo(() => Number.isInteger(roomId) && Number(roomId) > 0, [roomId]);
+  const isReady = useMemo(() => !disabled && Number.isInteger(roomId) && Number(roomId) > 0, [disabled, roomId]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (disabled) {
+      setState("error");
+      setMessage("Phòng này đã được thuê, chưa thể đặt lịch xem.");
+      return;
+    }
     const form = event.currentTarget;
     if (!form.checkValidity()) {
       form.reportValidity();
@@ -71,17 +78,13 @@ export function ViewingRequestPanel({ roomId }: ViewingRequestPanelProps) {
       return;
     }
 
-    const accessToken = getStoredAccessToken();
     setState("submitting");
     setMessage("");
 
     try {
-      const response = await fetch("/api/viewing-requests", {
+      const response = await authFetch("/api/viewing-requests", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           room_id: roomId,
           preferred_viewing_date: formSnapshot?.date,
@@ -114,7 +117,7 @@ export function ViewingRequestPanel({ roomId }: ViewingRequestPanelProps) {
         <div className="mb-8">
           <span className="mb-2 block font-headline-sm text-headline-sm text-primary">Đặt lịch xem phòng</span>
           <span className="font-body-md text-body-md text-secondary">
-            Đội ngũ hỗ trợ của chúng tôi luôn sẵn sàng phục vụ.
+            {disabled ? "Phòng đã thuê, vui lòng chọn phòng còn trống." : "Chọn ngày/giờ mong muốn. Saler sẽ gọi lại để xác nhận phòng, cọc và phí trước khi xem."}
           </span>
         </div>
 
@@ -136,6 +139,7 @@ export function ViewingRequestPanel({ roomId }: ViewingRequestPanelProps) {
                 min={new Date().toISOString().slice(0, 10)}
                 name="date"
                 required
+                disabled={disabled}
                 type="date"
               />
             </div>
@@ -158,6 +162,7 @@ export function ViewingRequestPanel({ roomId }: ViewingRequestPanelProps) {
                 id="viewing-time"
                 name="time_slot"
                 required
+                disabled={disabled}
               >
                 <option disabled value="">
                   Chọn thời gian
@@ -179,7 +184,7 @@ export function ViewingRequestPanel({ roomId }: ViewingRequestPanelProps) {
               disabled={!isReady || state === "submitting"}
               type="submit"
             >
-              Yêu cầu xem ngay
+              {disabled ? "Phòng đã thuê" : "Yêu cầu xem ngay"}
             </button>
           </div>
         </form>
@@ -191,7 +196,7 @@ export function ViewingRequestPanel({ roomId }: ViewingRequestPanelProps) {
         ) : null}
 
         {state === "success" ? (
-          <div className="mt-6 border border-[#4a7c59] bg-[#4a7c59]/10 p-4 text-[#4a7c59]">
+          <div className="mt-6 border border-success/30 bg-success-container/40 p-4 text-success">
             <div className="flex gap-3">
               <CheckCircle className="mt-0.5 flex-shrink-0" size={20} strokeWidth={1.8} />
               <p className="font-body-md text-body-md">{message}</p>
@@ -201,14 +206,28 @@ export function ViewingRequestPanel({ roomId }: ViewingRequestPanelProps) {
       </div>
 
       {state === "confirming" || state === "submitting" ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <button
+        <MotionModal>
+          <MotionDiv
+            animate="show"
             aria-label="Đóng xác nhận"
-            className="absolute inset-0 bg-primary/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-primary/40"
+            exit="hidden"
+            initial="hidden"
             onClick={() => setState("idle")}
-            type="button"
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") setState("idle");
+            }}
+            role="button"
+            tabIndex={0}
+            variants={modalBackdrop}
           />
-          <div className="relative w-full max-w-md rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-8 shadow-elevated">
+          <MotionDiv
+            animate="show"
+            className="relative w-full max-w-md rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-8 shadow-elevated"
+            exit="hidden"
+            initial="hidden"
+            variants={modalPanel}
+          >
             <button
               aria-label="Đóng"
               className="absolute right-4 top-4 text-secondary transition-colors hover:text-primary"
@@ -219,8 +238,7 @@ export function ViewingRequestPanel({ roomId }: ViewingRequestPanelProps) {
             </button>
             <h3 className="mb-4 font-headline-sm text-headline-sm text-primary">Xác nhận yêu cầu xem</h3>
             <p className="mb-4 font-body-md text-body-md text-on-surface-variant">
-              Bạn có muốn chia sẻ thông tin hồ sơ Aurelian Reserve của mình với nhân viên hỗ trợ để đẩy nhanh quá trình
-              xem phòng không?
+              ForRent sẽ gửi yêu cầu này cho saler phụ trách. Saler gọi lại để xác nhận phòng còn trống, cọc, phí và giờ xem thực tế.
             </p>
             {formSnapshot ? (
               <p className="mb-8 font-body-md text-sm text-secondary">
@@ -245,8 +263,8 @@ export function ViewingRequestPanel({ roomId }: ViewingRequestPanelProps) {
                 {state === "submitting" ? "Đang gửi..." : "Xác nhận"}
               </button>
             </div>
-          </div>
-        </div>
+          </MotionDiv>
+        </MotionModal>
       ) : null}
     </>
   );

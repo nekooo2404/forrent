@@ -1,10 +1,12 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
+from apps.accounts.views import AdminUserViewSet
 from apps.blogs.views import AdminBlogViewSet, PublicBlogViewSet
 from apps.contacts.views import ContactCreateAPIView, AdminContactMessageViewSet
 from apps.locations.views import (
@@ -25,12 +27,19 @@ admin_router.register("rooms", AdminRoomViewSet, basename="admin-room")
 admin_router.register("viewing-requests", AdminViewingRequestViewSet, basename="admin-viewing-request")
 admin_router.register("blogs", AdminBlogViewSet, basename="admin-blog")
 admin_router.register("contacts", AdminContactMessageViewSet, basename="admin-contact")
+admin_router.register("users", AdminUserViewSet, basename="admin-user")
 
 public_router = DefaultRouter()
 public_router.register("rooms", PublicRoomViewSet, basename="room")
 public_router.register("blogs", PublicBlogViewSet, basename="blog")
 
+
+def health_check(_request):
+    return JsonResponse({"status": "ok"})
+
+
 urlpatterns = [
+    path("api/health/", health_check, name="health-check"),
     path("django-admin/", admin.site.urls),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),

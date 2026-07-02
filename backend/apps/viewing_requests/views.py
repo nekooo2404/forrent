@@ -1,4 +1,5 @@
 from drf_spectacular.utils import extend_schema
+from django.db import transaction
 from rest_framework import mixins
 from rest_framework import status
 from rest_framework.decorators import action
@@ -15,7 +16,10 @@ from apps.viewing_requests.selectors import admin_viewing_requests_queryset, use
 from apps.viewing_requests.models import ViewingRequest
 from apps.viewing_requests.serializers import (
     AdminViewingRequestSerializer,
+    AppointmentConfirmSerializer,
+    BulkViewingRequestUpdateSerializer,
     ConfirmMovedInResponseSerializer,
+    MoveOutSerializer,
     MyViewingRequestSerializer,
     ViewingRequestCreateResponseSerializer,
     ViewingRequestCreateSerializer,
@@ -82,3 +86,45 @@ class AdminViewingRequestViewSet(
             },
             message="Moved-in confirmation recorded successfully.",
         )
+
+    @extend_schema(request=AppointmentConfirmSerializer, responses=AdminViewingRequestSerializer)
+    @action(detail=True, methods=["post"], url_path="confirm-appointment")
+    def confirm_appointment(self, request, pk=None):
+        serializer = AppointmentConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        viewing_request = ViewingRequestService.confirm_appointment(
+            viewing_request_id=pk,
+            actor=request.user,
+            **serializer.validated_data,
+        )
+        return success_response(
+            data=AdminViewingRequestSerializer(viewing_request, context={"request": request}).data,
+            message="Appointment confirmed successfully.",
+        )
+
+    @extend_schema(request=MoveOutSerializer)
+    @action(detail=True, methods=["post"], url_path="move-out")
+    def move_out(self, request, pk=None):
+        serializer = MoveOutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        lease = ViewingRequestService.move_out(
+            viewing_request_id=pk,
+            actor=request.user,
+            note=serializer.validated_data.get("note", ""),
+        )
+        return success_response(
+            data={"lease_id": lease.id, "status": lease.status},
+            message="Move-out recorded successfully.",
+        )
+
+    @extend_schema(request=BulkViewingRequestUpdateSerializer)
+    @action(detail=False, methods=["post"], url_path="bulk-update")
+    def bulk_update(self, request):
+        serializer = BulkViewingRequestUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        ids = serializer.validated_data.pop("ids")
+        serializer.validated_data.pop("status", None) if not serializer.validated_data.get("status") else None
+        with transaction.atomic():
+            queryset = ViewingRequest.objects.select_for_update().filter(id__in=ids).exclude(status=ViewingRequest.Status.MOVED_IN)
+            updated_count = queryset.update(**serializer.validated_data) if serializer.validated_data else 0
+        return success_response(data={"updated_count": updated_count}, message="Leads updated successfully.")

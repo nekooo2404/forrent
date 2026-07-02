@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
 
 export const metadata: Metadata = {
-  title: "Aurelian Admin",
-  description: "Cổng quản trị Aurelian Reserve cho phòng, lead, hoa hồng và cấu hình hệ thống.",
+  title: "ForRent Admin",
+  description: "Cổng quản trị ForRent cho phòng, lead, hoa hồng và cấu hình hệ thống.",
 };
 
 export default function AdminLayout({

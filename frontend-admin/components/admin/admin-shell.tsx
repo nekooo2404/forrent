@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
-  Bell,
   Building2,
   ChevronRight,
   DoorOpen,
@@ -18,9 +17,9 @@ import {
   Newspaper,
   PanelLeftClose,
   PanelLeftOpen,
-  Search,
   Settings,
   UserRound,
+  UserCog,
   UsersRound,
   WalletCards,
   X,
@@ -32,19 +31,20 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 
 import type { ApiUser } from "@/lib/api";
+import { MotionPage } from "@/components/motion";
 import {
+  authFetch,
   clearAuthSession,
   getStoredAccessToken,
-  getStoredRefreshToken,
+  refreshStoredAuthSession,
   saveStoredUser,
 } from "@/lib/auth-storage";
 
-import type { AdminContextValue } from "./admin-api";
+import { adminRoleLabel, type AdminContextValue } from "./admin-api";
 
 type ApiResponse<T> = {
   success: boolean;
@@ -61,6 +61,7 @@ const navItems = [
   { href: "/admin/blogs", label: "Blog", icon: Newspaper },
   { href: "/admin/contacts", label: "Liên hệ", icon: Mail },
   { href: "/admin/commissions", label: "Hoa hồng", icon: WalletCards },
+  { href: "/admin/users", label: "Người dùng", icon: UserCog },
   { href: "/admin/settings", label: "Cài đặt", icon: Settings },
 ];
 
@@ -82,19 +83,19 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [error, setError] = useState("");
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const refreshUser = useCallback(async () => {
-    const accessToken = getStoredAccessToken();
+    let accessToken = getStoredAccessToken();
+    if (!accessToken) {
+      accessToken = await refreshStoredAuthSession();
+    }
     if (!accessToken) {
       setToken(null);
       setUser(null);
       return;
     }
 
-    const response = await fetch("/api/auth/me", {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const response = await authFetch("/api/auth/me");
     const payload = (await response.json()) as ApiResponse<ApiUser>;
     if (!response.ok || !payload.success || !payload.data) {
       clearAuthSession();
@@ -127,18 +128,15 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
 
   async function handleLogout() {
     const accessToken = getStoredAccessToken();
-    const refreshToken = getStoredRefreshToken();
 
-    if (accessToken && refreshToken) {
-      await fetch("/api/auth/log-out", {
-        body: JSON.stringify({ refresh: refreshToken }),
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      }).catch(() => null);
-    }
+    await fetch("/api/auth/log-out", {
+      body: JSON.stringify({}),
+      headers: {
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    }).catch(() => null);
 
     clearAuthSession();
     window.location.assign("/log-in");
@@ -146,7 +144,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
 
   if (isLoading) {
     return (
-      <main className="grid min-h-[100dvh] place-items-center bg-[#f8f5f2] px-6 text-primary">
+      <main className="grid min-h-[100dvh] place-items-center bg-surface px-6 text-primary">
         <div className="flex items-center gap-3 rounded-lg bg-white px-6 py-4 shadow-soft">
           <LoaderCircle className="animate-spin" size={20} strokeWidth={1.8} />
           <span className="font-body-md text-sm">Đang kiểm tra phiên admin...</span>
@@ -160,13 +158,13 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
       <AdminGateMessage
         actionHref="/log-in"
         actionLabel="Đăng nhập"
-        description={error || "Bạn cần đăng nhập bằng tài khoản admin hoặc saler để vào cổng quản trị."}
+        description={error || "Bạn cần đăng nhập bằng tài khoản saler/admin để vào cổng quản trị."}
         title="Cần đăng nhập"
       />
     );
   }
 
-  if (!["ADMIN", "SALER"].includes(user.role)) {
+  if (user.role !== "SALER") {
     return (
       <AdminGateMessage
         actionHref={`${publicClientUrl}/homepage`}
@@ -179,7 +177,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
 
   return (
     <AdminAuthContext.Provider value={contextValue}>
-      <div className="admin-surface min-h-[100dvh] bg-[#f8f5f2] text-primary">
+      <div className="admin-surface min-h-[100dvh] bg-surface text-primary">
         <a
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-3 focus:text-on-primary"
           href="#admin-main"
@@ -217,7 +215,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
           ) : null}
 
           <div className="flex min-w-0 flex-1 flex-col">
-            <header className="sticky top-0 z-30 border-b border-primary/10 bg-[#f8f5f2]/90 backdrop-blur-xl">
+            <header className="sticky top-0 z-30 border-b border-primary/10 bg-surface/90 backdrop-blur-xl">
               <div className="flex h-20 items-center justify-between gap-4 px-4 sm:px-6 xl:px-8">
                 <div className="flex min-w-0 items-center gap-3">
                   <button
@@ -237,25 +235,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
                   </div>
                 </div>
 
-                <label className="hidden h-11 min-w-[280px] max-w-md flex-1 items-center gap-3 rounded-md border border-primary/10 bg-white px-4 shadow-sm transition focus-within:border-primary/30 md:flex">
-                  <Search size={18} strokeWidth={1.8} className="text-secondary" />
-                  <input
-                    className="h-full w-full border-0 bg-transparent p-0 text-sm text-primary placeholder:text-secondary focus:ring-0"
-                    placeholder="Tìm nhanh phòng, lead, blog, liên hệ, cấu hình..."
-                    ref={searchInputRef}
-                    type="search"
-                  />
-                </label>
-
                 <div className="flex items-center gap-2">
-                  <button
-                    aria-label="Thông báo"
-                    className="relative inline-flex size-10 items-center justify-center rounded-md border border-primary/10 bg-white text-primary shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30"
-                    type="button"
-                  >
-                    <Bell size={19} strokeWidth={1.8} />
-                    <span className="absolute right-2 top-2 size-2 rounded-full bg-gold" />
-                  </button>
                   <Link
                     className="hidden items-center gap-3 rounded-md border border-primary/10 bg-white py-1.5 pl-2 pr-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 sm:flex"
                     href="/admin/settings"
@@ -265,16 +245,16 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
                     </span>
                     <span className="min-w-0">
                       <span className="block max-w-36 truncate text-sm font-semibold">{user.full_name}</span>
-                      <span className="block text-xs text-secondary">{user.role}</span>
+                      <span className="block text-xs text-secondary">{adminRoleLabel(user.role)}</span>
                     </span>
                   </Link>
                 </div>
               </div>
             </header>
 
-            <main className="flex-1 px-4 py-6 sm:px-6 xl:px-8" id="admin-main">
+            <MotionPage className="flex-1 px-4 py-6 sm:px-6 xl:px-8" id="admin-main">
               <div className="mx-auto w-full max-w-[1480px]">{children}</div>
-            </main>
+            </MotionPage>
           </div>
         </div>
       </div>
@@ -307,7 +287,7 @@ function SidebarContent({
           {!collapsed ? (
             <span className="min-w-0">
               <span className="block truncate font-headline-sm text-xl uppercase leading-tight tracking-normal">
-                Aurelian
+                ForRent
               </span>
               <span className="block text-xs font-semibold uppercase tracking-[0.2em] text-secondary">Admin Portal</span>
             </span>
@@ -426,7 +406,7 @@ function AdminGateMessage({
   title: string;
 }>) {
   return (
-    <main className="grid min-h-[100dvh] place-items-center bg-[#f8f5f2] px-6 py-16 text-center text-primary">
+    <main className="grid min-h-[100dvh] place-items-center bg-surface px-6 py-16 text-center text-primary">
       <section className="max-w-lg rounded-xl bg-white p-8 shadow-elevated">
         <span className="mx-auto mb-6 grid size-16 place-items-center rounded-lg bg-primary text-on-primary">
           <DoorOpen size={28} strokeWidth={1.8} />
@@ -447,6 +427,7 @@ function activeTitle(pathname: string) {
   if (pathname.startsWith("/admin/blogs")) return "Blog";
   if (pathname.startsWith("/admin/contacts")) return "Liên hệ";
   if (pathname.startsWith("/admin/commissions")) return "Hoa hồng";
+  if (pathname.startsWith("/admin/users")) return "Người dùng";
   if (pathname.startsWith("/admin/settings")) return "Cài đặt";
   return "Dashboard";
 }

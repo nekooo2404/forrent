@@ -5,8 +5,8 @@ import { KeyRound } from "lucide-react";
 import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata: Metadata = {
-  title: "Đăng nhập Admin - Aurelian Reserve",
-  description: "Đăng nhập cổng quản trị Aurelian Reserve.",
+  title: "Đăng nhập Admin - ForRent",
+  description: "Đăng nhập cổng quản trị ForRent.",
 };
 
 const publicClientUrl = process.env.NEXT_PUBLIC_CLIENT_URL || "http://localhost:3000";
@@ -22,7 +22,7 @@ export default function AdminLogInPage() {
                 <KeyRound size={20} strokeWidth={1.8} />
               </span>
               <span>
-                <span className="block font-headline-sm text-2xl uppercase leading-tight">Aurelian</span>
+                <span className="block font-headline-sm text-2xl uppercase leading-tight">ForRent</span>
                 <span className="block text-xs font-semibold uppercase tracking-[0.22em] text-white/55">Admin Portal</span>
               </span>
             </Link>
@@ -32,7 +32,7 @@ export default function AdminLogInPage() {
             <p className="mb-5 text-xs font-semibold uppercase tracking-[0.22em] text-white/55">Secure operations</p>
             <h1 className="font-headline-md text-5xl leading-tight">Quản trị phòng, lead và hoa hồng trong một nơi.</h1>
             <p className="mt-6 leading-7 text-white/68">
-              Dành cho tài khoản ADMIN hoặc SALER. Mọi thao tác vẫn được Django backend kiểm quyền bằng JWT.
+              Dành cho tài khoản saler/admin. Mọi thao tác vẫn được Django backend kiểm quyền bằng JWT.
             </p>
           </div>
 

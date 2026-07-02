@@ -1,8 +1,11 @@
 import logging
 import hashlib
+import hmac
 import secrets
+import string
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.db import transaction
 from django.utils import timezone
@@ -10,6 +13,7 @@ from rest_framework.exceptions import AuthenticationFailed, ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import PasswordResetToken
+from apps.common.validators import normalize_vietnamese_phone
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -18,14 +22,17 @@ User = get_user_model()
 class AuthService:
     @staticmethod
     @transaction.atomic
-    def register_tenant(*, full_name, date_of_birth, phone, email, password):
+    def register_tenant(*, full_name, date_of_birth, phone, email, password, otp):
+        email = email.lower()
+        phone = normalize_vietnamese_phone(phone)
         if User.objects.filter(email__iexact=email).exists():
             raise ValidationError({"email": "This email is already registered."})
         if User.objects.filter(phone=phone).exists():
             raise ValidationError({"phone": "This phone is already registered."})
+        AuthService.confirm_otp(email=email, otp=otp, purpose=PasswordResetToken.Purpose.REGISTER)
 
         user = User.objects.create_user(
-            email=email.lower(),
+            email=email,
             phone=phone,
             password=password,
             full_name=full_name,
@@ -65,9 +72,10 @@ class AuthService:
             raise ValidationError({"refresh": "Invalid refresh token."}) from exc
 
     @staticmethod
-    def change_password(*, user, old_password, new_password):
+    def change_password(*, user, old_password, new_password, otp):
         if not user.check_password(old_password):
             raise ValidationError({"old_password": "Old password is incorrect."})
+        AuthService.confirm_otp(email=user.email, otp=otp, purpose=PasswordResetToken.Purpose.CHANGE_PASSWORD)
         user.set_password(new_password)
         user.save(update_fields=["password", "updated_at"])
         logger.info("Password changed: user_id=%s", user.id)
@@ -75,7 +83,51 @@ class AuthService:
 
     @staticmethod
     def hash_reset_token(raw_token):
-        return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+        return hmac.new(settings.SECRET_KEY.encode("utf-8"), raw_token.encode("utf-8"), hashlib.sha256).hexdigest()
+
+    @staticmethod
+    def issue_otp(*, email, purpose, requested_ip=None, user_agent="", user=None):
+        normalized_email = email.lower()
+        now = timezone.now()
+        otp = "".join(secrets.choice(string.digits) for _ in range(6))
+        PasswordResetToken.objects.filter(
+            email__iexact=normalized_email,
+            purpose=purpose,
+            used_at__isnull=True,
+            expires_at__gt=now,
+        ).update(used_at=now, updated_at=now)
+        token = PasswordResetToken.objects.create(
+            user=user,
+            email=normalized_email,
+            purpose=purpose,
+            token_hash=AuthService.hash_reset_token(otp),
+            expires_at=now + timedelta(minutes=10),
+            requested_ip=requested_ip,
+            user_agent=user_agent[:500],
+        )
+        from apps.accounts.tasks import send_otp_email
+
+        transaction.on_commit(lambda: send_otp_email.delay(normalized_email, otp, purpose, token.id))
+        return token
+
+    @staticmethod
+    @transaction.atomic
+    def confirm_otp(*, email, otp, purpose):
+        token = (
+            PasswordResetToken.objects.select_for_update()
+            .filter(
+                email__iexact=email,
+                purpose=purpose,
+                token_hash=AuthService.hash_reset_token(otp),
+                used_at__isnull=True,
+                expires_at__gt=timezone.now(),
+            )
+            .first()
+        )
+        if token is None:
+            raise ValidationError({"otp": "OTP is invalid or has expired."})
+        token.mark_used()
+        return token
 
     @staticmethod
     @transaction.atomic
@@ -91,48 +143,29 @@ class AuthService:
             updated_at=now,
         )
 
-        raw_token = secrets.token_urlsafe(32)
-        reset_token = PasswordResetToken.objects.create(
-            user=user,
-            token_hash=AuthService.hash_reset_token(raw_token),
-            expires_at=now + timedelta(minutes=30),
+        reset_token = AuthService.issue_otp(
+            email=user.email,
+            purpose=PasswordResetToken.Purpose.PASSWORD_RESET,
             requested_ip=requested_ip,
-            user_agent=user_agent[:500],
+            user_agent=user_agent,
+            user=user,
         )
-
-        from apps.accounts.tasks import send_password_reset_email
-
-        transaction.on_commit(lambda: send_password_reset_email.delay(user.id, raw_token, reset_token.id))
-        logger.info("Password reset token created: user_id=%s token_id=%s", user.id, reset_token.id)
+        logger.info("Password reset OTP created: user_id=%s token_id=%s", user.id, reset_token.id)
         return reset_token
 
     @staticmethod
     @transaction.atomic
-    def confirm_password_reset(*, user_id, token, new_password):
+    def confirm_password_reset(*, email, otp, new_password):
         now = timezone.now()
-        token_hash = AuthService.hash_reset_token(token)
-        reset_token = (
-            PasswordResetToken.objects.select_for_update()
-            .select_related("user")
-            .filter(
-                user_id=user_id,
-                token_hash=token_hash,
-                used_at__isnull=True,
-                expires_at__gt=now,
-                user__is_active=True,
-            )
-            .first()
-        )
-        if reset_token is None:
-            raise ValidationError({"token": "Password reset link is invalid or has expired."})
-
-        user = reset_token.user
+        reset_token = AuthService.confirm_otp(email=email, otp=otp, purpose=PasswordResetToken.Purpose.PASSWORD_RESET)
+        user = User.objects.filter(email__iexact=email, is_active=True).first()
+        if user is None:
+            raise ValidationError({"email": "Password reset request is invalid or has expired."})
         user.set_password(new_password)
         user.save(update_fields=["password", "updated_at"])
-        reset_token.mark_used()
         PasswordResetToken.objects.filter(user=user, used_at__isnull=True).exclude(pk=reset_token.pk).update(
-            used_at=timezone.now(),
-            updated_at=timezone.now(),
+            used_at=now,
+            updated_at=now,
         )
         logger.info("Password reset confirmed: user_id=%s token_id=%s", user.id, reset_token.id)
         return user

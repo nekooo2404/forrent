@@ -9,7 +9,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from apps.common.permissions import IsAdminOrSaler
+from apps.common.permissions import IsAdmin
 from apps.common.responses import success_response
 from apps.common.viewsets import StandardResponseModelViewSetMixin, StandardResponseReadOnlyMixin
 from apps.locations.models import Amenity, AreaRange, City, Ward
@@ -17,12 +17,12 @@ from apps.locations.serializers import AmenitySerializer, AreaRangeSerializer, C
 from apps.rooms.filters import RoomFilter
 from apps.rooms.models import Room
 from apps.rooms.selectors import admin_rooms_queryset, public_room_details_queryset, public_rooms_queryset
-from apps.rooms.serializers import AdminRoomSerializer, PublicRoomDetailSerializer, PublicRoomListSerializer, RoomFiltersSerializer
+from apps.rooms.serializers import AdminRoomSerializer, PublicRoomDetailSerializer, PublicRoomListSerializer, RoomFiltersSerializer, RoomImageSerializer
 from apps.rooms.services import RoomService
 
 
-@method_decorator(cache_control(public=True, max_age=300), name="list")
-@method_decorator(cache_control(public=True, max_age=600), name="retrieve")
+@method_decorator(cache_control(public=True, max_age=30), name="list")
+@method_decorator(cache_control(public=True, max_age=30), name="retrieve")
 class PublicRoomViewSet(StandardResponseReadOnlyMixin, ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
     lookup_field = "slug"
@@ -58,8 +58,7 @@ class PublicRoomFiltersAPIView(APIView):
                 "area_ranges": AreaRangeSerializer(AreaRange.objects.active(), many=True).data,
                 "room_types": [{"value": value, "label": label} for value, label in Room.RoomType.choices],
                 "statuses": [
-                    {"value": Room.Status.AVAILABLE, "label": Room.Status.AVAILABLE.label},
-                    {"value": Room.Status.UNAVAILABLE, "label": Room.Status.UNAVAILABLE.label},
+                    {"value": Room.Status.AVAILABLE, "label": "Còn trống"},
                 ],
             }
             cache.set(cache_key, data, 60 * 10)
@@ -68,7 +67,7 @@ class PublicRoomFiltersAPIView(APIView):
 
 class AdminRoomViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
     serializer_class = AdminRoomSerializer
-    permission_classes = [IsAdminOrSaler]
+    permission_classes = [IsAdmin]
     parser_classes = [JSONParser, MultiPartParser, FormParser]
     filterset_class = RoomFilter
     search_fields = ("title", "address", "description", "internal_note")
@@ -88,9 +87,13 @@ class AdminRoomViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
             OpenApiParameter("image_id", OpenApiTypes.INT, OpenApiParameter.PATH),
         ]
     )
-    @action(detail=True, methods=["delete"], url_path="images/(?P<image_id>[^/.]+)")
-    def delete_image(self, request, pk=None, image_id=None):
+    @action(detail=True, methods=["delete", "patch"], url_path="images/(?P<image_id>[^/.]+)")
+    def image_detail(self, request, pk=None, image_id=None):
         room = self.get_object()
         image = room.images.get(pk=image_id)
+        if request.method == "PATCH":
+            image.sort_order = request.data.get("sort_order", image.sort_order)
+            image.save(update_fields=["sort_order"])
+            return success_response(data=RoomImageSerializer(image, context=self.get_serializer_context()).data)
         image.delete()
         return success_response(message="Image deleted successfully.")

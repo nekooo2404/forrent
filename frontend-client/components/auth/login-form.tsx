@@ -106,7 +106,7 @@ export function LoginForm() {
             value={identifier}
           />
           <label
-            className="pointer-events-none absolute left-0 top-6 origin-left font-body-md text-body-md text-on-surface-variant transition-all duration-300 peer-focus:-translate-y-6 peer-focus:scale-[0.85] peer-focus:text-primary peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-[0.85]"
+            className="pointer-events-none absolute left-0 top-6 origin-left font-body-md text-body-md text-on-surface-variant transition-[transform,color] duration-300 peer-focus:-translate-y-6 peer-focus:scale-[0.85] peer-focus:text-primary peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-[0.85]"
             htmlFor="identifier"
           >
             Email hoặc số điện thoại
@@ -134,7 +134,7 @@ export function LoginForm() {
             value={password}
           />
           <label
-            className="pointer-events-none absolute left-0 top-6 origin-left font-body-md text-body-md text-on-surface-variant transition-all duration-300 peer-focus:-translate-y-6 peer-focus:scale-[0.85] peer-focus:text-primary peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-[0.85]"
+            className="pointer-events-none absolute left-0 top-6 origin-left font-body-md text-body-md text-on-surface-variant transition-[transform,color] duration-300 peer-focus:-translate-y-6 peer-focus:scale-[0.85] peer-focus:text-primary peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-[0.85]"
             htmlFor="password"
           >
             Mật khẩu
@@ -164,7 +164,7 @@ export function LoginForm() {
             />
             Ghi nhớ đăng nhập
           </label>
-          <Link className="font-body-md text-body-md text-primary transition-colors hover:text-gold" href="/forgot-password">
+          <Link className="font-body-md text-body-md text-primary transition-colors hover:text-gold" href="/forget-password">
             Quên mật khẩu?
           </Link>
         </div>

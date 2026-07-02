@@ -2,56 +2,72 @@ services:
   backend:
     build: .
     command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
+    restart: unless-stopped
     env_file:
       - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
-      - .:/app
-      - media_data:/app/media
-      - static_data:/app/staticfiles
+      - ./media:/app/media
+      - ./staticfiles:/app/staticfiles
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; req=urllib.request.Request('http://127.0.0.1:8000/api/health/', headers={'X-Forwarded-Proto':'https'}); urllib.request.urlopen(req, timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   frontend_client:
     build:
       context: ../frontend-client
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: https://api.forrent.id.vn
+    restart: unless-stopped
     environment:
       NODE_ENV: production
       API_BASE_URL: http://backend:8000
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+      NEXT_PUBLIC_API_BASE_URL: https://api.forrent.id.vn
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
 
   frontend_admin:
     build:
       context: ../frontend-admin
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: https://api.forrent.id.vn
+        NEXT_PUBLIC_CLIENT_URL: https://forrent.id.vn
+    restart: unless-stopped
     environment:
       NODE_ENV: production
       API_BASE_URL: http://backend:8000
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
-      NEXT_PUBLIC_CLIENT_URL: http://localhost:3000
+      NEXT_PUBLIC_API_BASE_URL: https://api.forrent.id.vn
+      NEXT_PUBLIC_CLIENT_URL: https://forrent.id.vn
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
 
   celery_worker:
     build: .
     command: celery -A config worker -l info
+    restart: unless-stopped
     env_file:
       - .env
-    volumes:
-      - .:/app
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
     depends_on:
       backend:
         condition: service_started
@@ -63,10 +79,11 @@ services:
   celery_beat:
     build: .
     command: celery -A config beat -l info
+    restart: unless-stopped
     env_file:
       - .env
-    volumes:
-      - .:/app
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
     depends_on:
       backend:
         condition: service_started
@@ -77,12 +94,11 @@ services:
 
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-rental_db}
       POSTGRES_USER: ${POSTGRES_USER:-rental_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rental_password}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -93,8 +109,9 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -103,5 +120,3 @@ services:
 
 volumes:
   postgres_data:
-  media_data:
-  static_data:

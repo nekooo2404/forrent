@@ -31,6 +31,10 @@ class PublicRoomListSerializer(serializers.ModelSerializer):
             "ward",
             "address",
             "price",
+            "deposit_amount",
+            "electricity_price_per_kwh",
+            "water_price_per_person",
+            "service_fee",
             "actual_area",
             "area_range",
             "amenities",
@@ -94,6 +98,10 @@ class AdminRoomSerializer(serializers.ModelSerializer):
             "ward",
             "address",
             "price",
+            "deposit_amount",
+            "electricity_price_per_kwh",
+            "water_price_per_person",
+            "service_fee",
             "actual_area",
             "area_range",
             "amenities",
@@ -118,8 +126,31 @@ class AdminRoomSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         city = attrs.get("city") or getattr(self.instance, "city", None)
         ward = attrs.get("ward") or getattr(self.instance, "ward", None)
+        actual_area = attrs.get("actual_area") or getattr(self.instance, "actual_area", None)
+        area_range = attrs.get("area_range") or getattr(self.instance, "area_range", None)
+        commission_percent = attrs.get("commission_percent")
+        errors = {}
         if city and ward and ward.city_id != city.id:
-            raise serializers.ValidationError({"ward": "Ward must belong to selected city."})
+            errors["ward"] = "Ward must belong to selected city."
+        if actual_area is not None and area_range is not None:
+            if actual_area < area_range.min_area or (area_range.max_area is not None and actual_area > area_range.max_area):
+                errors["actual_area"] = "Actual area must be inside selected area range."
+        if commission_percent is not None and commission_percent > 100:
+            errors["commission_percent"] = "Commission percent cannot exceed 100."
+        uploaded_images = attrs.get("uploaded_images") or []
+        image_urls = attrs.get("image_urls") or []
+        existing_count = self.instance.images.count() if self.instance else 0
+        if existing_count + len(uploaded_images) + len(image_urls) > 12:
+            errors["uploaded_images"] = "A room can have at most 12 gallery images."
+        for image in uploaded_images:
+            if image.size > 5 * 1024 * 1024:
+                errors["uploaded_images"] = "Each room image must be 5MB or smaller."
+                break
+        thumbnail = attrs.get("thumbnail")
+        if thumbnail and thumbnail.size > 5 * 1024 * 1024:
+            errors["thumbnail"] = "Thumbnail must be 5MB or smaller."
+        if errors:
+            raise serializers.ValidationError(errors)
         return attrs
 
     def create(self, validated_data):

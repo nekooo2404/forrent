@@ -164,7 +164,7 @@ export function LoginForm() {
             />
             Ghi nhớ đăng nhập
           </label>
-          <Link className="font-body-md text-body-md text-primary transition-colors hover:text-gold" href="/forgot-password">
+          <Link className="font-body-md text-body-md text-primary transition-colors hover:text-gold" href="/forget-password">
             Quên mật khẩu?
           </Link>
         </div>
@@ -187,7 +187,7 @@ export function LoginForm() {
       </form>
 
       <p className="mt-8 text-center font-body-md text-sm text-on-surface-variant">
-        Cổng này dành cho tài khoản ADMIN hoặc SALER đã được cấp trong backend.
+        Cổng này dành cho tài khoản saler/admin đã được cấp trong backend.
       </p>
     </div>
   );

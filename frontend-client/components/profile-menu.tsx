@@ -7,8 +7,8 @@ import { useEffect, useRef, useState } from "react";
 import {
   clearAuthSession,
   getStoredAccessToken,
-  getStoredRefreshToken,
   hasStoredAuthSession,
+  refreshStoredAuthSession,
 } from "@/lib/auth-storage";
 
 export function ProfileMenu() {
@@ -18,6 +18,11 @@ export function ProfileMenu() {
 
   useEffect(() => {
     setIsLoggedIn(hasStoredAuthSession());
+    if (!getStoredAccessToken()) {
+      refreshStoredAuthSession()
+        .then((token) => setIsLoggedIn(Boolean(token)))
+        .catch(() => setIsLoggedIn(false));
+    }
 
     function refreshAuthState() {
       setIsLoggedIn(hasStoredAuthSession());
@@ -60,18 +65,15 @@ export function ProfileMenu() {
 
   async function handleLogout() {
     const accessToken = getStoredAccessToken();
-    const refreshToken = getStoredRefreshToken();
 
-    if (accessToken && refreshToken) {
-      await fetch("/api/auth/log-out", {
-        body: JSON.stringify({ refresh: refreshToken }),
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      }).catch(() => null);
-    }
+    await fetch("/api/auth/log-out", {
+      body: JSON.stringify({}),
+      headers: {
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    }).catch(() => null);
 
     clearAuthSession();
     setIsLoggedIn(false);
@@ -85,7 +87,7 @@ export function ProfileMenu() {
         aria-expanded={isProfileMenuOpen}
         aria-haspopup="menu"
         aria-label="Tài khoản"
-        className="inline-flex size-10 items-center justify-center rounded-full border border-outline-variant/30 bg-surface-container-lowest text-primary transition-opacity duration-300 hover:opacity-70 active:translate-y-px"
+        className="premium-button inline-flex size-10 items-center justify-center rounded-full border border-outline-variant/30 bg-surface-container-lowest text-primary"
         onClick={() => setIsProfileMenuOpen((current) => !current)}
         type="button"
       >
@@ -94,7 +96,7 @@ export function ProfileMenu() {
 
       {isProfileMenuOpen ? (
         <div
-          className="absolute right-0 top-full mt-3 w-52 overflow-hidden rounded-lg border border-outline-variant/15 bg-surface-container-lowest py-2 text-left shadow-elevated"
+          className="glass-panel scroll-reveal absolute right-0 top-full mt-3 w-52 overflow-hidden rounded-lg border py-2 text-left"
           role="menu"
         >
           {isLoggedIn ? (
@@ -106,6 +108,14 @@ export function ProfileMenu() {
                 role="menuitem"
               >
                 Thông tin người dùng
+              </Link>
+              <Link
+                className="block px-4 py-3 font-body-md text-body-md text-primary transition-colors hover:bg-surface-container"
+                href="/forget-password"
+                onClick={() => setIsProfileMenuOpen(false)}
+                role="menuitem"
+              >
+                Quên mật khẩu
               </Link>
               <button
                 className="block w-full px-4 py-3 text-left font-body-md text-body-md text-primary transition-colors hover:bg-surface-container"

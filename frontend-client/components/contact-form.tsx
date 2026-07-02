@@ -31,7 +31,7 @@ function errorText(payload: ContactApiResponse) {
   return "Vui lòng kiểm tra lại các trường bắt buộc.";
 }
 
-export function ContactForm() {
+export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | null; roomTitle?: string }>) {
   const [state, setState] = useState<FormState>("idle");
   const [statusMessage, setStatusMessage] = useState("");
 
@@ -51,6 +51,7 @@ export function ContactForm() {
       phone: normalizePhone(String(formData.get("phone") ?? "")),
       email: String(formData.get("email") ?? "").trim(),
       message: String(formData.get("message") ?? "").trim(),
+      ...(roomId ? { room_id: roomId } : {}),
     };
 
     setState("submitting");
@@ -74,7 +75,7 @@ export function ContactForm() {
 
       form.reset();
       setState("success");
-      setStatusMessage("Cảm ơn bạn. Đội hỗ trợ sẽ liên hệ trong thời gian sớm nhất.");
+      setStatusMessage("Đã nhận yêu cầu. Saler sẽ liên hệ để xác nhận phòng, cọc và lịch xem.");
     } catch {
       setState("error");
       setStatusMessage("Không thể gửi yêu cầu lúc này. Vui lòng thử lại sau.");
@@ -82,13 +83,19 @@ export function ContactForm() {
   }
 
   return (
-    <form className="space-y-8" onSubmit={handleSubmit}>
+    <form aria-busy={state === "submitting"} className="space-y-8" onSubmit={handleSubmit}>
+      {roomTitle ? (
+        <div className="rounded border border-primary/10 bg-surface-container-low p-4 text-sm text-primary">
+          Tư vấn phòng: <span className="font-semibold">{roomTitle}</span>
+        </div>
+      ) : null}
       <div>
         <label className="mb-2 block font-label-caps text-label-caps text-on-surface-variant" htmlFor="fullName">
           HỌ VÀ TÊN
         </label>
         <input
           className="w-full border-0 border-b border-outline-variant/50 bg-transparent px-0 py-3 font-body-md text-body-md text-primary placeholder:text-outline-variant/50 focus:border-primary focus:ring-0"
+          autoComplete="name"
           id="fullName"
           name="fullName"
           placeholder="Họ và tên của bạn"
@@ -104,6 +111,7 @@ export function ContactForm() {
           </label>
           <input
             className="w-full border-0 border-b border-outline-variant/50 bg-transparent px-0 py-3 font-body-md text-body-md text-primary placeholder:text-outline-variant/50 focus:border-primary focus:ring-0"
+            autoComplete="email"
             id="email"
             name="email"
             placeholder="your@email.com"
@@ -117,6 +125,7 @@ export function ContactForm() {
           </label>
           <input
             className="w-full border-0 border-b border-outline-variant/50 bg-transparent px-0 py-3 font-body-md text-body-md text-primary placeholder:text-outline-variant/50 focus:border-primary focus:ring-0"
+            autoComplete="tel"
             id="phone"
             inputMode="tel"
             name="phone"
@@ -136,28 +145,31 @@ export function ContactForm() {
           className="w-full rounded border border-outline-variant/50 bg-transparent px-4 py-3 font-body-md text-body-md text-primary placeholder:text-outline-variant/50 focus:border-primary focus:ring-0"
           id="message"
           name="message"
-          placeholder="Chúng tôi có thể giúp gì cho bạn?"
+          placeholder="Ví dụ: Mình cần phòng ở Tây Mỗ, dưới 5 triệu/tháng, có thể xem cuối tuần."
           required
           rows={4}
         />
       </div>
 
       <button
-        className="flex w-full items-center justify-center bg-primary px-6 py-4 font-button text-button text-on-primary transition-opacity duration-300 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        className="premium-button flex w-full items-center justify-center rounded bg-primary px-6 py-4 font-button text-button text-on-primary disabled:cursor-not-allowed disabled:opacity-50"
         disabled={state === "submitting"}
         type="submit"
       >
-        {state === "submitting" ? "ĐANG GỬI..." : "GỬI YÊU CẦU"}
+        {state === "submitting" ? "Đang gửi..." : "Gửi nhu cầu thuê phòng"}
       </button>
+      <p className="text-center text-sm leading-6 text-on-surface-variant">
+        Sau khi gửi, saler sẽ gọi lại để xác nhận phòng còn trống, cọc, phí và lịch xem.
+      </p>
 
       {state === "success" ? (
-        <div className="border border-[#4a7c59] bg-[#4a7c59]/10 p-4 text-center text-[#4a7c59]">
+        <div className="rounded-md border border-success/30 bg-success-container/40 p-4 text-center text-success" role="status">
           <p className="font-body-md text-body-md">{statusMessage}</p>
         </div>
       ) : null}
 
       {state === "error" ? (
-        <div className="border border-error bg-error-container/20 p-4 text-center text-error">
+        <div className="rounded-md border border-error bg-error-container/20 p-4 text-center text-error" role="alert">
           <p className="font-body-md text-body-md">{statusMessage}</p>
         </div>
       ) : null}

@@ -1,24 +1,17 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Open_Sans } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+const openSans = Open_Sans({
   subsets: ["latin", "vietnamese"],
-  weight: ["400", "500", "600"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const playfair = Playfair_Display({
-  subsets: ["latin", "vietnamese"],
-  weight: ["600", "700"],
-  variable: "--font-playfair",
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-open-sans",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "AURELIAN RESERVE - Cho Thuê Sang Trọng",
-  description: "Khám phá bộ sưu tập bất động sản cho thuê sang trọng, được tuyển chọn cho người thuê sành điệu.",
+  title: "ForRent - Thuê Phòng Theo Tháng",
+  description: "Tìm phòng thuê theo tháng theo khu vực, giá, diện tích, loại phòng và đặt lịch xem trực tiếp.",
 };
 
 export default function RootLayout({
@@ -33,7 +26,7 @@ export default function RootLayout({
         <link href="https://images.unsplash.com" rel="preconnect" />
         <link href={process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"} rel="preconnect" />
       </head>
-      <body className={`${inter.variable} ${playfair.variable} bg-surface font-body-md text-body-md text-on-surface antialiased`}>
+      <body className={`${openSans.variable} bg-surface font-body-md text-body-md text-on-surface antialiased`}>
         {children}
       </body>
     </html>

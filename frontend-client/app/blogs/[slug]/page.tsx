@@ -12,21 +12,18 @@ type BlogDetailPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-const fallbackImage =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuD0pcY70_bMGWIoCOdTZUb5oCZJJwLx4caemuJrMYCSeRxGZHA6jmWyyEAKkU87jOdlyYJXGlXEU_VQPyK2zeIr1x7RyShOQPYJ9Cg6xtIJA_8YkwTjxeHB0TNlKdKjQDigcA-mXHPnX7XP6DCWLhvaOOC-dqSE0GTU7vu-NdDHwKQnqI9raZHlDt2h4Ox9Th78zWxvRxCP3A2CbqEdzHDzAgNnReJ5x11iS7yEY0XT16traN4ETN4piOZpKC1ShOwjljZjYNV35tNc";
-
 export async function generateMetadata({ params }: BlogDetailPageProps): Promise<Metadata> {
   const { slug } = await params;
   const post = await getCachedBlogDetail(slug).catch(() => null);
 
   if (!post) {
     return {
-      title: "Không tìm thấy bài viết - Aurelian Reserve",
+      title: "Không tìm thấy bài viết - ForRent",
     };
   }
 
   return {
-    title: `${post.title} - Aurelian Reserve`,
+    title: `${post.title} - ForRent`,
     description: post.short_description || post.content.slice(0, 150),
   };
 }
@@ -41,7 +38,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
 
   const relatedResponse = await getBlogs({ page_size: 4, ordering: "-published_at" }).catch(() => null);
   const relatedPosts = (relatedResponse?.results ?? []).filter((item) => item.slug !== post.slug).slice(0, 3);
-  const image = resolveMediaUrl(post.thumbnail) ?? fallbackImage;
+  const image = resolveMediaUrl(post.thumbnail);
   const paragraphs = post.content
     .split(/\n+/)
     .map((value) => value.trim())
@@ -62,7 +59,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
           </Link>
 
           <span className="mb-5 inline-flex rounded-sm bg-surface-container-high px-3 py-1 font-label-caps text-label-caps uppercase tracking-widest text-on-primary-container">
-            Tạp chí Aurelian
+            Blog ForRent
           </span>
           <h1 className="font-display-lg-mobile text-display-lg-mobile leading-tight text-primary md:font-display-lg md:text-6xl">
             {post.title}
@@ -74,7 +71,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
           <div className="mt-8 flex flex-wrap gap-5 border-t border-outline-variant/15 pt-6 text-sm text-on-surface-variant">
             <span className="inline-flex items-center gap-2">
               <UserRound size={17} strokeWidth={1.8} />
-              {post.author_name || "Aurelian Reserve"}
+              {post.author_name || "ForRent"}
             </span>
             <span className="inline-flex items-center gap-2">
               <CalendarDays size={17} strokeWidth={1.8} />
@@ -85,15 +82,19 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
 
         <div className="mx-auto mb-16 max-w-container-max px-margin-mobile md:px-margin-desktop">
           <div className="relative aspect-[16/8] overflow-hidden rounded-lg shadow-soft">
-            <Image
-              alt={post.short_description || post.title}
-              className="object-cover"
-              fill
-              priority
-              quality={82}
-              sizes="(min-width: 1280px) 1280px, 100vw"
-              src={image}
-            />
+            {image ? (
+              <Image
+                alt={post.short_description || post.title}
+                className="object-cover"
+                fill
+                priority
+                quality={82}
+                sizes="(min-width: 1280px) 1280px, 100vw"
+                src={image}
+              />
+            ) : (
+              <ImagePlaceholder label="Chưa có ảnh bài viết" />
+            )}
           </div>
         </div>
 
@@ -143,24 +144,27 @@ function RelatedPosts({ posts }: Readonly<{ posts: ApiBlog[] }>) {
 
         <div className="grid gap-gutter md:grid-cols-3">
           {posts.map((post) => {
-            const image = resolveMediaUrl(post.thumbnail) ?? fallbackImage;
+            const image = resolveMediaUrl(post.thumbnail);
             return (
               <Link
                 className="group rounded-lg border border-primary/10 bg-white/85 p-4 shadow-soft transition hover:-translate-y-0.5 hover:border-primary/25"
                 href={`/blogs/${post.slug}`}
                 key={post.id}
-                prefetch={false}
               >
                 <div className="relative mb-5 aspect-[4/3] overflow-hidden rounded-md">
-                  <Image
-                    alt={post.short_description || post.title}
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    fill
-                    loading="lazy"
-                    quality={78}
-                    sizes="(min-width: 768px) 33vw, 100vw"
-                    src={image}
-                  />
+                  {image ? (
+                    <Image
+                      alt={post.short_description || post.title}
+                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      fill
+                      loading="lazy"
+                      quality={78}
+                      sizes="(min-width: 768px) 33vw, 100vw"
+                      src={image}
+                    />
+                  ) : (
+                    <ImagePlaceholder label="Chưa có ảnh bài viết" />
+                  )}
                 </div>
                 <h3 className="line-clamp-2 font-headline-sm text-headline-sm text-primary">{post.title}</h3>
                 <p className="mt-3 line-clamp-2 text-sm leading-6 text-secondary">{post.short_description}</p>
@@ -170,5 +174,13 @@ function RelatedPosts({ posts }: Readonly<{ posts: ApiBlog[] }>) {
         </div>
       </div>
     </section>
+  );
+}
+
+function ImagePlaceholder({ label }: Readonly<{ label: string }>) {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-surface-container-low text-sm font-medium text-on-surface-variant">
+      {label}
+    </div>
   );
 }

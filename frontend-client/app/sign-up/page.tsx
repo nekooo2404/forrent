@@ -5,8 +5,8 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 
 export const metadata: Metadata = {
-  title: "Đăng ký tài khoản - Aurelian Reserve",
-  description: "Tạo tài khoản Aurelian Reserve để đặt lịch xem phòng và theo dõi bộ sưu tập phòng cao cấp.",
+  title: "Đăng ký tài khoản - ForRent",
+  description: "Tạo tài khoản ForRent để đặt lịch xem phòng và theo dõi yêu cầu thuê phòng.",
 };
 
 export default function SignUpPage() {

@@ -6,8 +6,8 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 
 export const metadata: Metadata = {
-  title: "Đăng nhập - Aurelian Reserve",
-  description: "Đăng nhập tài khoản Aurelian Reserve để lưu phòng yêu thích và đặt lịch xem phòng.",
+  title: "Đăng nhập - ForRent",
+  description: "Đăng nhập tài khoản ForRent để đặt lịch xem phòng và theo dõi yêu cầu.",
 };
 
 const loginImage =
@@ -21,7 +21,7 @@ export default function LogInPage() {
       <section className="flex flex-grow flex-col pt-20 lg:min-h-[calc(100dvh-80px)] lg:flex-row">
         <div className="relative hidden overflow-hidden bg-surface-container lg:block lg:w-1/2">
           <Image
-            alt="Không gian lưu trú sang trọng của Aurelian Reserve"
+            alt="Không gian phòng thuê sáng, gọn và đầy đủ tiện ích"
             className="object-cover"
             fill
             priority

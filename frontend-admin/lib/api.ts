@@ -3,6 +3,20 @@ const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
 export const API_BASE_URL =
   process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL;
 
+function buildRequestHeaders(initHeaders?: HeadersInit, hasBody = false) {
+  const headers = new Headers(initHeaders);
+  if (!headers.has("Accept")) {
+    headers.set("Accept", "application/json");
+  }
+  if (typeof window === "undefined") {
+    headers.set("X-Forwarded-Proto", "https");
+  }
+  if (hasBody && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return headers;
+}
+
 export type ApiEnvelope<T> = {
   success: boolean;
   message: string;
@@ -35,8 +49,13 @@ export type LoginPayload = {
 
 export type LoginResponse = {
   access: string;
-  refresh: string;
+  refresh?: string;
   user: ApiUser;
+};
+
+export type TokenRefreshResponse = {
+  access: string;
+  refresh?: string;
 };
 
 export type ProfileUpdatePayload = {
@@ -57,8 +76,8 @@ export type PasswordResetRequestPayload = {
 };
 
 export type PasswordResetConfirmPayload = {
-  uid: number | string;
-  token: string;
+  email: string;
+  otp: string;
   new_password: string;
   confirm_new_password: string;
 };
@@ -82,11 +101,7 @@ function buildUrl(path: string) {
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(buildUrl(path), {
     ...init,
-    headers: {
-      Accept: "application/json",
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
-      ...init.headers,
-    },
+    headers: buildRequestHeaders(init.headers, Boolean(init.body)),
     cache: init.method ? "no-store" : "no-store",
   });
 
@@ -102,6 +117,13 @@ export async function loginTenant(payload: LoginPayload) {
   return apiFetch<LoginResponse>("/api/auth/login/", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export async function refreshTenant(refresh: string) {
+  return apiFetch<TokenRefreshResponse>("/api/auth/refresh/", {
+    method: "POST",
+    body: JSON.stringify({ refresh }),
   });
 }
 

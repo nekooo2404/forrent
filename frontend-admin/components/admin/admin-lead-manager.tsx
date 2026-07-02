@@ -12,6 +12,9 @@ import {
   formatAdminDate,
   formatAdminDateOnly,
   formatAdminVnd,
+  type AdminCity,
+  type AdminUser,
+  type AdminWard,
   type AdminViewingRequest,
 } from "./admin-api";
 import { useAdminAuth } from "./admin-shell";
@@ -19,9 +22,10 @@ import {
   AdminEmptyState,
   AdminInlineMessage,
   AdminLeadBadge,
-  AdminLoadingState,
   AdminPageHeader,
+  AdminPagination,
   AdminPanel,
+  AdminTableSkeleton,
   adminButtonPrimary,
   adminButtonSecondary,
   adminInputClass,
@@ -38,32 +42,56 @@ const leadStatuses = [
   { label: "Đã hủy", value: "CANCELLED" },
 ];
 
+const editableLeadStatuses = leadStatuses.filter((item) => item.value && item.value !== "MOVED_IN");
+const pageSize = 20;
+
 export function AdminLeadManager() {
   const { token } = useAdminAuth();
   const [leads, setLeads] = useState<AdminViewingRequest[]>([]);
+  const [cities, setCities] = useState<AdminCity[]>([]);
+  const [wards, setWards] = useState<AdminWard[]>([]);
+  const [salers, setSalers] = useState<AdminUser[]>([]);
   const [count, setCount] = useState(0);
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [city, setCity] = useState("");
+  const [ward, setWard] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkStatus, setBulkStatus] = useState("CONTACTED");
   const [selectedLead, setSelectedLead] = useState<AdminViewingRequest | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [statusDraft, setStatusDraft] = useState("NEW");
+  const [assignedToDraft, setAssignedToDraft] = useState("");
+  const [followUpDraft, setFollowUpDraft] = useState("");
+  const [appointmentDateDraft, setAppointmentDateDraft] = useState("");
+  const [appointmentSlotDraft, setAppointmentSlotDraft] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  async function loadLeads(nextSearch = search, nextStatus = status) {
+  async function loadLeads(nextSearch = search, nextStatus = status, nextPage = page) {
     setIsLoading(true);
     setError("");
     try {
       const response = await adminList<AdminViewingRequest>("viewing-requests", token, {
         ordering: "-created_at",
-        page_size: 50,
+        page: nextPage,
+        page_size: pageSize,
+        city,
+        date_from: dateFrom,
+        date_to: dateTo,
         search: nextSearch,
         status: nextStatus,
+        ward,
       });
       setLeads(response.results);
       setCount(response.count);
+      setPage(nextPage);
+      setSelectedIds([]);
       if (selectedLead) {
         const refreshed = response.results.find((lead) => lead.id === selectedLead.id);
         if (refreshed) setSelectedLead(refreshed);
@@ -76,7 +104,18 @@ export function AdminLeadManager() {
   }
 
   useEffect(() => {
-    loadLeads("", "");
+    loadLeads("", "", 1);
+    Promise.all([
+      adminList<AdminCity>("cities", token, { page_size: 100, ordering: "name" }),
+      adminList<AdminWard>("wards", token, { page_size: 100, ordering: "name" }),
+      adminList<AdminUser>("users", token, { page_size: 100, ordering: "full_name", role: "SALER" }),
+    ])
+      .then(([cityResponse, wardResponse, userResponse]) => {
+        setCities(cityResponse.results);
+        setWards(wardResponse.results);
+        setSalers(userResponse.results);
+      })
+      .catch(() => null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
@@ -86,11 +125,16 @@ export function AdminLeadManager() {
       return accumulator;
     }, {});
   }, [leads]);
+  const filteredWards = useMemo(() => (city ? wards.filter((item) => String(item.city) === city) : wards), [city, wards]);
 
   function selectLead(lead: AdminViewingRequest) {
     setSelectedLead(lead);
     setNoteDraft(lead.saler_note ?? "");
     setStatusDraft(lead.status);
+    setAssignedToDraft(lead.assigned_to ? String(lead.assigned_to) : "");
+    setFollowUpDraft(toDateTimeLocal(lead.next_follow_up_at));
+    setAppointmentDateDraft(lead.appointment_date || lead.preferred_viewing_date || "");
+    setAppointmentSlotDraft(lead.appointment_time_slot || lead.preferred_viewing_time_slot || "");
     setMessage("");
     setError("");
   }
@@ -105,6 +149,8 @@ export function AdminLeadManager() {
     try {
       const updated = await adminRequest<AdminViewingRequest>(`viewing-requests/${selectedLead.id}`, token, {
         body: JSON.stringify({
+          assigned_to: assignedToDraft ? Number(assignedToDraft) : null,
+          next_follow_up_at: followUpDraft ? new Date(followUpDraft).toISOString() : null,
           saler_note: noteDraft,
           status: statusDraft,
         }),
@@ -115,6 +161,29 @@ export function AdminLeadManager() {
       setMessage("Lead đã được cập nhật.");
     } catch (updateError) {
       setError(adminMessageFrom(updateError, "Không thể cập nhật lead."));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function toggleLeadSelection(leadId: number, checked: boolean) {
+    setSelectedIds((current) => (checked ? [...new Set([...current, leadId])] : current.filter((id) => id !== leadId)));
+  }
+
+  async function handleBulkUpdate() {
+    if (!selectedIds.length) return;
+    setIsSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      await adminRequest<{ updated: number }>("viewing-requests/bulk-update", token, {
+        body: JSON.stringify({ ids: selectedIds, status: bulkStatus }),
+        method: "POST",
+      });
+      setMessage(`Đã cập nhật ${selectedIds.length} lead.`);
+      await loadLeads();
+    } catch (bulkError) {
+      setError(adminMessageFrom(bulkError, "Không thể cập nhật hàng loạt lead."));
     } finally {
       setIsSaving(false);
     }
@@ -134,6 +203,35 @@ export function AdminLeadManager() {
       await loadLeads();
     } catch (confirmError) {
       setError(adminMessageFrom(confirmError, "Không thể xác nhận chuyển vào."));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleConfirmAppointment() {
+    if (!selectedLead) return;
+    if (!appointmentDateDraft || !appointmentSlotDraft) {
+      setError("Cần chọn ngày và khung giờ đã chốt trước khi xác nhận lịch xem.");
+      return;
+    }
+    setIsSaving(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const updated = await adminRequest<AdminViewingRequest>(`viewing-requests/${selectedLead.id}/confirm-appointment`, token, {
+        body: JSON.stringify({
+          appointment_date: appointmentDateDraft,
+          appointment_time_slot: appointmentSlotDraft,
+        }),
+        method: "POST",
+      });
+      setSelectedLead(updated);
+      setStatusDraft(updated.status);
+      setLeads((current) => current.map((lead) => (lead.id === updated.id ? updated : lead)));
+      setMessage("Lịch xem đã được xác nhận riêng với ngày/khung giờ đã chốt.");
+    } catch (confirmError) {
+      setError(adminMessageFrom(confirmError, "Không thể xác nhận lịch xem."));
     } finally {
       setIsSaving(false);
     }
@@ -169,11 +267,11 @@ export function AdminLeadManager() {
             key={key}
             onClick={() => {
               setStatus(key);
-              loadLeads(search, key);
+              loadLeads(search, key, 1);
             }}
             type="button"
           >
-            <span className="text-sm text-secondary">{label}</span>
+            <span className="text-sm text-secondary">{label} trong trang</span>
             <span className="mt-2 block text-3xl font-semibold tabular-nums text-primary">{statusCounts[key] ?? 0}</span>
           </button>
         ))}
@@ -182,40 +280,79 @@ export function AdminLeadManager() {
       <section className="grid gap-6 xl:grid-cols-[1.35fr_0.85fr]">
         <AdminPanel
           toolbar={
-            <form
-              className="grid w-full gap-3 md:grid-cols-[minmax(240px,1fr)_190px_auto]"
-              onSubmit={(event) => {
-                event.preventDefault();
-                loadLeads(search, status);
-              }}
-            >
-              <label className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-secondary" size={17} strokeWidth={1.8} />
-                <input
-                  className={`${adminInputClass} pl-9`}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Tìm khách hàng, email, số điện thoại..."
-                  type="search"
-                  value={search}
-                />
-              </label>
-              <select className={adminSelectClass} onChange={(event) => setStatus(event.target.value)} value={status}>
-                {leadStatuses.map((item) => (
-                  <option key={item.value || "all"} value={item.value}>{item.label}</option>
-                ))}
-              </select>
-              <button className={adminButtonSecondary} type="submit">Lọc</button>
-            </form>
+            <>
+              <form
+                className="grid w-full gap-3 md:grid-cols-3 xl:grid-cols-7"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  loadLeads(search, status, 1);
+                }}
+              >
+                <label className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-secondary" size={17} strokeWidth={1.8} />
+                  <input
+                    className={`${adminInputClass} pl-9`}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Tìm khách hàng, email, số điện thoại..."
+                    type="search"
+                    value={search}
+                  />
+                </label>
+                <select className={adminSelectClass} onChange={(event) => setStatus(event.target.value)} value={status}>
+                  {leadStatuses.map((item) => (
+                    <option key={item.value || "all"} value={item.value}>{item.label}</option>
+                  ))}
+                </select>
+                <select
+                  className={adminSelectClass}
+                  onChange={(event) => {
+                    setCity(event.target.value);
+                    setWard("");
+                  }}
+                  value={city}
+                >
+                  <option value="">Tất cả khu vực</option>
+                  {cities.map((item) => (
+                    <option key={item.id} value={item.id}>{item.name}</option>
+                  ))}
+                </select>
+                <select className={adminSelectClass} onChange={(event) => setWard(event.target.value)} value={ward}>
+                  <option value="">Tất cả phường</option>
+                  {filteredWards.map((item) => (
+                    <option key={item.id} value={item.id}>{item.name}</option>
+                  ))}
+                </select>
+                <input className={adminInputClass} onChange={(event) => setDateFrom(event.target.value)} type="date" value={dateFrom} />
+                <input className={adminInputClass} onChange={(event) => setDateTo(event.target.value)} type="date" value={dateTo} />
+                <button className={adminButtonSecondary} type="submit">Lọc</button>
+              </form>
+              {selectedIds.length ? (
+                <div className="flex w-full flex-wrap items-center gap-2">
+                  <span className="text-sm text-secondary">Đã chọn {selectedIds.length}</span>
+                  <select className={adminSelectClass} onChange={(event) => setBulkStatus(event.target.value)} value={bulkStatus}>
+                    {editableLeadStatuses.map((item) => (
+                      <option key={item.value} value={item.value}>{item.label}</option>
+                    ))}
+                  </select>
+                  <button className={adminButtonSecondary} disabled={isSaving} onClick={handleBulkUpdate} type="button">
+                    Cập nhật hàng loạt
+                  </button>
+                </div>
+              ) : null}
+            </>
           }
           title={`Danh sách lead (${count})`}
         >
           {isLoading ? (
-            <AdminLoadingState />
+            <AdminTableSkeleton />
           ) : leads.length ? (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
                 <thead className="border-b border-primary/10 text-xs uppercase tracking-[0.16em] text-secondary">
                   <tr>
+                    <th className="py-3 pr-3">
+                      <span className="sr-only">Chọn</span>
+                    </th>
                     <th className="py-3 pr-5 font-semibold">Khách hàng</th>
                     <th className="py-3 pr-5 font-semibold">Phòng</th>
                     <th className="py-3 pr-5 font-semibold">Lịch xem</th>
@@ -231,6 +368,15 @@ export function AdminLeadManager() {
                       key={lead.id}
                       onClick={() => selectLead(lead)}
                     >
+                      <td className="py-4 pr-3">
+                        <input
+                          checked={selectedIds.includes(lead.id)}
+                          className="size-4 rounded border-primary/20 text-primary focus:ring-primary"
+                          onChange={(event) => toggleLeadSelection(lead.id, event.target.checked)}
+                          onClick={(event) => event.stopPropagation()}
+                          type="checkbox"
+                        />
+                      </td>
                       <td className="py-4 pr-5">
                         <p className="font-semibold text-primary">{lead.full_name}</p>
                         <p className="mt-1 text-xs text-secondary">{lead.phone}</p>
@@ -265,6 +411,9 @@ export function AdminLeadManager() {
           ) : (
             <AdminEmptyState description="Không có lead phù hợp với bộ lọc hiện tại." title="Chưa có lead" />
           )}
+          {!isLoading && count > pageSize ? (
+            <AdminPagination count={count} onPageChange={(nextPage) => loadLeads(search, status, nextPage)} page={page} pageSize={pageSize} />
+          ) : null}
         </AdminPanel>
 
         <AdminPanel title="Cập nhật nhanh">
@@ -281,6 +430,8 @@ export function AdminLeadManager() {
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <Info label="Tạo lúc" value={formatAdminDate(selectedLead.created_at)} />
                   <Info label="Lịch xem" value={formatAdminDateOnly(selectedLead.preferred_viewing_date)} />
+                  <Info label="Saler xử lý" value={selectedLead.assigned_to_name || "Chưa gán"} />
+                  <Info label="Follow-up" value={formatAdminDate(selectedLead.next_follow_up_at)} />
                   <Info label="Hoa hồng dự kiến" value={formatAdminVnd(selectedLead.estimated_commission_amount)} />
                   <Info label="Đã ghi nhận" value={formatAdminVnd(selectedLead.actual_commission_amount)} />
                 </div>
@@ -289,11 +440,44 @@ export function AdminLeadManager() {
               <label className="block">
                 <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Trạng thái</span>
                 <select className={adminSelectClass} onChange={(event) => setStatusDraft(event.target.value)} value={statusDraft}>
-                  {leadStatuses.filter((item) => item.value).map((item) => (
+                  {selectedLead.status === "MOVED_IN" ? <option value="MOVED_IN">Đã chuyển vào</option> : null}
+                  {editableLeadStatuses.map((item) => (
                     <option key={item.value} value={item.value}>{item.label}</option>
                   ))}
                 </select>
               </label>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Saler phụ trách</span>
+                  <select className={adminSelectClass} onChange={(event) => setAssignedToDraft(event.target.value)} value={assignedToDraft}>
+                    <option value="">Chưa gán</option>
+                    {salers.map((saler) => (
+                      <option key={saler.id} value={saler.id}>{saler.full_name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Hẹn follow-up</span>
+                  <input className={adminInputClass} onChange={(event) => setFollowUpDraft(event.target.value)} type="datetime-local" value={followUpDraft} />
+                </label>
+              </div>
+
+              <div className="rounded-lg border border-primary/10 bg-white p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Lịch xem đã chốt</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input className={adminInputClass} onChange={(event) => setAppointmentDateDraft(event.target.value)} type="date" value={appointmentDateDraft} />
+                  <select className={adminSelectClass} onChange={(event) => setAppointmentSlotDraft(event.target.value)} value={appointmentSlotDraft}>
+                    <option value="">Chọn khung giờ</option>
+                    <option value="morning">Buổi sáng</option>
+                    <option value="afternoon">Buổi chiều</option>
+                    <option value="evening">Buổi tối</option>
+                  </select>
+                </div>
+                <button className={`${adminButtonSecondary} mt-3`} disabled={isSaving} onClick={handleConfirmAppointment} type="button">
+                  Xác nhận lịch xem
+                </button>
+              </div>
 
               <label className="block">
                 <span className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-secondary">
@@ -325,6 +509,14 @@ export function AdminLeadManager() {
       </section>
     </div>
   );
+}
+
+function toDateTimeLocal(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function Info({ label, value }: Readonly<{ label: string; value: string }>) {

@@ -40,7 +40,9 @@ type RoomFormState = {
   city: string;
   commission_base_amount: string;
   commission_percent: string;
+  deposit_amount: string;
   description: string;
+  electricity_price_per_kwh: string;
   image_urls: string;
   thumbnail: File | null;
   uploaded_images: File[];
@@ -50,7 +52,9 @@ type RoomFormState = {
   short_description: string;
   slug: string;
   status: string;
+  service_fee: string;
   title: string;
+  water_price_per_person: string;
   ward: string;
 };
 
@@ -69,7 +73,9 @@ const emptyForm: RoomFormState = {
   city: "",
   commission_base_amount: "",
   commission_percent: "0",
+  deposit_amount: "",
   description: "",
+  electricity_price_per_kwh: "",
   image_urls: "",
   thumbnail: null,
   uploaded_images: [],
@@ -79,7 +85,9 @@ const emptyForm: RoomFormState = {
   short_description: "",
   slug: "",
   status: "AVAILABLE",
+  service_fee: "",
   title: "",
+  water_price_per_person: "",
   ward: "",
 };
 
@@ -178,7 +186,9 @@ export function AdminRoomManager() {
       city: String(room.city),
       commission_base_amount: room.commission_base_amount,
       commission_percent: room.commission_percent,
+      deposit_amount: room.deposit_amount,
       description: room.description,
+      electricity_price_per_kwh: room.electricity_price_per_kwh,
       image_urls: "",
       thumbnail: null,
       uploaded_images: [],
@@ -188,7 +198,9 @@ export function AdminRoomManager() {
       short_description: room.short_description,
       slug: room.slug,
       status: room.status,
+      service_fee: room.service_fee,
       title: room.title,
+      water_price_per_person: room.water_price_per_person,
       ward: String(room.ward),
     });
     setIsModalOpen(true);
@@ -210,14 +222,18 @@ export function AdminRoomManager() {
       city: form.city,
       commission_base_amount: form.commission_base_amount || "0",
       commission_percent: form.commission_percent || "0",
+      deposit_amount: form.deposit_amount || "0",
       description: form.description.trim(),
+      electricity_price_per_kwh: form.electricity_price_per_kwh || "0",
       internal_note: form.internal_note.trim(),
       price: form.price,
       room_type: form.room_type,
       short_description: form.short_description.trim(),
       slug: form.slug.trim(),
       status: form.status,
+      service_fee: form.service_fee || "0",
       title: form.title.trim(),
+      water_price_per_person: form.water_price_per_person || "0",
       ward: form.ward,
     }).forEach(([key, value]) => payload.append(key, value));
     form.amenities.forEach((amenity) => payload.append("amenities", String(amenity)));
@@ -361,7 +377,10 @@ export function AdminRoomManager() {
                       <p>{wardById.get(room.ward)?.name ?? `Ward #${room.ward}`}</p>
                       <p className="mt-1 text-xs">{cityById.get(room.city)?.name ?? `City #${room.city}`}</p>
                     </td>
-                    <td className="py-4 pr-5 tabular-nums text-primary">{formatAdminVnd(room.price)}</td>
+                    <td className="py-4 pr-5">
+                      <p className="tabular-nums text-primary">{formatAdminVnd(room.price)}</p>
+                      <p className="mt-1 text-xs text-secondary">Cọc {formatAdminVnd(room.deposit_amount)}</p>
+                    </td>
                     <td className="py-4 pr-5">
                       <p className="tabular-nums text-primary">{formatAdminVnd(room.estimated_commission_amount)}</p>
                       <p className="mt-1 text-xs text-secondary">{room.commission_percent}% · {formatAdminVnd(room.commission_base_amount)}</p>
@@ -568,9 +587,25 @@ function RoomFormModal({
               <Field label="Giá thuê">
                 <input className={adminInputClass} min="0" onChange={(event) => update("price", event.target.value)} required type="number" value={form.price} />
               </Field>
+              <Field label="Cọc dự kiến">
+                <input className={adminInputClass} min="0" onChange={(event) => update("deposit_amount", event.target.value)} type="number" value={form.deposit_amount} />
+              </Field>
               <Field label="Diện tích thực">
                 <input className={adminInputClass} min="0" onChange={(event) => update("actual_area", event.target.value)} required step="0.1" type="number" value={form.actual_area} />
               </Field>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <Field label="Tiền điện / kWh">
+                <input className={adminInputClass} min="0" onChange={(event) => update("electricity_price_per_kwh", event.target.value)} type="number" value={form.electricity_price_per_kwh} />
+              </Field>
+              <Field label="Tiền nước / người">
+                <input className={adminInputClass} min="0" onChange={(event) => update("water_price_per_person", event.target.value)} type="number" value={form.water_price_per_person} />
+              </Field>
+              <Field label="Phí dịch vụ / tháng">
+                <input className={adminInputClass} min="0" onChange={(event) => update("service_fee", event.target.value)} type="number" value={form.service_fee} />
+              </Field>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
               <Field label="Trạng thái">
                 <select className={adminSelectClass} onChange={(event) => update("status", event.target.value)} value={form.status}>
                   {roomStatuses.map((item) => (

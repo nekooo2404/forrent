@@ -40,7 +40,7 @@ export function AdminPanel({
   toolbar?: ReactNode;
 }>) {
   return (
-    <section className={`rounded-xl border border-primary/10 bg-white/90 p-5 shadow-soft backdrop-blur md:p-6 ${className}`}>
+    <section className={`admin-spotlight rounded-xl border border-primary/10 bg-white/90 p-5 shadow-soft backdrop-blur md:p-6 ${className}`}>
       {title || toolbar ? (
         <div className="mb-5 flex flex-col gap-3 border-b border-primary/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
           {title ? <h2 className="font-headline-sm text-xl text-primary md:text-2xl">{title}</h2> : <span />}
@@ -64,7 +64,7 @@ export function AdminStatCard({
   value: ReactNode;
 }>) {
   return (
-    <article className="rounded-xl border border-primary/10 bg-white/90 p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-primary/20">
+    <article className="admin-spotlight rounded-xl border border-primary/10 bg-white/90 p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-primary/20">
       <div className="mb-6 flex items-start justify-between gap-4">
         <p className="text-sm font-medium text-secondary">{label}</p>
         <span className="grid size-10 place-items-center rounded-md bg-surface-container text-primary">{icon}</span>

@@ -1,23 +1,33 @@
 from drf_spectacular.utils import extend_schema
+from django.contrib.auth import get_user_model
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 
 from apps.accounts.serializers import (
+    AdminUserSerializer,
     ChangePasswordSerializer,
     LoginResponseSerializer,
     LoginSerializer,
     LogoutSerializer,
+    OTPRequestSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     ProfileUpdateSerializer,
     RegisterSerializer,
     UserSummarySerializer,
 )
+from apps.common.permissions import IsAdmin
 from apps.common.responses import success_response
+from apps.common.viewsets import StandardResponseModelViewSetMixin
+
+User = get_user_model()
 
 
 class RegisterAPIView(APIView):
+    permission_classes = [AllowAny]
     throttle_scope = "register"
     serializer_class = RegisterSerializer
 
@@ -34,6 +44,7 @@ class RegisterAPIView(APIView):
 
 
 class LoginAPIView(APIView):
+    permission_classes = [AllowAny]
     throttle_scope = "login"
     serializer_class = LoginSerializer
 
@@ -60,6 +71,17 @@ class LogoutAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return success_response(message="Logout successfully.")
+
+
+class RefreshAPIView(APIView):
+    permission_classes = [AllowAny]
+    serializer_class = TokenRefreshSerializer
+
+    @extend_schema(request=TokenRefreshSerializer)
+    def post(self, request):
+        serializer = TokenRefreshSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return success_response(data=serializer.validated_data, message="Token refreshed successfully.")
 
 
 class MeAPIView(APIView):
@@ -105,7 +127,21 @@ class ChangePasswordAPIView(APIView):
         return success_response(message="Password changed successfully.")
 
 
+class OTPRequestAPIView(APIView):
+    permission_classes = [AllowAny]
+    throttle_scope = "password_reset"
+    serializer_class = OTPRequestSerializer
+
+    @extend_schema(request=OTPRequestSerializer)
+    def post(self, request):
+        serializer = OTPRequestSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return success_response(message="OTP has been sent if the request is valid.")
+
+
 class PasswordResetRequestAPIView(APIView):
+    permission_classes = [AllowAny]
     throttle_scope = "password_reset"
     serializer_class = PasswordResetRequestSerializer
 
@@ -120,6 +156,7 @@ class PasswordResetRequestAPIView(APIView):
 
 
 class PasswordResetConfirmAPIView(APIView):
+    permission_classes = [AllowAny]
     throttle_scope = "password_reset"
     serializer_class = PasswordResetConfirmSerializer
 
@@ -129,3 +166,13 @@ class PasswordResetConfirmAPIView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return success_response(message="Password reset successfully.")
+
+
+class AdminUserViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = AdminUserSerializer
+    permission_classes = [IsAdmin]
+    filterset_fields = ("role", "is_active")
+    search_fields = ("full_name", "email", "phone")
+    ordering_fields = ("created_at", "full_name", "email", "role")
+    http_method_names = ["get", "post", "patch", "head", "options"]

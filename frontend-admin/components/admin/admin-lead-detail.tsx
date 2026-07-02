@@ -6,11 +6,13 @@ import type { FormEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
 
 import {
+  adminList,
   adminMessageFrom,
   adminRequest,
   formatAdminDate,
   formatAdminDateOnly,
   formatAdminVnd,
+  type AdminUser,
   type AdminViewingRequest,
 } from "./admin-api";
 import { useAdminAuth } from "./admin-shell";
@@ -31,7 +33,6 @@ const statuses = [
   { label: "Lead mới", value: "NEW" },
   { label: "Đã liên hệ", value: "CONTACTED" },
   { label: "Đã xem phòng", value: "VIEWED" },
-  { label: "Đã chuyển vào", value: "MOVED_IN" },
   { label: "Không chuyển vào", value: "NOT_MOVED_IN" },
   { label: "Đã hủy", value: "CANCELLED" },
 ];
@@ -39,8 +40,14 @@ const statuses = [
 export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
   const { token } = useAdminAuth();
   const [lead, setLead] = useState<AdminViewingRequest | null>(null);
+  const [salers, setSalers] = useState<AdminUser[]>([]);
   const [status, setStatus] = useState("NEW");
   const [note, setNote] = useState("");
+  const [assignedTo, setAssignedTo] = useState("");
+  const [nextFollowUpAt, setNextFollowUpAt] = useState("");
+  const [appointmentDate, setAppointmentDate] = useState("");
+  const [appointmentTimeSlot, setAppointmentTimeSlot] = useState("");
+  const [moveOutNote, setMoveOutNote] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -54,6 +61,10 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
       setLead(data);
       setStatus(data.status);
       setNote(data.saler_note ?? "");
+      setAssignedTo(data.assigned_to ? String(data.assigned_to) : "");
+      setNextFollowUpAt(toDateTimeLocal(data.next_follow_up_at));
+      setAppointmentDate(data.appointment_date || data.preferred_viewing_date || "");
+      setAppointmentTimeSlot(data.appointment_time_slot || data.preferred_viewing_time_slot || "");
     } catch (loadError) {
       setError(adminMessageFrom(loadError, "Không thể tải chi tiết lead."));
     } finally {
@@ -63,6 +74,9 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
 
   useEffect(() => {
     loadLead();
+    adminList<AdminUser>("users", token, { page_size: 100, ordering: "full_name", role: "SALER" })
+      .then((response) => setSalers(response.results))
+      .catch(() => null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, token]);
 
@@ -74,7 +88,12 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
     setMessage("");
     try {
       const updated = await adminRequest<AdminViewingRequest>(`viewing-requests/${lead.id}`, token, {
-        body: JSON.stringify({ saler_note: note, status }),
+        body: JSON.stringify({
+          assigned_to: assignedTo ? Number(assignedTo) : null,
+          next_follow_up_at: nextFollowUpAt ? new Date(nextFollowUpAt).toISOString() : null,
+          saler_note: note,
+          status,
+        }),
         method: "PATCH",
       });
       setLead(updated);
@@ -99,6 +118,52 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
       await loadLead();
     } catch (confirmError) {
       setError(adminMessageFrom(confirmError, "Không thể xác nhận chuyển vào."));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleConfirmAppointment() {
+    if (!lead) return;
+    if (!appointmentDate || !appointmentTimeSlot) {
+      setError("Cần chọn ngày và khung giờ đã chốt trước khi xác nhận lịch xem.");
+      return;
+    }
+    setIsSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      const updated = await adminRequest<AdminViewingRequest>(`viewing-requests/${lead.id}/confirm-appointment`, token, {
+        body: JSON.stringify({
+          appointment_date: appointmentDate,
+          appointment_time_slot: appointmentTimeSlot,
+        }),
+        method: "POST",
+      });
+      setLead(updated);
+      setStatus(updated.status);
+      setMessage("Đã xác nhận lịch xem với ngày/khung giờ đã chốt.");
+    } catch (confirmError) {
+      setError(adminMessageFrom(confirmError, "Không thể xác nhận lịch xem."));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleMoveOut() {
+    if (!lead) return;
+    setIsSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      await adminRequest<Record<string, unknown>>(`viewing-requests/${lead.id}/move-out`, token, {
+        body: JSON.stringify({ note: moveOutNote.trim() }),
+        method: "POST",
+      });
+      setMessage("Đã kết thúc lượt thuê và mở lại phòng.");
+      await loadLead();
+    } catch (moveOutError) {
+      setError(adminMessageFrom(moveOutError, "Không thể kết thúc lượt thuê."));
     } finally {
       setIsSaving(false);
     }
@@ -168,7 +233,11 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
                 <Info label="Ngày xem mong muốn" value={formatAdminDateOnly(lead.preferred_viewing_date)} />
                 <Info label="Khung giờ" value={timeSlotLabel(lead.preferred_viewing_time_slot)} />
                 <Info label="Tạo lúc" value={formatAdminDate(lead.created_at)} />
-                <Info label="Xác nhận lúc" value={formatAdminDate(lead.confirmed_at)} />
+                <Info label="Xác nhận lịch lúc" value={formatAdminDate(lead.appointment_confirmed_at)} />
+                <Info label="Ngày đã chốt" value={formatAdminDateOnly(lead.appointment_date)} />
+                <Info label="Khung giờ đã chốt" value={timeSlotLabel(lead.appointment_time_slot)} />
+                <Info label="Saler phụ trách" value={lead.assigned_to_name || "Chưa gán"} />
+                <Info label="Follow-up" value={formatAdminDate(lead.next_follow_up_at)} />
               </div>
             </div>
           </AdminPanel>
@@ -186,11 +255,44 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
               <label className="block">
                 <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Cập nhật trạng thái</span>
                 <select className={adminSelectClass} onChange={(event) => setStatus(event.target.value)} value={status}>
+                  {lead.status === "MOVED_IN" ? <option value="MOVED_IN">Đã chuyển vào</option> : null}
                   {statuses.map((item) => (
                     <option key={item.value} value={item.value}>{item.label}</option>
                   ))}
                 </select>
               </label>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Saler phụ trách</span>
+                  <select className={adminSelectClass} onChange={(event) => setAssignedTo(event.target.value)} value={assignedTo}>
+                    <option value="">Chưa gán</option>
+                    {salers.map((saler) => (
+                      <option key={saler.id} value={saler.id}>{saler.full_name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Hẹn follow-up</span>
+                  <input className={adminInputClass} onChange={(event) => setNextFollowUpAt(event.target.value)} type="datetime-local" value={nextFollowUpAt} />
+                </label>
+              </div>
+
+              <div className="rounded-lg border border-primary/10 bg-white p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Xác nhận lịch xem riêng</p>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <input className={adminInputClass} onChange={(event) => setAppointmentDate(event.target.value)} type="date" value={appointmentDate} />
+                  <select className={adminSelectClass} onChange={(event) => setAppointmentTimeSlot(event.target.value)} value={appointmentTimeSlot}>
+                    <option value="">Chọn khung giờ</option>
+                    <option value="morning">Buổi sáng</option>
+                    <option value="afternoon">Buổi chiều</option>
+                    <option value="evening">Buổi tối</option>
+                  </select>
+                </div>
+                <button className={`${adminButtonSecondary} mt-3`} disabled={isSaving} onClick={handleConfirmAppointment} type="button">
+                  Xác nhận lịch xem
+                </button>
+              </div>
 
               <label className="block">
                 <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Ghi chú saler</span>
@@ -214,10 +316,29 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
             </form>
           </AdminPanel>
 
+          {lead.status === "MOVED_IN" ? (
+            <AdminPanel title="Kết thúc lượt thuê">
+              <div className="space-y-4">
+                <p className="text-sm leading-6 text-secondary">
+                  Khi người thuê rời phòng, thao tác này kết thúc lease hiện tại và chuyển phòng về trạng thái trống.
+                </p>
+                <textarea
+                  className={`${adminInputClass} min-h-24`}
+                  onChange={(event) => setMoveOutNote(event.target.value)}
+                  placeholder="Ghi chú kết thúc thuê"
+                  value={moveOutNote}
+                />
+                <button className={adminButtonSecondary} disabled={isSaving} onClick={handleMoveOut} type="button">
+                  Kết thúc thuê và mở lại phòng
+                </button>
+              </div>
+            </AdminPanel>
+          ) : null}
+
           <AdminPanel title="Timeline">
             <div className="space-y-4">
               <TimelineItem label="Lead được tạo" value={formatAdminDate(lead.created_at)} />
-              <TimelineItem label="Yêu cầu xem phòng xác nhận" value={formatAdminDate(lead.confirmed_at)} />
+              <TimelineItem label="Lịch xem được xác nhận" value={formatAdminDate(lead.appointment_confirmed_at)} />
               <TimelineItem label="Cập nhật gần nhất" value={formatAdminDate(lead.updated_at)} />
               <TimelineItem label="Chuyển vào" value={formatAdminDate(lead.moved_in_at)} />
             </div>
@@ -226,6 +347,14 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
       </section>
     </div>
   );
+}
+
+function toDateTimeLocal(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function ContactLine({ icon, value }: Readonly<{ icon: ReactNode; value: string }>) {

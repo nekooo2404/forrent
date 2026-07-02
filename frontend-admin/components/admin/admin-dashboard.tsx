@@ -2,15 +2,13 @@
 
 import Link from "next/link";
 import { ArrowRight, Building2, CalendarClock, CircleDollarSign, Mail, Newspaper, Sparkles, UsersRound } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
-  adminList,
   adminMessageFrom,
   adminRequest,
   formatAdminDate,
   formatAdminVnd,
-  type AdminViewingRequest,
   type CommissionSummary,
   type DashboardSummary,
 } from "./admin-api";
@@ -31,7 +29,6 @@ type DashboardState = {
   commission: CommissionSummary | null;
   error: string;
   isLoading: boolean;
-  leads: AdminViewingRequest[];
   summary: DashboardSummary | null;
 };
 
@@ -39,7 +36,6 @@ const initialState: DashboardState = {
   commission: null,
   error: "",
   isLoading: true,
-  leads: [],
   summary: null,
 };
 
@@ -53,13 +49,9 @@ export function AdminDashboard() {
     async function loadDashboard() {
       setState((current) => ({ ...current, error: "", isLoading: true }));
       try {
-        const [summary, commission, leads] = await Promise.all([
+        const [summary, commission] = await Promise.all([
           adminRequest<DashboardSummary>("dashboard/summary", token),
           adminRequest<CommissionSummary>("commissions/summary", token),
-          adminList<AdminViewingRequest>("viewing-requests", token, {
-            ordering: "-created_at",
-            page_size: 24,
-          }),
         ]);
 
         if (!isMounted) return;
@@ -67,7 +59,6 @@ export function AdminDashboard() {
           commission,
           error: "",
           isLoading: false,
-          leads: leads.results,
           summary,
         });
       } catch (error) {
@@ -86,19 +77,14 @@ export function AdminDashboard() {
     };
   }, [token]);
 
-  const statusCounts = useMemo(() => {
-    return state.leads.reduce<Record<string, number>>((accumulator, lead) => {
-      accumulator[lead.status] = (accumulator[lead.status] ?? 0) + 1;
-      return accumulator;
-    }, {});
-  }, [state.leads]);
-
   if (state.isLoading) {
     return <AdminLoadingState label="Đang tải dashboard..." />;
   }
 
   const summary = state.summary;
   const commission = state.commission;
+  const statusCounts = summary?.status_counts ?? {};
+  const totalLeadStatusCount = Math.max(summary?.total_viewing_requests ?? 0, 1);
 
   return (
     <div>
@@ -142,9 +128,9 @@ export function AdminDashboard() {
           value={formatAdminVnd(summary?.total_estimated_commission ?? 0)}
         />
         <AdminStatCard
-          caption="Doanh thu hoa hồng đã ghi nhận"
+          caption="Hoa hồng đã ghi nhận từ lead chuyển vào"
           icon={<Sparkles size={20} strokeWidth={1.8} />}
-          label="Hoa hồng đã nhận"
+          label="Hoa hồng đã ghi nhận"
           value={formatAdminVnd(summary?.total_received_commission ?? 0)}
         />
       </section>
@@ -213,7 +199,6 @@ export function AdminDashboard() {
                 ["MOVED_IN", "Đã chuyển vào"],
               ].map(([status, label]) => {
                 const count = statusCounts[status] ?? 0;
-                const total = Math.max(state.leads.length, 1);
                 return (
                   <div key={status}>
                     <div className="mb-2 flex items-center justify-between text-sm">
@@ -221,7 +206,7 @@ export function AdminDashboard() {
                       <span className="tabular-nums text-secondary">{count}</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-surface-container">
-                      <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (count / total) * 100)}%` }} />
+                      <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (count / totalLeadStatusCount) * 100)}%` }} />
                     </div>
                   </div>
                 );
@@ -279,7 +264,7 @@ export function AdminDashboard() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold tabular-nums">{formatAdminVnd(item.total_received_commission ?? 0)}</p>
-                      <p className="mt-1 text-xs text-secondary">đã nhận</p>
+                      <p className="mt-1 text-xs text-secondary">đã ghi nhận</p>
                     </div>
                   </div>
                 ))}

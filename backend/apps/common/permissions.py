@@ -2,15 +2,23 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 class IsAdminOrSaler(BasePermission):
-    message = "Only ADMIN or SALER users can access this endpoint."
+    message = "Only SALER/admin users can access this endpoint."
 
     def has_permission(self, request, view):
         user = request.user
         return bool(
             user
             and user.is_authenticated
-            and user.role in {user.Role.ADMIN, user.Role.SALER}
+            and user.role == user.Role.SALER
         )
+
+
+class IsAdmin(BasePermission):
+    message = "Only SALER/admin users can access this endpoint."
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(user and user.is_authenticated and user.role == user.Role.SALER)
 
 
 class IsTenant(BasePermission):

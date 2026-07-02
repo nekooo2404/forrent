@@ -17,7 +17,7 @@ async function proxyAdminRequest(request: Request, context: RouteContext) {
     targetUrl.searchParams.append(key, value);
   });
 
-  const headers = new Headers({ Accept: "application/json" });
+  const headers = new Headers({ Accept: "application/json", "X-Forwarded-Proto": "https" });
   const authorization = request.headers.get("authorization");
   const contentType = request.headers.get("content-type");
 

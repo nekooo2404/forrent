@@ -10,7 +10,7 @@ class RoomImageInline(admin.TabularInline):
 
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):
-    list_display = ("title", "room_type", "city", "ward", "price", "status", "estimated_commission_amount")
+    list_display = ("title", "room_type", "city", "ward", "price", "deposit_amount", "status", "estimated_commission_amount")
     list_filter = ("room_type", "status", "city", "ward")
     search_fields = ("title", "address", "description", "internal_note")
     prepopulated_fields = {"slug": ("title",)}

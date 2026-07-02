@@ -4,13 +4,14 @@ import { Check, Pencil, Plus, RefreshCw, ShieldCheck, Trash2, UserRound, X } fro
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 
-import { saveStoredUser } from "@/lib/auth-storage";
+import { authFetch, saveStoredUser } from "@/lib/auth-storage";
 import type { ApiUser } from "@/lib/api";
 
 import {
   adminList,
   adminMessageFrom,
   adminRequest,
+  adminRoleLabel,
   type AdminAmenity,
   type AdminAreaRange,
   type AdminCity,
@@ -279,7 +280,7 @@ export function AdminSettings() {
           ) : null}
 
           {activeTab === "account" ? (
-            <AccountSecurityPanel refreshUser={refreshUser} token={token} user={user} />
+            <AccountSecurityPanel refreshUser={refreshUser} user={user} />
           ) : null}
         </>
       )}
@@ -491,11 +492,9 @@ function AreaPanel(props: Readonly<{
 
 function AccountSecurityPanel({
   refreshUser,
-  token,
   user,
 }: Readonly<{
   refreshUser: () => Promise<void>;
-  token: string;
   user: ApiUser;
 }>) {
   const [profile, setProfile] = useState({
@@ -518,10 +517,9 @@ function AccountSecurityPanel({
     event.preventDefault();
     setProfileState({ error: "", loading: true, message: "" });
     try {
-      const response = await fetch("/api/auth/profile", {
+      const response = await authFetch("/api/auth/profile", {
         body: JSON.stringify({ ...profile, date_of_birth: profile.date_of_birth || null }),
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         method: "PUT",
@@ -547,10 +545,9 @@ function AccountSecurityPanel({
     }
     setPasswordState({ error: "", loading: true, message: "" });
     try {
-      const response = await fetch("/api/auth/change-password", {
+      const response = await authFetch("/api/auth/change-password", {
         body: JSON.stringify(password),
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         method: "POST",
@@ -597,7 +594,7 @@ function AccountSecurityPanel({
             </span>
             <div>
               <p className="font-semibold text-primary">{user.full_name}</p>
-              <p className="text-sm text-secondary">{user.role} · {user.email}</p>
+              <p className="text-sm text-secondary">{adminRoleLabel(user.role)} · {user.email}</p>
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -759,7 +756,7 @@ function ActiveCheckbox({ checked, onChange }: Readonly<{ checked: boolean; onCh
 
 function ActivePill({ active }: Readonly<{ active: boolean }>) {
   return (
-    <span className={`inline-flex rounded-md px-2.5 py-1 text-xs font-semibold ring-1 ${active ? "bg-[#315f45]/10 text-[#315f45] ring-[#315f45]/20" : "bg-error-container text-error ring-error/20"}`}>
+    <span className={`inline-flex rounded-md px-2.5 py-1 text-xs font-semibold ring-1 ${active ? "bg-success-container text-success ring-success/20" : "bg-error-container text-error ring-error/20"}`}>
       {active ? "Active" : "Inactive"}
     </span>
   );

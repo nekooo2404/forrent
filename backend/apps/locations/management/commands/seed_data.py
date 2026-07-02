@@ -19,14 +19,14 @@ class Command(BaseCommand):
             defaults={
                 "phone": "0900000000",
                 "full_name": "Default Admin",
-                "role": User.Role.ADMIN,
+                "role": User.Role.SALER,
                 "is_staff": True,
                 "is_superuser": True,
             },
         )
         admin.phone = "0900000000"
         admin.full_name = "Default Admin"
-        admin.role = User.Role.ADMIN
+        admin.role = User.Role.SALER
         admin.is_staff = True
         admin.is_superuser = True
         admin.set_password("Admin@123")

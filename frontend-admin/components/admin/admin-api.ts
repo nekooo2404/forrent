@@ -1,6 +1,7 @@
 "use client";
 
 import type { ApiAreaRange, ApiUser } from "@/lib/api";
+import { authFetch } from "@/lib/auth-storage";
 
 export type AdminEnvelope<T> = {
   success: boolean;
@@ -67,6 +68,10 @@ export type AdminRoom = {
   ward: number;
   address: string;
   price: string;
+  deposit_amount: string;
+  electricity_price_per_kwh: string;
+  water_price_per_person: string;
+  service_fee: string;
   actual_area: string;
   area_range: number;
   amenities: number[];
@@ -98,9 +103,14 @@ export type AdminViewingRequest = {
   email: string;
   preferred_viewing_date: string | null;
   preferred_viewing_time_slot: "morning" | "afternoon" | "evening" | "";
+  assigned_to: number | null;
+  assigned_to_name: string | null;
+  next_follow_up_at: string | null;
+  appointment_date: string | null;
+  appointment_time_slot: "morning" | "afternoon" | "evening" | "";
   status: "NEW" | "CONTACTED" | "VIEWED" | "MOVED_IN" | "NOT_MOVED_IN" | "CANCELLED" | string;
   saler_note: string;
-  confirmed_at: string;
+  appointment_confirmed_at: string | null;
   moved_in_at: string | null;
   is_commission_counted: boolean;
   estimated_commission_amount: string;
@@ -131,6 +141,26 @@ export type AdminContactMessage = {
   email: string;
   message: string;
   status: "NEW" | "READ" | "HANDLED" | string;
+  room: number | null;
+  room_title: string | null;
+  assigned_to: number | null;
+  assigned_to_name: string | null;
+  admin_note: string;
+  converted_viewing_request_id: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminUser = {
+  id: number;
+  full_name: string;
+  date_of_birth: string | null;
+  email: string;
+  phone: string;
+  role: "SALER" | "TENANT" | string;
+  is_active: boolean;
+  admin_updated_by: number | null;
+  admin_updated_by_name: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -143,6 +173,7 @@ export type DashboardSummary = {
   total_moved_in_leads: number;
   total_estimated_commission: string | number;
   total_received_commission: string | number;
+  status_counts: Record<string, number>;
   latest_leads: Array<{
     id: number;
     full_name: string;
@@ -157,6 +188,9 @@ export type DashboardSummary = {
 export type CommissionSummary = {
   total_received_commission: string | number;
   total_estimated_commission: string | number;
+  total_pending_payout: string | number;
+  total_approved_payout: string | number;
+  total_paid_payout: string | number;
   total_moved_in_leads: number;
   total_pending_leads: number;
   by_room: Array<{
@@ -173,6 +207,27 @@ export type CommissionSummary = {
     total_received_commission: string | number | null;
     lead_count: number;
   }>;
+};
+
+export type CommissionPayout = {
+  id: number;
+  viewing_request: number;
+  room_title: string;
+  tenant_name: string;
+  amount: string;
+  status: "PENDING" | "APPROVED" | "PAID" | "CANCELLED" | string;
+  approved_by: number | null;
+  approved_by_name: string | null;
+  approved_at: string | null;
+  paid_by: number | null;
+  paid_by_name: string | null;
+  paid_at: string | null;
+  cancelled_by: number | null;
+  cancelled_by_name: string | null;
+  cancelled_at: string | null;
+  note: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export type AdminContextValue = {
@@ -207,7 +262,7 @@ export function adminMessageFrom(error: unknown, fallback: string) {
 
 export async function adminRequest<T>(
   path: string,
-  token: string,
+  token: string | null | undefined,
   init: RequestInit = {},
   params?: Record<string, string | number | undefined | null>,
 ): Promise<T> {
@@ -218,11 +273,11 @@ export async function adminRequest<T>(
     }
   });
 
-  const response = await fetch(url, {
+  const response = await authFetch(url, {
     ...init,
     headers: {
       Accept: "application/json",
-      Authorization: `Bearer ${token}`,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init.body && !(init.body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
       ...init.headers,
     },
@@ -238,7 +293,7 @@ export async function adminRequest<T>(
 
 export async function adminList<T>(
   path: string,
-  token: string,
+  token: string | null | undefined,
   params?: Record<string, string | number | undefined | null>,
 ) {
   return adminRequest<AdminPaginated<T>>(path, token, {}, params);
@@ -253,6 +308,10 @@ export function formatAdminDate(value?: string | null) {
     month: "2-digit",
     year: "numeric",
   }).format(new Date(value));
+}
+
+export function adminRoleLabel(role: string) {
+  return role === "SALER" ? "Saler/Admin" : role === "TENANT" ? "Người thuê" : role;
 }
 
 export function formatAdminDateOnly(value?: string | null) {
@@ -283,16 +342,16 @@ export function leadStatusLabel(status: string) {
 }
 
 export function leadStatusTone(status: string) {
-  if (status === "MOVED_IN") return "bg-[#315f45]/10 text-[#315f45] ring-[#315f45]/20";
-  if (status === "NEW") return "bg-gold/20 text-[#7a5c00] ring-gold/30";
+  if (status === "MOVED_IN") return "bg-success-container text-success ring-success/20";
+  if (status === "NEW") return "bg-warning-container text-on-warning ring-warning/30";
   if (status === "CANCELLED" || status === "NOT_MOVED_IN") return "bg-error-container text-error ring-error/20";
   if (status === "VIEWED") return "bg-primary/10 text-primary ring-primary/10";
   return "bg-surface-container-high text-secondary ring-outline-variant/30";
 }
 
 export function roomStatusTone(status: string) {
-  if (status === "AVAILABLE") return "bg-[#315f45]/10 text-[#315f45] ring-[#315f45]/20";
-  if (status === "UNAVAILABLE") return "bg-gold/20 text-[#7a5c00] ring-gold/30";
+  if (status === "AVAILABLE") return "bg-success-container text-success ring-success/20";
+  if (status === "UNAVAILABLE") return "bg-warning-container text-on-warning ring-warning/30";
   return "bg-surface-container-high text-secondary ring-outline-variant/30";
 }
 
@@ -307,8 +366,8 @@ export function blogStatusLabel(status: string) {
 }
 
 export function blogStatusTone(status: string) {
-  if (status === "PUBLISHED") return "bg-[#315f45]/10 text-[#315f45] ring-[#315f45]/20";
-  if (status === "DRAFT") return "bg-gold/20 text-[#7a5c00] ring-gold/30";
+  if (status === "PUBLISHED") return "bg-success-container text-success ring-success/20";
+  if (status === "DRAFT") return "bg-warning-container text-on-warning ring-warning/30";
   return "bg-surface-container-high text-secondary ring-outline-variant/30";
 }
 
@@ -323,7 +382,25 @@ export function contactStatusLabel(status: string) {
 }
 
 export function contactStatusTone(status: string) {
-  if (status === "HANDLED") return "bg-[#315f45]/10 text-[#315f45] ring-[#315f45]/20";
-  if (status === "NEW") return "bg-gold/20 text-[#7a5c00] ring-gold/30";
+  if (status === "HANDLED") return "bg-success-container text-success ring-success/20";
+  if (status === "NEW") return "bg-warning-container text-on-warning ring-warning/30";
   return "bg-primary/10 text-primary ring-primary/10";
+}
+
+export function payoutStatusLabel(status: string) {
+  return (
+    {
+      PENDING: "Chờ duyệt",
+      APPROVED: "Đã duyệt",
+      PAID: "Đã trả",
+      CANCELLED: "Đã hủy",
+    }[status] ?? status
+  );
+}
+
+export function payoutStatusTone(status: string) {
+  if (status === "PAID") return "bg-success-container text-success ring-success/20";
+  if (status === "APPROVED") return "bg-primary/10 text-primary ring-primary/10";
+  if (status === "CANCELLED") return "bg-error-container text-error ring-error/20";
+  return "bg-warning-container text-on-warning ring-warning/30";
 }

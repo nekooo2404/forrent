@@ -17,9 +17,10 @@ import {
   AdminBlogBadge,
   AdminEmptyState,
   AdminInlineMessage,
-  AdminLoadingState,
   AdminPageHeader,
+  AdminPagination,
   AdminPanel,
+  AdminTableSkeleton,
   adminButtonPrimary,
   adminButtonSecondary,
   adminInputClass,
@@ -32,6 +33,7 @@ type BlogFormState = {
   short_description: string;
   slug: string;
   status: string;
+  thumbnail: File | null;
   title: string;
 };
 
@@ -41,6 +43,7 @@ const emptyForm: BlogFormState = {
   short_description: "",
   slug: "",
   status: "DRAFT",
+  thumbnail: null,
   title: "",
 };
 
@@ -50,6 +53,8 @@ const blogStatuses = [
   { label: "Đã xuất bản", value: "PUBLISHED" },
   { label: "Đã ẩn", value: "HIDDEN" },
 ];
+
+const pageSize = 20;
 
 function toDateTimeLocal(value?: string | null) {
   if (!value) return "";
@@ -73,6 +78,8 @@ function toSlug(value: string) {
 export function AdminBlogManager() {
   const { token } = useAdminAuth();
   const [blogs, setBlogs] = useState<AdminBlog[]>([]);
+  const [count, setCount] = useState(0);
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -86,17 +93,20 @@ export function AdminBlogManager() {
 
   const publishedCount = useMemo(() => blogs.filter((blog) => blog.status === "PUBLISHED").length, [blogs]);
 
-  async function loadBlogs(nextSearch = search, nextStatus = status) {
+  async function loadBlogs(nextSearch = search, nextStatus = status, nextPage = page) {
     setIsLoading(true);
     setError("");
     try {
       const response = await adminList<AdminBlog>("blogs", token, {
         ordering: "-created_at",
-        page_size: 100,
+        page: nextPage,
+        page_size: pageSize,
         search: nextSearch,
         status: nextStatus,
       });
       setBlogs(response.results);
+      setCount(response.count);
+      setPage(nextPage);
     } catch (loadError) {
       setError(adminMessageFrom(loadError, "Không thể tải danh sách blog."));
     } finally {
@@ -105,7 +115,7 @@ export function AdminBlogManager() {
   }
 
   useEffect(() => {
-    loadBlogs("", "");
+    loadBlogs("", "", 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
@@ -125,6 +135,7 @@ export function AdminBlogManager() {
       short_description: blog.short_description,
       slug: blog.slug,
       status: blog.status,
+      thumbnail: null,
       title: blog.title,
     });
     setIsModalOpen(true);
@@ -146,25 +157,25 @@ export function AdminBlogManager() {
     setError("");
     setMessage("");
 
-    const payload = {
-      content: form.content.trim(),
-      published_at: form.published_at ? new Date(form.published_at).toISOString() : null,
-      short_description: form.short_description.trim(),
-      slug: form.slug.trim(),
-      status: form.status,
-      title: form.title.trim(),
-    };
+    const payload = new FormData();
+    payload.append("content", form.content.trim());
+    if (form.published_at) payload.append("published_at", new Date(form.published_at).toISOString());
+    payload.append("short_description", form.short_description.trim());
+    payload.append("slug", form.slug.trim());
+    payload.append("status", form.status);
+    payload.append("title", form.title.trim());
+    if (form.thumbnail) payload.append("thumbnail", form.thumbnail);
 
     try {
       if (editingBlog) {
         await adminRequest<AdminBlog>(`blogs/${editingBlog.id}`, token, {
-          body: JSON.stringify(payload),
+          body: payload,
           method: "PATCH",
         });
         setMessage("Bài viết đã được cập nhật.");
       } else {
         await adminRequest<AdminBlog>("blogs", token, {
-          body: JSON.stringify(payload),
+          body: payload,
           method: "POST",
         });
         setMessage("Bài viết mới đã được tạo.");
@@ -218,9 +229,9 @@ export function AdminBlogManager() {
       />
 
       <div className="mb-5 grid gap-3 md:grid-cols-3">
-        <MiniMetric label="Tổng bài trong bộ lọc" value={blogs.length} />
-        <MiniMetric label="Đang publish" value={publishedCount} />
-        <MiniMetric label="Nháp/ẩn" value={Math.max(blogs.length - publishedCount, 0)} />
+        <MiniMetric label="Bài trong trang hiện tại" value={blogs.length} />
+        <MiniMetric label="Publish trong trang" value={publishedCount} />
+        <MiniMetric label="Nháp/ẩn trong trang" value={Math.max(blogs.length - publishedCount, 0)} />
       </div>
 
       <div className="mb-5">
@@ -233,7 +244,7 @@ export function AdminBlogManager() {
             className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row"
             onSubmit={(event) => {
               event.preventDefault();
-              loadBlogs(search, status);
+              loadBlogs(search, status, 1);
             }}
           >
             <label className="relative min-w-[260px]">
@@ -259,7 +270,7 @@ export function AdminBlogManager() {
         title="Danh sách bài viết"
       >
         {isLoading ? (
-          <AdminLoadingState />
+          <AdminTableSkeleton />
         ) : blogs.length ? (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
@@ -339,6 +350,9 @@ export function AdminBlogManager() {
             title="Chưa có bài viết"
           />
         )}
+        {!isLoading && count > pageSize ? (
+          <AdminPagination count={count} onPageChange={(nextPage) => loadBlogs(search, status, nextPage)} page={page} pageSize={pageSize} />
+        ) : null}
       </AdminPanel>
 
       {isModalOpen ? (
@@ -381,8 +395,8 @@ function BlogFormModal({
 }>) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-primary/30 p-0 backdrop-blur-sm md:items-center md:p-6">
-      <section className="max-h-[94dvh] w-full max-w-4xl overflow-y-auto rounded-t-2xl bg-[#fbf8f5] shadow-elevated md:rounded-2xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-primary/10 bg-[#fbf8f5]/95 px-5 py-4 backdrop-blur">
+      <section className="admin-modal-panel max-h-[94dvh] w-full max-w-4xl overflow-y-auto rounded-t-2xl bg-surface shadow-elevated md:rounded-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-primary/10 bg-surface/95 px-5 py-4 backdrop-blur">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-secondary">{isEditing ? "Edit article" : "New article"}</p>
             <h2 className="font-headline-sm text-2xl text-primary">{isEditing ? "Cập nhật bài viết" : "Tạo bài viết mới"}</h2>
@@ -435,9 +449,13 @@ function BlogFormModal({
 
             <section className="rounded-xl border border-primary/10 bg-white p-4 shadow-sm">
               <h3 className="mb-3 font-semibold">Ảnh thumbnail</h3>
-              <p className="text-sm leading-6 text-secondary">
-                Backend hiện dùng ImageField. Màn này không gửi URL giả để tránh lệch dữ liệu; ảnh có thể được bổ sung qua media pipeline sau.
-              </p>
+              <input
+                accept="image/*"
+                className={adminInputClass}
+                onChange={(event) => onUpdate("thumbnail", event.target.files?.[0] ?? null)}
+                type="file"
+              />
+              {form.thumbnail ? <p className="mt-2 text-xs text-secondary">{form.thumbnail.name}</p> : null}
             </section>
 
             <div className="flex flex-col gap-3 pt-2">

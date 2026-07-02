@@ -4,10 +4,25 @@ const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
 export const PUBLIC_REVALIDATE_SECONDS = 300;
 export const STATIC_LOOKUP_REVALIDATE_SECONDS = 1800;
 export const DETAIL_REVALIDATE_SECONDS = 600;
+export const AVAILABILITY_REVALIDATE_SECONDS = 30;
 const DEFAULT_API_TIMEOUT_MS = 5000;
 
 export const API_BASE_URL =
   process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL;
+
+function buildRequestHeaders(initHeaders?: HeadersInit, hasBody = false) {
+  const headers = new Headers(initHeaders);
+  if (!headers.has("Accept")) {
+    headers.set("Accept", "application/json");
+  }
+  if (typeof window === "undefined") {
+    headers.set("X-Forwarded-Proto", "https");
+  }
+  if (hasBody && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return headers;
+}
 
 export type ApiEnvelope<T> = {
   success: boolean;
@@ -63,6 +78,10 @@ export type ApiRoom = {
   ward: ApiWard;
   address: string;
   price: string;
+  deposit_amount: string;
+  electricity_price_per_kwh: string;
+  water_price_per_person: string;
+  service_fee: string;
   actual_area: string;
   area_range: ApiAreaRange;
   amenities: ApiAmenity[];
@@ -109,11 +128,18 @@ export type ApiBlog = {
   updated_at: string;
 };
 
+export type TenantBlogPayload = {
+  title: string;
+  short_description?: string;
+  content: string;
+};
+
 export type ContactPayload = {
   full_name: string;
   phone: string;
   email?: string;
   message: string;
+  room_id?: number;
 };
 
 export type ApiUser = {
@@ -133,8 +159,13 @@ export type LoginPayload = {
 
 export type LoginResponse = {
   access: string;
-  refresh: string;
+  refresh?: string;
   user: ApiUser;
+};
+
+export type TokenRefreshResponse = {
+  access: string;
+  refresh?: string;
 };
 
 export type RegisterPayload = {
@@ -144,6 +175,7 @@ export type RegisterPayload = {
   email: string;
   password: string;
   confirm_password: string;
+  otp: string;
 };
 
 export type ProfileUpdatePayload = {
@@ -151,12 +183,14 @@ export type ProfileUpdatePayload = {
   date_of_birth?: string | null;
   phone: string;
   email: string;
+  otp?: string;
 };
 
 export type ChangePasswordPayload = {
   old_password: string;
   new_password: string;
   confirm_new_password: string;
+  otp: string;
 };
 
 export type PasswordResetRequestPayload = {
@@ -164,10 +198,17 @@ export type PasswordResetRequestPayload = {
 };
 
 export type PasswordResetConfirmPayload = {
-  uid: number | string;
-  token: string;
+  email: string;
+  otp: string;
   new_password: string;
   confirm_new_password: string;
+};
+
+export type OTPPurpose = "REGISTER" | "PASSWORD_RESET" | "CHANGE_EMAIL" | "CHANGE_PASSWORD";
+
+export type OTPRequestPayload = {
+  email: string;
+  purpose: OTPPurpose;
 };
 
 export type ViewingRequestResponse = {
@@ -176,7 +217,8 @@ export type ViewingRequestResponse = {
   status: string;
   preferred_viewing_date: string | null;
   preferred_viewing_time_slot: "morning" | "afternoon" | "evening" | "";
-  confirmed_at: string;
+  created_at: string;
+  appointment_confirmed_at: string | null;
 };
 
 export type ViewingRequestPayload = {
@@ -191,8 +233,8 @@ export type MyViewingRequest = {
   status: string;
   preferred_viewing_date: string | null;
   preferred_viewing_time_slot: "morning" | "afternoon" | "evening" | "";
-  confirmed_at: string;
   created_at: string;
+  appointment_confirmed_at: string | null;
   updated_at: string;
 };
 
@@ -229,11 +271,7 @@ async function apiFetch<T>(
 
   const response = await fetch(buildUrl(path, params), {
     ...requestInit,
-    headers: {
-      Accept: "application/json",
-      ...(requestInit.body ? { "Content-Type": "application/json" } : {}),
-      ...requestInit.headers,
-    },
+    headers: buildRequestHeaders(requestInit.headers, Boolean(requestInit.body)),
     next: requestInit.next ?? (requestInit.method || requestInit.cache === "no-store" ? undefined : { revalidate: PUBLIC_REVALIDATE_SECONDS }),
     signal: requestInit.signal ?? controller.signal,
   }).finally(() => clearTimeout(timeout));
@@ -258,12 +296,13 @@ export async function getRooms(params?: {
   status?: string;
   min_price?: number | string;
   max_price?: number | string;
+  amenities?: number | string;
 }) {
-  return apiFetch<Paginated<ApiRoom>>("/api/rooms/", { next: { revalidate: PUBLIC_REVALIDATE_SECONDS } }, params);
+  return apiFetch<Paginated<ApiRoom>>("/api/rooms/", { next: { revalidate: AVAILABILITY_REVALIDATE_SECONDS } }, params);
 }
 
 export async function getRoomDetail(slug: string) {
-  return apiFetch<ApiRoomDetail>(`/api/rooms/${encodeURIComponent(slug)}/`, { next: { revalidate: DETAIL_REVALIDATE_SECONDS } });
+  return apiFetch<ApiRoomDetail>(`/api/rooms/${encodeURIComponent(slug)}/`, { next: { revalidate: AVAILABILITY_REVALIDATE_SECONDS } });
 }
 
 export async function getRoomFilters() {
@@ -276,6 +315,14 @@ export async function getBlogs(params?: { page?: number; page_size?: number; sea
 
 export async function getBlogDetail(slug: string) {
   return apiFetch<ApiBlog>(`/api/blogs/${encodeURIComponent(slug)}/`, { next: { revalidate: DETAIL_REVALIDATE_SECONDS } });
+}
+
+export async function createTenantBlog(payload: TenantBlogPayload, authorization?: string | null) {
+  return apiFetch<Pick<ApiBlog, "id" | "title" | "short_description" | "content" | "created_at">>("/api/blogs/", {
+    method: "POST",
+    headers: authorization ? { Authorization: authorization } : undefined,
+    body: JSON.stringify(payload),
+  });
 }
 
 export const getCachedBlogDetail = cache(getBlogDetail);
@@ -300,6 +347,13 @@ export async function loginTenant(payload: LoginPayload) {
   return apiFetch<LoginResponse>("/api/auth/login/", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export async function refreshTenant(refresh: string) {
+  return apiFetch<TokenRefreshResponse>("/api/auth/refresh/", {
+    method: "POST",
+    body: JSON.stringify({ refresh }),
   });
 }
 
@@ -337,6 +391,14 @@ export async function changePassword(payload: ChangePasswordPayload, authorizati
 export async function requestPasswordReset(payload: PasswordResetRequestPayload) {
   return apiFetch<Record<string, never>>("/api/auth/password-reset/", {
     method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function requestOtp(payload: OTPRequestPayload, authorization?: string | null) {
+  return apiFetch<Record<string, never>>("/api/auth/otp/", {
+    method: "POST",
+    headers: authorization ? { Authorization: authorization } : undefined,
     body: JSON.stringify(payload),
   });
 }
@@ -379,6 +441,14 @@ export function formatVnd(value: string | number, suffix = "VNĐ") {
     return `${value} ${suffix}`;
   }
   return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(numeric)} ${suffix}`;
+}
+
+export function formatOptionalVnd(value?: string | number | null, fallback = "Xác nhận khi tư vấn") {
+  const numeric = Number(value ?? 0);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return fallback;
+  }
+  return formatVnd(numeric);
 }
 
 export function formatArea(value: string | number) {

@@ -11,7 +11,7 @@ from apps.locations.models import Amenity, AreaRange, City, Ward
 
 class RoomQuerySet(models.QuerySet):
     def public(self):
-        return self.exclude(status=Room.Status.HIDDEN)
+        return self.filter(status=Room.Status.AVAILABLE)
 
     def available(self):
         return self.filter(status=Room.Status.AVAILABLE)
@@ -35,6 +35,10 @@ class Room(TimeStampedModel):
     ward = models.ForeignKey(Ward, on_delete=models.PROTECT, related_name="rooms")
     address = models.CharField(max_length=500)
     price = models.DecimalField(max_digits=14, decimal_places=2, validators=[MinValueValidator(Decimal("0"))])
+    deposit_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
+    electricity_price_per_kwh = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
+    water_price_per_person = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
+    service_fee = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
     actual_area = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(Decimal("0"))])
     area_range = models.ForeignKey(AreaRange, on_delete=models.PROTECT, related_name="rooms")
     amenities = models.ManyToManyField(Amenity, related_name="rooms", blank=True)

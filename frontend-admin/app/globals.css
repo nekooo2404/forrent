@@ -4,6 +4,14 @@
 
 :root {
   color-scheme: light;
+  --motion-fast: 160ms;
+  --motion-base: 250ms;
+  --motion-medium: 400ms;
+  --motion-slow: 600ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 * {
@@ -19,8 +27,8 @@ body {
 }
 
 ::selection {
-  background: #1c1b1b;
-  color: #f4f0ef;
+  background: #2563eb;
+  color: #ffffff;
 }
 
 button,
@@ -29,11 +37,96 @@ input {
   -webkit-tap-highlight-color: transparent;
 }
 
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root) {
+  animation: admin-page-out var(--motion-fast) var(--ease-out) both;
+}
+
+::view-transition-new(root) {
+  animation: admin-page-in var(--motion-medium) var(--ease-smooth) both;
+}
+
+@keyframes admin-page-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes admin-page-out {
+  to {
+    opacity: 0;
+    transform: translate3d(0, -6px, 0);
+  }
+}
+
+@keyframes admin-modal-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.admin-modal-panel {
+  animation: admin-modal-in var(--motion-medium) var(--ease-smooth) both;
+}
+
+.admin-motion-card {
+  transition:
+    transform var(--motion-fast) var(--ease-smooth),
+    border-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
+}
+
+.admin-motion-card:hover {
+  transform: translate3d(0, -2px, 0);
+}
+
+.admin-spotlight {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.admin-spotlight::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(22rem circle at 18% 0%, rgba(37, 99, 235, 0.14), transparent 44%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.5), transparent 42%);
+  transition: opacity var(--motion-base) var(--ease-smooth);
+}
+
+.admin-spotlight:hover::before,
+.admin-spotlight:focus-within::before {
+  opacity: 1;
+}
+
+.admin-spotlight > * {
+  position: relative;
+  z-index: 1;
+}
+
 .admin-surface {
   background:
-    radial-gradient(circle at 12% 8%, rgba(212, 175, 55, 0.12), transparent 28rem),
-    radial-gradient(circle at 82% 16%, rgba(28, 27, 27, 0.08), transparent 24rem),
-    linear-gradient(180deg, #fbf8f5 0%, #f3efec 100%);
+    radial-gradient(circle at 12% 8%, rgba(37, 99, 235, 0.06), transparent 28rem),
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
 }
 
 .admin-surface::before {
@@ -42,7 +135,7 @@ input {
   z-index: 0;
   pointer-events: none;
   content: "";
-  opacity: 0.32;
+  opacity: 0.16;
   background-image:
     linear-gradient(rgba(28, 27, 27, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(28, 27, 27, 0.035) 1px, transparent 1px);
@@ -52,4 +145,30 @@ input {
 .admin-surface > * {
   position: relative;
   z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  .admin-modal-panel {
+    animation: none;
+  }
+
+  .admin-motion-card,
+  .admin-spotlight::before {
+    transition: none;
+  }
+
+  .admin-motion-card:hover {
+    transform: none;
+  }
 }

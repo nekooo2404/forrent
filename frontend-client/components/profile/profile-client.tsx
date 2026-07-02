@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle, CalendarClock, CheckCircle, House, KeyRound, LoaderCircle, Lock, MapPin, Medal, UserRound } from "lucide-react";
+import { AlertCircle, CalendarClock, CheckCircle, House, LoaderCircle, Lock, MapPin, UserRound } from "lucide-react";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 
-import { clearAuthSession, getStoredAccessToken, saveStoredUser } from "@/lib/auth-storage";
+import { authFetch, clearAuthSession, getStoredAccessToken, refreshStoredAuthSession, saveStoredUser } from "@/lib/auth-storage";
 import { formatDate, formatVnd, type ApiUser, type MyViewingRequest } from "@/lib/api";
 
 type ApiResponse<T> = {
@@ -20,12 +20,7 @@ type ProfileFields = {
   dateOfBirth: string;
   phone: string;
   email: string;
-};
-
-type ChangePasswordFields = {
-  oldPassword: string;
-  newPassword: string;
-  confirmNewPassword: string;
+  otp: string;
 };
 
 function messageFrom(payload: ApiResponse<unknown>, fallback: string) {
@@ -38,7 +33,7 @@ function messageFrom(payload: ApiResponse<unknown>, fallback: string) {
 }
 
 function emptyProfileFields(): ProfileFields {
-  return { fullName: "", dateOfBirth: "", phone: "", email: "" };
+  return { fullName: "", dateOfBirth: "", phone: "", email: "", otp: "" };
 }
 
 function viewingStatusLabel(status: string) {
@@ -55,8 +50,8 @@ function viewingStatusLabel(status: string) {
 }
 
 function viewingStatusClass(status: string) {
-  if (status === "MOVED_IN") return "border-[#315f45]/20 bg-[#315f45]/10 text-[#315f45]";
-  if (status === "NEW") return "border-[#D4AF37]/25 bg-[#D4AF37]/15 text-[#7a5c00]";
+  if (status === "MOVED_IN") return "border-success/20 bg-success-container text-success";
+  if (status === "NEW") return "border-warning/25 bg-warning-container text-on-warning";
   if (status === "CANCELLED" || status === "NOT_MOVED_IN") return "border-error/20 bg-error-container/40 text-error";
   return "border-outline-variant/25 bg-surface-container text-primary";
 }
@@ -75,30 +70,20 @@ function timeSlotLabel(value: MyViewingRequest["preferred_viewing_time_slot"]) {
 export function ProfileClient() {
   const [user, setUser] = useState<ApiUser | null>(null);
   const [profileFields, setProfileFields] = useState<ProfileFields>(emptyProfileFields);
-  const [passwordFields, setPasswordFields] = useState<ChangePasswordFields>({
-    oldPassword: "",
-    newPassword: "",
-    confirmNewPassword: "",
-  });
-  const [resetEmail, setResetEmail] = useState("");
   const [viewingRequests, setViewingRequests] = useState<MyViewingRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [profileState, setProfileState] = useState({ loading: false, message: "", error: "" });
-  const [passwordState, setPasswordState] = useState({ loading: false, message: "", error: "" });
-  const [resetState, setResetState] = useState({ loading: false, message: "", error: "" });
 
   useEffect(() => {
     async function loadProfile() {
-      const accessToken = getStoredAccessToken();
+      const accessToken = getStoredAccessToken() || (await refreshStoredAuthSession());
       if (!accessToken) {
         setIsLoading(false);
         return;
       }
 
       try {
-        const response = await fetch("/api/auth/me", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        const response = await authFetch("/api/auth/me");
         const payload = (await response.json()) as ApiResponse<ApiUser>;
         if (!response.ok || !payload.success || !payload.data) {
           clearAuthSession();
@@ -112,12 +97,10 @@ export function ProfileClient() {
           dateOfBirth: payload.data.date_of_birth ?? "",
           phone: payload.data.phone,
           email: payload.data.email,
+          otp: "",
         });
-        setResetEmail(payload.data.email);
 
-        const requestsResponse = await fetch("/api/viewing-requests/my", {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        const requestsResponse = await authFetch("/api/viewing-requests/my");
         const requestsPayload = (await requestsResponse.json()) as ApiResponse<{ results: MyViewingRequest[] }>;
         if (requestsResponse.ok && requestsPayload.success && requestsPayload.data?.results) {
           setViewingRequests(requestsPayload.data.results);
@@ -134,22 +117,22 @@ export function ProfileClient() {
 
   async function handleProfileSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const accessToken = getStoredAccessToken();
+    const accessToken = getStoredAccessToken() || (await refreshStoredAuthSession());
     if (!accessToken) return;
 
     setProfileState({ loading: true, message: "", error: "" });
     try {
-      const response = await fetch("/api/auth/profile", {
+      const response = await authFetch("/api/auth/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           full_name: profileFields.fullName.trim(),
           date_of_birth: profileFields.dateOfBirth || null,
           phone: profileFields.phone.trim(),
           email: profileFields.email.trim(),
+          otp: profileFields.otp.trim(),
         }),
       });
       const payload = (await response.json()) as ApiResponse<ApiUser>;
@@ -166,62 +149,25 @@ export function ProfileClient() {
     }
   }
 
-  async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const accessToken = getStoredAccessToken();
-    if (!accessToken) return;
-
-    if (passwordFields.newPassword !== passwordFields.confirmNewPassword) {
-      setPasswordState({ loading: false, message: "", error: "Mật khẩu xác nhận không khớp." });
-      return;
-    }
-
-    setPasswordState({ loading: true, message: "", error: "" });
-    try {
-      const response = await fetch("/api/auth/change-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          old_password: passwordFields.oldPassword,
-          new_password: passwordFields.newPassword,
-          confirm_new_password: passwordFields.confirmNewPassword,
-        }),
-      });
-      const payload = (await response.json()) as ApiResponse<Record<string, never>>;
-      if (!response.ok || !payload.success) {
-        setPasswordState({ loading: false, message: "", error: messageFrom(payload, "Không thể đổi mật khẩu.") });
-        return;
-      }
-
-      setPasswordFields({ oldPassword: "", newPassword: "", confirmNewPassword: "" });
-      setPasswordState({ loading: false, message: "Mật khẩu đã được đổi thành công.", error: "" });
-    } catch {
-      setPasswordState({ loading: false, message: "", error: "Không thể kết nối hệ thống đổi mật khẩu." });
+  async function sendOtp(email: string) {
+    const response = await authFetch("/api/auth/otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim(), purpose: "CHANGE_EMAIL" }),
+    });
+    const payload = (await response.json()) as ApiResponse<Record<string, never>>;
+    if (!response.ok || !payload.success) {
+      throw new Error(messageFrom(payload, "Không thể gửi OTP."));
     }
   }
 
-  async function handleResetSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setResetState({ loading: true, message: "", error: "" });
-
+  async function handleSendProfileOtp() {
+    setProfileState({ loading: true, message: "", error: "" });
     try {
-      const response = await fetch("/api/auth/password-reset", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: resetEmail.trim() }),
-      });
-      const payload = (await response.json()) as ApiResponse<Record<string, never>>;
-      if (!response.ok || !payload.success) {
-        setResetState({ loading: false, message: "", error: messageFrom(payload, "Không thể gửi email đặt lại mật khẩu.") });
-        return;
-      }
-
-      setResetState({ loading: false, message: "Nếu email tồn tại, hướng dẫn đặt lại mật khẩu đã được gửi.", error: "" });
-    } catch {
-      setResetState({ loading: false, message: "", error: "Không thể kết nối hệ thống quên mật khẩu." });
+      await sendOtp(profileFields.email);
+      setProfileState({ loading: false, message: "Mã OTP đã được gửi tới email mới.", error: "" });
+    } catch (error) {
+      setProfileState({ loading: false, message: "", error: error instanceof Error ? error.message : "Không thể gửi OTP." });
     }
   }
 
@@ -250,6 +196,8 @@ export function ProfileClient() {
     );
   }
 
+  const emailChanged = profileFields.email.trim().toLowerCase() !== user.email.toLowerCase();
+
   return (
     <div className="mx-auto max-w-[1000px] px-margin-mobile py-24 md:px-margin-desktop">
       <section className="mb-16 flex flex-col items-center gap-8 md:flex-row md:items-end">
@@ -259,11 +207,11 @@ export function ProfileClient() {
           </div>
         </div>
         <div className="flex-1 pb-4 text-center md:text-left">
-          <span className="mb-2 block font-label-caps text-label-caps text-on-surface-variant">Thành viên cao cấp</span>
+          <span className="mb-2 block font-label-caps text-label-caps text-on-surface-variant">Tài khoản khách thuê</span>
           <h1 className="mb-2 font-display-lg-mobile text-display-lg-mobile text-primary md:font-display-lg md:text-display-lg">
             {user.full_name}
           </h1>
-          <p className="font-body-lg text-body-lg italic text-on-surface-variant/70">Nơi phong cách gặp gỡ sự tinh tế.</p>
+          <p className="font-body-lg text-body-lg text-on-surface-variant/70">Theo dõi lịch xem phòng, cập nhật liên hệ và nhận lại thông tin từ saler.</p>
         </div>
       </section>
 
@@ -276,14 +224,30 @@ export function ProfileClient() {
 
           <form className="space-y-8" onSubmit={handleProfileSubmit}>
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-              <ProfileInput label="Họ và tên" value={profileFields.fullName} onChange={(value) => setProfileFields((current) => ({ ...current, fullName: value }))} />
+              <ProfileInput label="Họ và tên" required value={profileFields.fullName} onChange={(value) => setProfileFields((current) => ({ ...current, fullName: value }))} />
               <ProfileInput label="Ngày sinh" type="date" value={profileFields.dateOfBirth} onChange={(value) => setProfileFields((current) => ({ ...current, dateOfBirth: value }))} />
-              <ProfileInput label="Số điện thoại" type="tel" value={profileFields.phone} onChange={(value) => setProfileFields((current) => ({ ...current, phone: value }))} />
-              <ProfileInput label="Địa chỉ email" type="email" value={profileFields.email} onChange={(value) => setProfileFields((current) => ({ ...current, email: value }))} />
+              <ProfileInput label="Số điện thoại" required type="tel" value={profileFields.phone} onChange={(value) => setProfileFields((current) => ({ ...current, phone: value }))} />
+              <ProfileInput label="Địa chỉ email" required type="email" value={profileFields.email} onChange={(value) => setProfileFields((current) => ({ ...current, email: value }))} />
+              <ProfileInput
+                disabled={!emailChanged}
+                helperText="Chỉ nhập OTP khi đổi sang email mới."
+                label="Mã OTP khi đổi email"
+                required={emailChanged}
+                value={profileFields.otp}
+                onChange={(value) => setProfileFields((current) => ({ ...current, otp: value }))}
+              />
             </div>
             <StatusMessage message={profileState.message} error={profileState.error} />
             <button
-              className="inline-flex items-center justify-center gap-2 rounded bg-primary px-10 py-4 font-button text-button text-on-primary transition-all hover:bg-secondary disabled:cursor-wait disabled:opacity-70"
+              className="premium-button mr-3 inline-flex items-center justify-center gap-2 rounded border border-primary px-6 py-4 font-button text-button text-primary hover:bg-primary hover:text-on-primary disabled:cursor-wait disabled:opacity-70"
+              disabled={profileState.loading || !emailChanged}
+              onClick={handleSendProfileOtp}
+              type="button"
+            >
+              Gửi OTP email
+            </button>
+            <button
+              className="premium-button inline-flex items-center justify-center gap-2 rounded bg-primary px-10 py-4 font-button text-button text-on-primary hover:bg-secondary disabled:cursor-wait disabled:opacity-70"
               disabled={profileState.loading}
               type="submit"
             >
@@ -295,21 +259,11 @@ export function ProfileClient() {
 
         <aside className="space-y-6 lg:col-span-4">
           <div className="rounded-lg bg-primary p-8 text-on-primary shadow-soft">
-            <span className="mb-6 block font-label-caps text-label-caps opacity-60">Tài khoản Reserve</span>
-            <div className="space-y-6">
-              <div>
-                <div className="mb-1 text-2xl font-light">Hạng Bạch Kim</div>
-                <div className="h-1 w-full bg-white/20">
-                  <div className="h-full w-3/4 bg-white" />
-                </div>
-              </div>
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="font-label-caps text-[10px] opacity-60">Số điểm tích lũy</p>
-                  <p className="text-xl font-semibold">12,450 pts</p>
-                </div>
-                <Medal size={34} strokeWidth={1.8} />
-              </div>
+            <span className="mb-6 block font-label-caps text-label-caps opacity-60">Thông tin tài khoản</span>
+            <div className="space-y-4 text-sm">
+              <p><span className="opacity-60">Vai trò:</span> Người thuê</p>
+              <p><span className="opacity-60">Email:</span> {user.email}</p>
+              <p><span className="opacity-60">Điện thoại:</span> {user.phone}</p>
             </div>
           </div>
 
@@ -327,17 +281,6 @@ export function ProfileClient() {
           </div>
 
           <ViewingRequestsSummary requests={viewingRequests} />
-
-          <PasswordTools
-            passwordFields={passwordFields}
-            passwordState={passwordState}
-            resetEmail={resetEmail}
-            resetState={resetState}
-            onPasswordChange={setPasswordFields}
-            onPasswordSubmit={handlePasswordSubmit}
-            onResetEmailChange={setResetEmail}
-            onResetSubmit={handleResetSubmit}
-          />
         </aside>
       </div>
     </div>
@@ -375,7 +318,7 @@ function ViewingRequestsSummary({ requests }: Readonly<{ requests: MyViewingRequ
                 </span>
               </div>
               <div className="grid gap-2 border-t border-outline-variant/15 pt-3 text-xs text-on-surface-variant">
-                <span>{formatDate(request.preferred_viewing_date || request.confirmed_at)} · {timeSlotLabel(request.preferred_viewing_time_slot)}</span>
+                <span>{formatDate(request.preferred_viewing_date || request.created_at)} · {timeSlotLabel(request.preferred_viewing_time_slot)}</span>
                 <span className="font-semibold text-primary">{formatVnd(request.room.price, "VNĐ")}/tháng</span>
               </div>
             </Link>
@@ -389,8 +332,9 @@ function ViewingRequestsSummary({ requests }: Readonly<{ requests: MyViewingRequ
       ) : (
         <div className="rounded-md border border-dashed border-outline-variant/30 bg-surface-container-low/60 p-5">
           <p className="font-body-md text-sm text-primary">Bạn chưa có yêu cầu xem phòng nào.</p>
-          <Link className="mt-4 inline-flex font-button text-button text-primary transition hover:text-gold" href="/rooms">
-            Khám phá danh sách phòng
+          <p className="mt-2 text-sm text-on-surface-variant">Chọn phòng còn trống và đặt lịch, saler sẽ gọi lại để xác nhận giờ xem.</p>
+          <Link className="premium-button mt-4 inline-flex rounded bg-primary px-4 py-2 font-button text-button text-on-primary" href="/rooms">
+            Tìm phòng để đặt lịch
           </Link>
         </div>
       )}
@@ -399,13 +343,19 @@ function ViewingRequestsSummary({ requests }: Readonly<{ requests: MyViewingRequ
 }
 
 function ProfileInput({
+  disabled = false,
+  helperText,
   label,
   onChange,
+  required = false,
   type = "text",
   value,
 }: Readonly<{
+  disabled?: boolean;
+  helperText?: string;
   label: string;
   onChange: (value: string) => void;
+  required?: boolean;
   type?: string;
   value: string;
 }>) {
@@ -413,12 +363,14 @@ function ProfileInput({
     <label className="space-y-2">
       <span className="font-label-caps text-label-caps text-on-surface-variant">{label}</span>
       <input
-        className="w-full border-0 border-b border-outline/20 bg-transparent px-0 py-3 font-body-md text-primary transition-all focus:border-primary focus:ring-0"
+        className="w-full border-0 border-b border-outline/20 bg-transparent px-0 py-3 font-body-md text-primary transition-colors disabled:cursor-not-allowed disabled:text-on-surface-variant/50 focus:border-primary focus:ring-0"
+        disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        required
+        required={required}
         type={type}
         value={value}
       />
+      {helperText ? <span className="block text-xs leading-5 text-on-surface-variant">{helperText}</span> : null}
     </label>
   );
 }
@@ -427,90 +379,9 @@ function StatusMessage({ error, message }: Readonly<{ error: string; message: st
   if (!error && !message) return null;
   const isError = Boolean(error);
   return (
-    <div className={`flex gap-3 border p-4 ${isError ? "border-error bg-error-container/30 text-error" : "border-[#4a7c59] bg-[#4a7c59]/10 text-[#4a7c59]"}`}>
+    <div className={`flex gap-3 border p-4 ${isError ? "border-error bg-error-container/30 text-error" : "border-success/30 bg-success-container/40 text-success"}`}>
       {isError ? <AlertCircle size={18} strokeWidth={1.8} /> : <CheckCircle size={18} strokeWidth={1.8} />}
       <p className="font-body-md text-sm">{error || message}</p>
     </div>
-  );
-}
-
-function PasswordTools({
-  onPasswordChange,
-  onPasswordSubmit,
-  onResetEmailChange,
-  onResetSubmit,
-  passwordFields,
-  passwordState,
-  resetEmail,
-  resetState,
-}: Readonly<{
-  onPasswordChange: (value: ChangePasswordFields) => void;
-  onPasswordSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onResetEmailChange: (value: string) => void;
-  onResetSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  passwordFields: ChangePasswordFields;
-  passwordState: { loading: boolean; message: string; error: string };
-  resetEmail: string;
-  resetState: { loading: boolean; message: string; error: string };
-}>) {
-  return (
-    <div className="rounded-lg bg-surface-container-lowest p-8 shadow-soft">
-      <div className="mb-6 flex items-center gap-3">
-        <KeyRound size={22} strokeWidth={1.8} />
-        <h3 className="font-headline-sm text-headline-sm text-primary">Bảo mật</h3>
-      </div>
-
-      <form className="space-y-4 border-b border-outline-variant/20 pb-8" onSubmit={onPasswordSubmit}>
-        <h4 className="font-label-caps text-label-caps text-on-surface-variant">Đổi mật khẩu</h4>
-        <SecurityInput label="Mật khẩu hiện tại" value={passwordFields.oldPassword} onChange={(oldPassword) => onPasswordChange({ ...passwordFields, oldPassword })} />
-        <SecurityInput label="Mật khẩu mới" value={passwordFields.newPassword} onChange={(newPassword) => onPasswordChange({ ...passwordFields, newPassword })} />
-        <SecurityInput label="Xác nhận mật khẩu mới" value={passwordFields.confirmNewPassword} onChange={(confirmNewPassword) => onPasswordChange({ ...passwordFields, confirmNewPassword })} />
-        <StatusMessage message={passwordState.message} error={passwordState.error} />
-        <button
-          className="w-full rounded border border-primary px-6 py-3 font-button text-button text-primary transition-colors hover:bg-primary hover:text-on-primary disabled:cursor-wait disabled:opacity-70"
-          disabled={passwordState.loading}
-          type="submit"
-        >
-          {passwordState.loading ? "Đang xử lý..." : "Đổi mật khẩu"}
-        </button>
-      </form>
-
-      <form className="space-y-4 pt-8" onSubmit={onResetSubmit}>
-        <h4 className="font-label-caps text-label-caps text-on-surface-variant">Quên mật khẩu</h4>
-        <p className="font-body-md text-sm text-on-surface-variant">
-          Gửi liên kết đặt lại mật khẩu tới email của tài khoản.
-        </p>
-        <SecurityInput label="Email nhận liên kết" type="email" value={resetEmail} onChange={onResetEmailChange} />
-        <StatusMessage message={resetState.message} error={resetState.error} />
-        <button
-          className="w-full rounded bg-primary px-6 py-3 font-button text-button text-on-primary transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-70"
-          disabled={resetState.loading}
-          type="submit"
-        >
-          {resetState.loading ? "Đang gửi..." : "Gửi email đặt lại"}
-        </button>
-      </form>
-    </div>
-  );
-}
-
-function SecurityInput({
-  label,
-  onChange,
-  type = "password",
-  value,
-}: Readonly<{ label: string; onChange: (value: string) => void; type?: string; value: string }>) {
-  return (
-    <label className="block">
-      <span className="mb-2 block font-body-md text-sm text-on-surface-variant">{label}</span>
-      <input
-        className="w-full border border-outline-variant/40 bg-transparent px-3 py-3 font-body-md text-primary transition-colors focus:border-primary focus:ring-0"
-        minLength={type === "password" ? 8 : undefined}
-        onChange={(event) => onChange(event.target.value)}
-        required
-        type={type}
-        value={value}
-      />
-    </label>
   );
 }

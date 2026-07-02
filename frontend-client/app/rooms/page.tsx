@@ -4,15 +4,16 @@ import Link from "next/link";
 import {
   Bath,
   BedDouble,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Grid3X3,
-  Heart,
-  List,
+  Droplets,
   Minus,
   Plus,
+  ReceiptText,
   Ruler,
+  Search,
+  ShieldCheck,
+  Zap,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -20,6 +21,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import {
   formatArea,
+  formatOptionalVnd,
   formatVnd,
   getCachedRoomFilters,
   getRooms,
@@ -31,15 +33,9 @@ import {
 } from "@/lib/api";
 
 export const metadata: Metadata = {
-  title: "Danh sách phòng - Aurelian Reserve",
-  description: "Danh sách căn hộ, loft, penthouse và nhà phố tuyển chọn từ Aurelian Reserve.",
+  title: "Danh sách phòng - ForRent",
+  description: "Danh sách phòng thuê theo tháng, lọc theo khu vực, giá, diện tích, loại phòng và tiện ích.",
 };
-
-const fallbackImages = [
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuCoHAurORyjFBIsGkdNouVfsovQFRN0riQATCfTpDbSRs15bgcSoIFtZrKi2L50us8tog8haNpV_PJpqG8si0-9k3LPEREeyeSedHYrOw8mtKuuQit8Al4tPuIeQJEAmBjcM2LoEUaTPXxnXK8RxfeH-qgSe8RazbVu6dG1L2QWqrdKLLYJOXQpknI4qW2xaBGQulRFdNwvv3hkR3S2Gr3KGJQ4g_7ky79CGvVC6EnCUFguGhhvjVZMlPoBwOA9wFICXdWGQ9l3kDoQ",
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuA7B0-2A1Iz1QFqZzzxKRgA5Decp_AqTNfs7s8OciPkWuoCiPuXKIoN0uK21M54TCTpvjBD5yHZDxs7fWne9Vw1Zq6i_gHaNh0IMUEiBR8oRM3wBhD0kGc7XsG6wpnbtoJD8qCsX59vPb_olmCBKESDShCz7xmW6J4q1x9IcKdR2L7zFiqHntrKXK_nZXJHm_mX1EmdwpgMXp6i7NyIhX3xGSCKB18e18S6znVWYTS7YG2ugDw76LDh9Ppnjo_Yah0s2GSYeDJuUB3Q",
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuDmYl0t3OUd8hwt_ThM3Mbrksifnw89OeRr3koLwbiDjUmpAlpWi7nHEGYTv9oZt0680YdmXSAJNP0FbmekUqCqUvYFPvxhYAUXL1zmGD8RpOO6r-HPVVI1du3K7ZxaxQSo78_fBWUchbATYS3jYvlVU83NObwW9FC85O3K76Q94s8e5Rct34GHXCdBBX-lGRS11N0iGiOwupVVZfQOhGDTX0OQOA4qFrGOL-4QyJntTyOAEDWTRH6Tg1PvuW7p6-TGwmN6fCQJx_gz",
-];
 
 type RoomCardView = {
   id: number | string;
@@ -48,13 +44,17 @@ type RoomCardView = {
   location: string;
   price: string;
   period: string;
+  deposit: string;
+  electricity: string;
+  water: string;
+  serviceFee: string;
   primaryMeta: string;
   secondaryMeta: string;
   area: string;
   status: string;
   unavailable: boolean;
-  favorite: boolean;
-  image: string;
+  featuredAmenities: string[];
+  image: string | null;
   alt: string;
 };
 
@@ -65,57 +65,6 @@ type RoomsPageProps = {
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
-
-const fallbackRooms: RoomCardView[] = [
-  {
-    id: "fallback-mercer",
-    slug: undefined,
-    title: "The Mercer Loft",
-    location: "Khu nghệ thuật, Trung tâm",
-    price: "130.000.000 VNĐ",
-    period: "/ tháng",
-    primaryMeta: "Loft",
-    secondaryMeta: "2 tiện ích",
-    area: "135 m²",
-    status: "Trống",
-    unavailable: false,
-    favorite: false,
-    image: fallbackImages[0],
-    alt: "Phòng khách loft sang trọng với cửa sổ cao, gạch trắng và nội thất kem than tinh tế",
-  },
-  {
-    id: "fallback-astor",
-    slug: undefined,
-    title: "Astor Penthouse",
-    location: "Khu tài chính, Trung tâm",
-    price: "300.000.000 VNĐ",
-    period: "/ tháng",
-    primaryMeta: "Penthouse",
-    secondaryMeta: "4 tiện ích",
-    area: "297 m²",
-    status: "Đã cho thuê",
-    unavailable: true,
-    favorite: false,
-    image: fallbackImages[1],
-    alt: "Bếp penthouse hiện đại với mặt đá tối, tủ trắng và điểm nhấn kim loại ấm",
-  },
-  {
-    id: "fallback-gramercy",
-    slug: undefined,
-    title: "The Gramercy Townhome",
-    location: "Khu Tây, Trung tâm",
-    price: "212.500.000 VNĐ",
-    period: "/ tháng",
-    primaryMeta: "Nhà nguyên căn",
-    secondaryMeta: "5 tiện ích",
-    area: "260 m²",
-    status: "Trống",
-    unavailable: false,
-    favorite: true,
-    image: fallbackImages[2],
-    alt: "Phòng ngủ master trong nhà phố cao cấp với giường lớn, đèn chùm hiện đại và bảng màu trung tính",
-  },
-];
 
 const fallbackFilters: RoomFilters = {
   cities: [],
@@ -128,13 +77,11 @@ const fallbackFilters: RoomFilters = {
     { value: "HOUSE", label: "Nhà nguyên căn" },
   ],
   statuses: [
-    { value: "AVAILABLE", label: "Available" },
-    { value: "UNAVAILABLE", label: "Unavailable" },
+    { value: "AVAILABLE", label: "Còn trống" },
   ],
 };
 
-function mapRoom(room: ApiRoom, index: number): RoomCardView {
-  const image = resolveMediaUrl(room.thumbnail_url) ?? fallbackImages[index % fallbackImages.length];
+function mapRoom(room: ApiRoom): RoomCardView {
   const amenitiesCount = room.amenities?.length ?? 0;
 
   return {
@@ -144,15 +91,37 @@ function mapRoom(room: ApiRoom, index: number): RoomCardView {
     location: [room.ward?.name, room.city?.name].filter(Boolean).join(", ") || room.address,
     price: formatVnd(room.price),
     period: "/ tháng",
+    deposit: formatOptionalVnd(room.deposit_amount),
+    electricity: formatOptionalVnd(room.electricity_price_per_kwh),
+    water: formatOptionalVnd(room.water_price_per_person),
+    serviceFee: formatOptionalVnd(room.service_fee),
     primaryMeta: roomTypeLabel(room.room_type),
     secondaryMeta: amenitiesCount ? `${amenitiesCount} tiện ích` : "Tiện ích cơ bản",
     area: formatArea(room.actual_area),
     status: roomStatusLabel(room.status),
     unavailable: room.status !== "AVAILABLE",
-    favorite: false,
-    image,
+    featuredAmenities: room.amenities.slice(0, 3).map((amenity) => amenity.name),
+    image: resolveMediaUrl(room.thumbnail_url),
     alt: room.short_description || room.title,
   };
+}
+
+function joinedParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value.filter(Boolean).join(",") : value;
+}
+
+function roomsHref(params: Record<string, string | string[] | undefined>, nextPage: number) {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (key === "page" || value === undefined || value === "") return;
+    if (Array.isArray(value)) {
+      value.filter(Boolean).forEach((item) => search.append(key, item));
+      return;
+    }
+    search.set(key, value);
+  });
+  search.set("page", String(nextPage));
+  return `/rooms?${search.toString()}`;
 }
 
 export default async function RoomsPage({ searchParams }: RoomsPageProps) {
@@ -166,12 +135,15 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   const status = firstParam(params.status);
   const minPrice = firstParam(params.min_price);
   const maxPrice = firstParam(params.max_price);
+  const ordering = firstParam(params.ordering) || "-created_at";
+  const amenities = joinedParam(params.amenities);
+  const currentPage = Math.max(1, Number(page) || 1);
 
   const [roomsResponse, filtersResponse] = await Promise.all([
     getRooms({
-      page: page ? Number(page) : undefined,
+      page: currentPage,
       page_size: 12,
-      ordering: "-created_at",
+      ordering,
       search,
       city,
       ward,
@@ -180,63 +152,51 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
       status,
       min_price: minPrice,
       max_price: maxPrice,
+      amenities,
     }).catch(() => null),
     getCachedRoomFilters().catch(() => null),
   ]);
 
-  const rooms = roomsResponse?.results.length ? roomsResponse.results.map(mapRoom) : fallbackRooms;
+  const rooms = roomsResponse?.results.map(mapRoom) ?? [];
   const filters = filtersResponse ?? fallbackFilters;
   const totalCount = roomsResponse?.count ?? rooms.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / 12));
 
   return (
-    <main className="flex min-h-[100dvh] flex-col bg-surface text-on-surface">
+    <main className="v-ui-shell flex min-h-[100dvh] flex-col bg-surface text-on-surface">
       <SiteNav active="rooms" />
       <div className="h-20" />
 
-      <header className="mx-auto flex w-full max-w-container-max flex-col items-start justify-between gap-6 border-b border-outline-variant/20 px-margin-mobile pb-8 pt-12 md:flex-row md:items-baseline md:px-margin-desktop">
+      <header className="scroll-reveal mx-auto flex w-full max-w-container-max flex-col items-start justify-between gap-6 border-b border-outline-variant/20 px-margin-mobile pb-8 pt-12 md:flex-row md:items-baseline md:px-margin-desktop">
         <div>
           <h1 className="mb-2 font-display-lg-mobile text-display-lg-mobile text-primary md:font-display-lg md:text-display-lg">
-            Căn hộ tuyển chọn
+            Phòng đang cho thuê
           </h1>
           <p className="font-body-lg text-body-lg text-on-surface-variant">
-            Hiển thị {rooms.length} trong {totalCount} bất động sản đang mở.
+            Hiển thị {rooms.length} trong {totalCount} phòng. Ưu tiên phòng còn trống và có thể đặt lịch xem.
           </p>
         </div>
 
-        <div className="flex w-full flex-wrap items-center gap-4 md:w-auto">
-          <button
-            className="flex items-center gap-2 rounded border border-outline-variant/30 bg-surface-container-lowest px-4 py-2 font-button text-button text-primary transition-colors hover:border-primary"
-            type="button"
-          >
-            <span>Sắp xếp: Mới nhất</span>
-            <ChevronDown size={18} strokeWidth={1.8} />
-          </button>
-          <div className="flex items-center rounded border border-outline-variant/30 bg-surface-container p-1">
-            <button
-              aria-label="Dạng lưới"
-              className="rounded bg-surface-container-lowest p-2 text-primary shadow-sm"
-              type="button"
-            >
-              <Grid3X3 size={20} strokeWidth={1.8} />
-            </button>
-            <button
-              aria-label="Dạng danh sách"
-              className="rounded p-2 text-on-surface-variant transition-colors hover:text-primary"
-              type="button"
-            >
-              <List size={20} strokeWidth={1.8} />
-            </button>
-          </div>
-        </div>
+        <SortForm ordering={ordering} params={params} />
       </header>
 
       <section className="mx-auto flex w-full max-w-container-max flex-grow flex-col gap-gutter px-margin-mobile py-12 md:flex-row md:px-margin-desktop">
-        <FilterSidebar activeCity={city} activeRoomType={roomType} filters={filters} />
+        <FilterSidebar
+          activeAreaRange={areaRange}
+          activeCity={city}
+          activeMaxPrice={maxPrice}
+          activeMinPrice={minPrice}
+          activeRoomType={roomType}
+          activeStatus={status}
+          activeWard={ward}
+          activeAmenities={Array.isArray(params.amenities) ? params.amenities : params.amenities ? params.amenities.split(",") : []}
+          filters={filters}
+          search={search}
+        />
 
         <div className="flex w-full flex-col gap-10 md:w-[calc(100%-280px-24px)]">
           {rooms.length ? (
-            <div className="grid grid-cols-1 gap-gutter xl:grid-cols-2">
+            <div className="stagger-list grid grid-cols-1 gap-gutter xl:grid-cols-2">
               {rooms.map((room) => (
                 <RoomCard key={room.id} room={room} />
               ))}
@@ -245,11 +205,19 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
             <div className="rounded border border-outline-variant/20 bg-surface-container-lowest p-10 text-center shadow-soft">
               <h2 className="font-headline-sm text-headline-sm text-primary">Chưa có phòng phù hợp</h2>
               <p className="mt-3 font-body-md text-body-md text-on-surface-variant">
-                Vui lòng thử lại với bộ lọc khác hoặc quay lại sau.
+                Thử xóa bớt bộ lọc hoặc gửi nhu cầu, saler sẽ báo khi có phòng phù hợp.
               </p>
+              <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+                <Link className="premium-button inline-flex rounded border border-primary px-5 py-3 font-button text-button text-primary" href="/rooms">
+                  Xóa bộ lọc
+                </Link>
+                <Link className="premium-button inline-flex rounded bg-primary px-5 py-3 font-button text-button text-on-primary" href="/contact">
+                  Gửi nhu cầu thuê phòng
+                </Link>
+              </div>
             </div>
           )}
-          <Pagination totalPages={totalPages} />
+          <Pagination currentPage={currentPage} params={params} totalPages={totalPages} />
         </div>
       </section>
 
@@ -258,40 +226,95 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   );
 }
 
-function FilterSidebar({
-  activeCity,
-  activeRoomType,
-  filters,
+function SortForm({
+  ordering,
+  params,
 }: Readonly<{
-  activeCity?: string;
-  activeRoomType?: string;
-  filters: RoomFilters;
+  ordering: string;
+  params: Record<string, string | string[] | undefined>;
 }>) {
-  const cityFilters = [
-    { id: 0, name: "Tất cả khu vực", slug: "all", is_active: true },
-    ...filters.cities,
-  ];
+  return (
+    <form action="/rooms" className="flex w-full items-center gap-3 md:w-auto">
+      {Object.entries(params).map(([key, value]) => {
+        if (key === "ordering" || key === "page" || value === undefined) return null;
+        const values = Array.isArray(value) ? value : [value];
+        return values.filter(Boolean).map((item) => <input key={`${key}-${item}`} name={key} type="hidden" value={item} />);
+      })}
+      <select
+        aria-label="Sắp xếp"
+        className="w-full rounded border border-outline-variant/30 bg-surface-container-lowest px-4 py-2 font-button text-button text-primary transition-colors focus:border-primary focus:ring-primary md:w-52"
+        defaultValue={ordering}
+        name="ordering"
+      >
+        <option value="-created_at">Mới nhất</option>
+        <option value="price">Giá thấp trước</option>
+        <option value="-price">Giá cao trước</option>
+        <option value="-actual_area">Diện tích lớn trước</option>
+      </select>
+      <button className="premium-button rounded bg-primary px-4 py-2 font-button text-button text-on-primary" type="submit">
+        Áp dụng
+      </button>
+    </form>
+  );
+}
+
+function FilterSidebar({
+  activeAmenities,
+  activeAreaRange,
+  activeCity,
+  activeMaxPrice,
+  activeMinPrice,
+  activeRoomType,
+  activeStatus,
+  activeWard,
+  filters,
+  search,
+}: Readonly<{
+  activeAmenities: string[];
+  activeAreaRange?: string;
+  activeCity?: string;
+  activeMaxPrice?: string;
+  activeMinPrice?: string;
+  activeRoomType?: string;
+  activeStatus?: string;
+  activeWard?: string;
+  filters: RoomFilters;
+  search?: string;
+}>) {
+  const cityFilters = [{ id: "", name: "Tất cả khu vực", slug: "all", is_active: true }, ...filters.cities];
   const typeFilters = filters.room_types.length ? filters.room_types : fallbackFilters.room_types;
+  const statusFilters = filters.statuses.length ? filters.statuses : fallbackFilters.statuses;
 
   return (
     <aside className="w-full flex-shrink-0 md:w-[280px]">
-      <div className="custom-scrollbar sticky top-[104px] max-h-none overflow-visible pr-0 md:max-h-[calc(100vh-124px)] md:overflow-y-auto md:pr-4">
-        <div className="mb-6 flex items-center justify-between">
+      <form action="/rooms" className="custom-scrollbar sticky top-[104px] max-h-none overflow-visible pr-0 md:max-h-[calc(100vh-124px)] md:overflow-y-auto md:pr-4">
+        <div className="glass-panel spotlight-card mb-6 flex items-center justify-between rounded-lg border p-4">
           <h2 className="font-headline-sm text-headline-sm text-primary">Bộ lọc</h2>
-          <button className="font-button text-button text-secondary underline transition-colors hover:text-primary" type="button">
+          <Link className="font-button text-button text-secondary underline transition-colors hover:text-primary" href="/rooms">
             Xóa tất cả
-          </button>
+          </Link>
         </div>
+
+        <FilterSection title="Tìm kiếm" icon={<Search size={18} strokeWidth={1.8} />}>
+          <input
+            className="w-full rounded border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 font-body-md text-primary focus:border-primary focus:ring-primary"
+            defaultValue={search}
+            name="search"
+            placeholder="Tên phòng, địa chỉ..."
+            type="search"
+          />
+        </FilterSection>
 
         <FilterSection title="Vị trí" icon={<Minus size={18} strokeWidth={1.8} />}>
           <div className="space-y-3">
-            {cityFilters.map((item, index) => (
+            {cityFilters.map((item) => (
               <label className="group flex cursor-pointer items-center gap-3" key={item.id || item.slug}>
                 <input
                   className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary"
-                  defaultChecked={activeCity ? String(item.id) === activeCity : index === 0}
-                  name="location"
+                  defaultChecked={(activeCity ?? "") === String(item.id)}
+                  name="city"
                   type="radio"
+                  value={item.id}
                 />
                 <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-primary">
                   {item.name}
@@ -301,32 +324,66 @@ function FilterSidebar({
           </div>
         </FilterSection>
 
+        {filters.wards.length ? (
+          <FilterSection title="Phường" icon={<Minus size={18} strokeWidth={1.8} />}>
+            <select
+              className="w-full rounded border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 font-body-md text-primary focus:border-primary focus:ring-primary"
+              defaultValue={activeWard ?? ""}
+              name="ward"
+            >
+              <option value="">Tất cả phường</option>
+              {filters.wards
+                .filter((ward) => !activeCity || String(ward.city) === activeCity)
+                .map((ward) => (
+                  <option key={ward.id} value={ward.id}>
+                    {ward.name}
+                  </option>
+                ))}
+            </select>
+          </FilterSection>
+        ) : null}
+
         <FilterSection title="Khoảng giá" icon={<Minus size={18} strokeWidth={1.8} />}>
-          <div className="px-1">
+          <div className="grid grid-cols-1 gap-3">
             <input
-              aria-label="Khoảng giá"
-              className="luxury-range w-full appearance-none bg-transparent"
-              defaultValue="8000000"
-              max="30000000"
-              min="2000000"
-              type="range"
+              className="w-full rounded border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 font-body-md text-primary focus:border-primary focus:ring-primary"
+              defaultValue={activeMinPrice}
+              min="0"
+              name="min_price"
+              placeholder="Giá từ"
+              type="number"
             />
-            <div className="mt-4 flex justify-between font-body-md text-sm text-on-surface-variant">
-              <span>2tr VNĐ</span>
-              <span className="font-medium text-primary">8tr VNĐ</span>
-              <span>30tr+ VNĐ</span>
-            </div>
+            <input
+              className="w-full rounded border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 font-body-md text-primary focus:border-primary focus:ring-primary"
+              defaultValue={activeMaxPrice}
+              min="0"
+              name="max_price"
+              placeholder="Giá đến"
+              type="number"
+            />
           </div>
         </FilterSection>
 
         <FilterSection title="Loại hình" icon={<Minus size={18} strokeWidth={1.8} />}>
           <div className="space-y-3">
-            {typeFilters.map((item, index) => (
+            <label className="group flex cursor-pointer items-center gap-3">
+              <input
+                className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary"
+                defaultChecked={!activeRoomType}
+                name="room_type"
+                type="radio"
+                value=""
+              />
+              <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-primary">Tất cả loại phòng</span>
+            </label>
+            {typeFilters.map((item) => (
               <label className="group flex cursor-pointer items-center gap-3" key={item.value}>
                 <input
-                  className="size-4 rounded border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary"
-                  defaultChecked={activeRoomType ? item.value === activeRoomType : index < 2}
-                  type="checkbox"
+                  className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary"
+                  defaultChecked={item.value === activeRoomType}
+                  name="room_type"
+                  type="radio"
+                  value={item.value}
                 />
                 <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-primary">
                   {roomTypeLabel(item.value) || item.label}
@@ -342,8 +399,11 @@ function FilterSidebar({
               {filters.area_ranges.map((item) => (
                 <label className="group flex cursor-pointer items-center gap-3" key={item.id}>
                   <input
-                    className="size-4 rounded border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary"
-                    type="checkbox"
+                    className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary"
+                    defaultChecked={String(item.id) === activeAreaRange}
+                    name="area_range"
+                    type="radio"
+                    value={item.id}
                   />
                   <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-primary">
                     {item.name}
@@ -354,13 +414,31 @@ function FilterSidebar({
           </FilterSection>
         ) : null}
 
+        <FilterSection title="Trạng thái" icon={<Minus size={18} strokeWidth={1.8} />}>
+          <select
+            className="w-full rounded border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 font-body-md text-primary focus:border-primary focus:ring-primary"
+            defaultValue={activeStatus ?? ""}
+            name="status"
+          >
+            <option value="">Tất cả trạng thái</option>
+            {statusFilters.map((item) => (
+              <option key={item.value} value={item.value}>
+                {roomStatusLabel(item.value)}
+              </option>
+            ))}
+          </select>
+        </FilterSection>
+
         <FilterSection title="Tiện ích" icon={<Plus size={18} strokeWidth={1.8} />}>
           <div className="space-y-3">
             {filters.amenities.slice(0, 5).map((item) => (
               <label className="group flex cursor-pointer items-center gap-3" key={item.id}>
                 <input
                   className="size-4 rounded border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary"
+                  defaultChecked={activeAmenities.includes(String(item.id))}
+                  name="amenities"
                   type="checkbox"
+                  value={item.id}
                 />
                 <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-primary">
                   {item.name}
@@ -369,7 +447,10 @@ function FilterSidebar({
             ))}
           </div>
         </FilterSection>
-      </div>
+        <button className="premium-button mt-6 w-full rounded bg-primary px-4 py-3 font-button text-button text-on-primary transition hover:bg-secondary" type="submit">
+          Áp dụng bộ lọc
+        </button>
+      </form>
     </aside>
   );
 }
@@ -385,10 +466,10 @@ function FilterSection({
 }>) {
   return (
     <div className="border-b border-outline-variant/20 py-6 last:border-b-0">
-      <button className="group mb-4 flex w-full items-center justify-between font-button text-button text-primary" type="button">
+      <div className="mb-4 flex w-full items-center justify-between font-button text-button text-primary">
         {title}
-        <span className="transition-colors group-hover:text-secondary">{icon}</span>
-      </button>
+        <span>{icon}</span>
+      </div>
       {children}
     </div>
   );
@@ -399,44 +480,41 @@ function RoomCard({ room }: Readonly<{ room: RoomCardView }>) {
 
   return (
     <article
-      className={`group flex flex-col overflow-hidden rounded-xl border border-outline-variant/5 bg-surface-container-lowest shadow-soft transition-transform duration-500 hover:-translate-y-1 ${
+      className={`premium-card spotlight-card scroll-reveal group flex flex-col overflow-hidden rounded-xl border border-outline-variant/5 bg-surface-container-lowest shadow-soft ${
         room.unavailable ? "opacity-80" : ""
       }`}
     >
       <div className={`relative h-[320px] overflow-hidden ${room.unavailable ? "grayscale-[30%]" : ""}`}>
-        <Link aria-label={`Xem chi tiết ${room.title}`} className="absolute inset-0" href={detailHref} prefetch={false}>
-          <Image
-            alt={room.alt}
-            className="object-cover transition-transform duration-700 group-hover:scale-105"
-            fill
-            loading="lazy"
-            quality={78}
-            sizes="(min-width: 1280px) 500px, (min-width: 768px) 50vw, 100vw"
-            src={room.image}
-          />
+        <Link aria-label={`Xem chi tiết ${room.title}`} className="absolute inset-0" href={detailHref}>
+          {room.image ? (
+            <Image
+              alt={room.alt}
+              className="shared-image object-cover transition-transform duration-700 group-hover:scale-105"
+              fill
+              loading="lazy"
+              quality={78}
+              sizes="(min-width: 1280px) 500px, (min-width: 768px) 50vw, 100vw"
+              src={room.image}
+            />
+          ) : (
+            <ImagePlaceholder />
+          )}
         </Link>
-        <div className="absolute left-4 right-4 top-4 flex items-start justify-between">
+        <div className="absolute left-4 top-4">
           <span
             className={`rounded-full px-3 py-1.5 font-label-caps text-label-caps uppercase tracking-wider shadow-sm backdrop-blur ${
-              room.unavailable ? "bg-surface-variant/95 text-on-surface" : "bg-surface-container-lowest/95 text-primary"
+              room.unavailable ? "bg-surface-variant/95 text-on-surface" : "bg-primary text-white"
             }`}
           >
-            {room.status}
+            {room.unavailable ? room.status : "Còn trống"}
           </span>
-          <button
-            aria-label="Lưu vào mục yêu thích"
-            className="flex size-10 items-center justify-center rounded-full bg-surface-container-lowest/50 text-primary shadow-sm backdrop-blur transition-colors hover:bg-surface-container-lowest"
-            type="button"
-          >
-            <Heart className={room.favorite ? "fill-error text-error" : ""} size={21} strokeWidth={1.8} />
-          </button>
         </div>
       </div>
 
       <div className="flex flex-grow flex-col p-6">
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <Link className="mb-1 block font-headline-sm text-headline-sm text-primary hover:text-secondary" href={detailHref} prefetch={false}>
+            <Link className="mb-1 block font-headline-sm text-headline-sm text-primary hover:text-secondary" href={detailHref}>
               {room.title}
             </Link>
             <p className="font-body-md text-body-md text-on-surface-variant">{room.location}</p>
@@ -446,16 +524,45 @@ function RoomCard({ room }: Readonly<{ room: RoomCardView }>) {
             <span className="font-body-md text-sm text-on-surface-variant">{room.period}</span>
           </div>
         </div>
+        <div className="mb-5 grid grid-cols-2 gap-3 text-sm text-on-surface-variant">
+          <CostPill icon={<ShieldCheck size={17} strokeWidth={1.8} />} label="Cọc" value={room.deposit} />
+          <CostPill icon={<ReceiptText size={17} strokeWidth={1.8} />} label="Phí DV" value={room.serviceFee} />
+          <CostPill icon={<Zap size={17} strokeWidth={1.8} />} label="Điện" value={room.electricity} />
+          <CostPill icon={<Droplets size={17} strokeWidth={1.8} />} label="Nước" value={room.water} />
+        </div>
+
+        {room.featuredAmenities.length ? (
+          <div className="mb-5 flex flex-wrap gap-2">
+            {room.featuredAmenities.map((amenity) => (
+              <span className="rounded-full bg-surface-container px-3 py-1 text-xs font-medium text-primary" key={amenity}>
+                {amenity}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
         <div className="mt-auto flex flex-wrap items-center gap-5 border-t border-outline-variant/10 pt-6 text-on-surface-variant lg:gap-6">
           <RoomMeta icon={<BedDouble size={20} strokeWidth={1.8} />} label={room.primaryMeta} />
           <RoomMeta icon={<Bath size={20} strokeWidth={1.8} />} label={room.secondaryMeta} />
           <RoomMeta icon={<Ruler size={20} strokeWidth={1.8} />} label={room.area} />
-          <Link className="ml-auto font-body-md text-sm text-gold hover:underline" href={detailHref} prefetch={false}>
-            Chi tiết
+          <Link className="premium-button ml-auto rounded bg-primary px-4 py-3 font-body-md text-sm text-on-primary" href={detailHref}>
+            Xem và đặt lịch
           </Link>
         </div>
       </div>
     </article>
+  );
+}
+
+function CostPill({ icon, label, value }: Readonly<{ icon: ReactNode; label: string; value: string }>) {
+  return (
+    <div className="rounded-md border border-outline-variant/15 bg-surface-container-low p-3">
+      <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-secondary">
+        {icon}
+        {label}
+      </div>
+      <p className="line-clamp-1 font-body-md text-sm text-primary">{value}</p>
+    </div>
   );
 }
 
@@ -468,52 +575,74 @@ function RoomMeta({ icon, label }: Readonly<{ icon: ReactNode; label: string }>)
   );
 }
 
-function Pagination({ totalPages }: Readonly<{ totalPages: number }>) {
-  const pages = Array.from({ length: Math.min(totalPages, 3) }, (_, index) => index + 1);
+function Pagination({
+  currentPage,
+  params,
+  totalPages,
+}: Readonly<{
+  currentPage: number;
+  params: Record<string, string | string[] | undefined>;
+  totalPages: number;
+}>) {
+  const start = Math.max(1, Math.min(currentPage - 1, totalPages - 2));
+  const pages = Array.from({ length: Math.min(totalPages, 3) }, (_, index) => start + index);
 
   return (
     <div className="mt-12 flex items-center justify-center gap-2 font-button text-button">
-      <button
+      <Link
         aria-label="Trang trước"
-        className="flex size-10 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-45"
-        disabled
-        type="button"
+        aria-disabled={currentPage <= 1}
+        className={`motion-chip flex size-10 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary ${
+          currentPage <= 1 ? "pointer-events-none opacity-45" : ""
+        }`}
+        href={roomsHref(params, Math.max(1, currentPage - 1))}
       >
         <ChevronLeft size={18} strokeWidth={1.8} />
-      </button>
+      </Link>
       {pages.map((page) => (
-        <button
+        <Link
           aria-label={`Trang ${page}`}
           className={
-            page === 1
-              ? "flex size-10 items-center justify-center rounded bg-primary text-on-primary"
-              : "flex size-10 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary"
+            page === currentPage
+              ? "motion-chip flex size-10 items-center justify-center rounded bg-primary text-on-primary"
+              : "motion-chip flex size-10 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary"
           }
+          href={roomsHref(params, page)}
           key={page}
-          type="button"
         >
           {page}
-        </button>
+        </Link>
       ))}
       {totalPages > 3 ? (
         <>
           <span className="px-2 text-secondary">...</span>
-          <button
+          <Link
             aria-label={`Trang ${totalPages}`}
-            className="flex size-10 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary"
-            type="button"
+            className="motion-chip flex size-10 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary"
+            href={roomsHref(params, totalPages)}
           >
             {totalPages}
-          </button>
+          </Link>
         </>
       ) : null}
-      <button
+      <Link
         aria-label="Trang sau"
-        className="flex size-10 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary"
-        type="button"
+        aria-disabled={currentPage >= totalPages}
+        className={`motion-chip flex size-10 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary ${
+          currentPage >= totalPages ? "pointer-events-none opacity-45" : ""
+        }`}
+        href={roomsHref(params, Math.min(totalPages, currentPage + 1))}
       >
         <ChevronRight size={18} strokeWidth={1.8} />
-      </button>
+      </Link>
+    </div>
+  );
+}
+
+function ImagePlaceholder() {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-surface-container-low text-sm font-medium text-on-surface-variant">
+      Chưa có ảnh phòng
     </div>
   );
 }
