@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlertCircle, CheckCircle2, LoaderCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
 
 import { blogStatusLabel, blogStatusTone, contactStatusLabel, contactStatusTone, leadStatusLabel, leadStatusTone, roomStatusTone } from "./admin-api";
 
@@ -115,6 +115,21 @@ export function AdminLoadingState({ label = "Đang tải dữ liệu..." }: Read
   );
 }
 
+export function AdminTableSkeleton({ rows = 6 }: Readonly<{ rows?: number }>) {
+  return (
+    <div aria-busy="true" aria-label="Đang tải bảng dữ liệu" className="space-y-3">
+      {Array.from({ length: rows }).map((_, index) => (
+        <div className="grid grid-cols-[2fr_1fr_1fr_96px] gap-4 rounded-md bg-surface-container-low/70 p-4" key={index}>
+          <span className="h-4 animate-pulse rounded-full bg-surface-container-high" />
+          <span className="h-4 animate-pulse rounded-full bg-surface-container-high" />
+          <span className="h-4 animate-pulse rounded-full bg-surface-container-high" />
+          <span className="h-4 animate-pulse rounded-full bg-surface-container-high" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function AdminEmptyState({
   action,
   description,
@@ -144,9 +159,54 @@ export function AdminInlineMessage({
 
   const isError = Boolean(error);
   return (
-    <div className={`flex items-start gap-3 rounded-md border px-4 py-3 text-sm ${isError ? "border-error/20 bg-error-container/50 text-error" : "border-[#315f45]/20 bg-[#315f45]/10 text-[#315f45]"}`}>
+    <div className={`flex items-start gap-3 rounded-md border px-4 py-3 text-sm ${isError ? "border-error/20 bg-error-container/50 text-error" : "border-success/20 bg-success-container text-success"}`}>
       {isError ? <AlertCircle className="mt-0.5 shrink-0" size={17} strokeWidth={1.8} /> : <CheckCircle2 className="mt-0.5 shrink-0" size={17} strokeWidth={1.8} />}
       <span>{error || message}</span>
+    </div>
+  );
+}
+
+export function AdminPagination({
+  count,
+  onPageChange,
+  page,
+  pageSize,
+}: Readonly<{
+  count: number;
+  onPageChange: (page: number) => void;
+  page: number;
+  pageSize: number;
+}>) {
+  const totalPages = Math.max(1, Math.ceil(count / pageSize));
+  const start = count ? (page - 1) * pageSize + 1 : 0;
+  const end = Math.min(count, page * pageSize);
+
+  return (
+    <div className="mt-5 flex flex-col gap-3 border-t border-primary/10 pt-4 text-sm text-secondary sm:flex-row sm:items-center sm:justify-between">
+      <span>
+        Hiển thị {start}-{end} / {count}
+      </span>
+      <div className="flex items-center gap-2">
+        <button
+          className="inline-flex size-9 items-center justify-center rounded-md border border-primary/10 bg-white text-primary disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+          type="button"
+        >
+          <ChevronLeft size={16} strokeWidth={1.8} />
+        </button>
+        <span className="px-2 tabular-nums">
+          {page}/{totalPages}
+        </span>
+        <button
+          className="inline-flex size-9 items-center justify-center rounded-md border border-primary/10 bg-white text-primary disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+          type="button"
+        >
+          <ChevronRight size={16} strokeWidth={1.8} />
+        </button>
+      </div>
     </div>
   );
 }
