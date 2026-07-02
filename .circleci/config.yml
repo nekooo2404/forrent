@@ -26,7 +26,7 @@ jobs:
             - ~/.cache/pip
       - run: python manage.py check --settings=config.settings.local
       - run: pytest apps/accounts apps/blogs apps/contacts apps/commissions apps/rooms apps/viewing_requests
-      - run: pip-audit --strict
+      - run: pip-audit -r requirements.txt --strict
 
   frontend:
     parameters:
