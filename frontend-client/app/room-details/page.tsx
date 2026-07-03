@@ -3,15 +3,17 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
-  Bath,
-  BedDouble,
+  AlertTriangle,
   Building2,
   Car,
   CalendarCheck,
   Droplets,
   Dumbbell,
+  Mail,
+  MessageCircle,
   MapPin,
   ParkingCircle,
+  Phone,
   ReceiptText,
   Ruler,
   ShieldCheck,
@@ -29,6 +31,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { ViewingRequestPanel } from "@/components/viewing-request-panel";
 import {
+  formatDate,
   formatArea,
   formatOptionalVnd,
   formatVnd,
@@ -68,6 +71,7 @@ type DetailView = {
   amenities: ApiAmenity[];
   gallery: string[];
   alt: string;
+  updatedAt: string;
 };
 
 function firstParam(value: string | string[] | undefined) {
@@ -121,6 +125,7 @@ function mapDetail(room: ApiRoomDetail): DetailView {
     amenities: room.amenities,
     gallery: galleryFor(room),
     alt: room.short_description || room.title,
+    updatedAt: formatDate(room.updated_at),
   };
 }
 
@@ -172,107 +177,7 @@ export default async function RoomDetailsPage({ searchParams }: RoomDetailsPageP
 
         <Gallery images={detail.gallery} title={detail.title} />
 
-        <div className="relative grid grid-cols-1 gap-gutter md:grid-cols-12">
-          <div className="space-y-12 pr-0 md:col-span-8 md:pr-8">
-            <header className="urban-card rounded-2xl p-7">
-              <div className="mb-4 flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
-                <div>
-                  <span className="mb-2 block font-label-caps text-label-caps uppercase tracking-widest text-secondary">
-                    {detail.collection}
-                  </span>
-                  <h1 className="font-display-lg-mobile text-display-lg-mobile leading-tight text-primary md:font-display-lg md:text-display-lg">
-                    {detail.title}
-                  </h1>
-                </div>
-                <div className="text-left md:text-right">
-                  <span className="block font-headline-md text-headline-md text-primary">{detail.price}</span>
-                  <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${detail.isAvailable ? "bg-emerald-500 text-white" : "bg-surface-variant text-on-surface"}`}>
-                    {detail.isAvailable ? "Còn trống, có thể đặt lịch" : detail.status}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-6 flex flex-wrap items-center gap-6 font-body-md text-body-md text-on-surface-variant">
-                <DetailMeta icon={<MapPin size={20} strokeWidth={1.8} className="text-secondary" />}>{detail.location}</DetailMeta>
-                <DetailMeta icon={<BedDouble size={20} strokeWidth={1.8} className="text-secondary" />}>{detail.status}</DetailMeta>
-                <DetailMeta icon={<Bath size={20} strokeWidth={1.8} className="text-secondary" />}>
-                  {detail.amenities.length} tiện ích
-                </DetailMeta>
-                <DetailMeta icon={<Ruler size={20} strokeWidth={1.8} className="text-secondary" />}>{detail.area}</DetailMeta>
-              </div>
-            </header>
-
-            <section className="urban-card rounded-2xl p-6">
-              <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <h2 className="font-headline-sm text-headline-sm text-primary">Chi phí cần biết</h2>
-                  <p className="mt-1 text-sm text-on-surface-variant">Các khoản chưa nhập sẽ được saler xác nhận trước khi bạn đi xem.</p>
-                </div>
-                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                  {detail.isAvailable ? "Có thể đặt lịch" : "Chưa nhận lịch mới"}
-                </span>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <CostCard icon={<ShieldCheck size={19} strokeWidth={1.8} />} label="Cọc dự kiến" value={detail.deposit} />
-                <CostCard icon={<ReceiptText size={19} strokeWidth={1.8} />} label="Phí dịch vụ" value={detail.serviceFee} />
-                <CostCard icon={<Zap size={19} strokeWidth={1.8} />} label="Tiền điện" value={detail.electricity} />
-                <CostCard icon={<Droplets size={19} strokeWidth={1.8} />} label="Tiền nước" value={detail.water} />
-              </div>
-            </section>
-
-            <section className="urban-card rounded-2xl p-7">
-              <h2 className="mb-6 font-headline-sm text-headline-sm text-primary">Thông tin phòng</h2>
-              <p className="mb-6 font-body-lg text-body-lg leading-relaxed text-on-surface-variant">{detail.description}</p>
-              <p className="font-body-md text-body-md leading-relaxed text-on-surface-variant/80">
-                {detail.secondaryDescription}
-              </p>
-            </section>
-
-            <section className="urban-card rounded-2xl p-7">
-              <h2 className="mb-8 font-headline-sm text-headline-sm text-primary">Tiện ích</h2>
-              {detail.amenities.length ? (
-                <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3">
-                  {detail.amenities.slice(0, 9).map((amenity) => (
-                    <div className="flex items-center gap-4" key={amenity.id}>
-                      {iconForAmenity(amenity.icon || amenity.name)}
-                      <span className="font-body-md text-body-md text-primary">{amenity.name}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="rounded-md border border-dashed border-outline-variant/30 p-5 text-on-surface-variant">
-                  Tiện ích đang được cập nhật. Saler sẽ xác nhận lại trước lịch xem.
-                </p>
-              )}
-            </section>
-          </div>
-
-          <div className="mt-12 md:col-span-4 md:mt-0">
-            <div className="sticky top-28 space-y-4">
-            <StickyRoomSummary detail={detail} />
-            <div id="dat-lich-xem">
-              <ViewingRequestPanel disabled={!detail.isAvailable} roomId={detail.id} />
-            </div>
-            <div className="urban-card rounded-2xl p-5">
-              <h3 className="mb-4 flex items-center gap-2 font-semibold text-primary">
-                <CalendarCheck size={18} strokeWidth={1.8} />
-                Sau khi gửi yêu cầu
-              </h3>
-              <ol className="space-y-3 text-sm leading-6 text-on-surface-variant">
-                <li>1. Saler gọi lại để xác nhận phòng còn trống.</li>
-                <li>2. Cọc, điện nước và phí dịch vụ được báo lại trước.</li>
-                <li>3. Bạn nhận lịch hẹn rõ ràng, tránh đi xem phòng không phù hợp.</li>
-              </ol>
-            </div>
-            <Link
-              className="premium-button flex w-full items-center justify-center rounded-xl border border-primary px-5 py-3 font-button text-button text-primary transition hover:bg-primary hover:text-on-primary"
-              href={`/contact?room_id=${detail.id}&room_title=${encodeURIComponent(detail.title)}`}
-            >
-              Tư vấn phòng này
-            </Link>
-            </div>
-          </div>
-        </div>
+        <ListingBody detail={detail} />
           </>
         )}
       </div>
@@ -284,7 +189,7 @@ export default async function RoomDetailsPage({ searchParams }: RoomDetailsPageP
 
 function Gallery({ images, title }: Readonly<{ images: string[]; title: string }>) {
   return (
-    <section className="mb-16 grid h-[560px] grid-cols-1 grid-rows-2 gap-unit md:h-[740px] md:grid-cols-4">
+    <section className="mb-6 grid h-[360px] grid-cols-1 grid-rows-2 gap-2 md:h-[460px] md:grid-cols-4">
       <GalleryTile
         alt={`${title} - ảnh chính`}
         className="col-span-1 row-span-2 md:col-span-2"
@@ -293,15 +198,20 @@ function Gallery({ images, title }: Readonly<{ images: string[]; title: string }
       />
       <GalleryTile alt={`${title} - ảnh 2`} className="hidden md:col-span-1 md:row-span-1 md:block" src={images[1]} />
       <GalleryTile alt={`${title} - ảnh 3`} className="hidden md:col-span-1 md:row-span-1 md:block" src={images[2]} />
-      <div className="relative hidden overflow-hidden rounded-2xl md:col-span-2 md:row-span-1 md:block">
+      <div className="relative hidden overflow-hidden rounded-lg md:col-span-2 md:row-span-1 md:block">
         {images[3] ? (
-          <Image
-            alt={`${title} - ảnh 4`}
-            className="object-cover transition-transform duration-700 hover:scale-105"
-            fill
-            sizes="(min-width: 768px) 50vw, 100vw"
-            src={images[3]}
-          />
+          <>
+            <Image
+              alt={`${title} - ảnh 4`}
+              className="object-cover transition-transform duration-700 hover:scale-105"
+              fill
+              sizes="(min-width: 768px) 50vw, 100vw"
+              src={images[3]}
+            />
+            <span className="absolute bottom-3 right-3 rounded-md bg-black/70 px-3 py-1 text-sm font-semibold text-white">
+              {images.length} ảnh
+            </span>
+          </>
         ) : (
           <GalleryPlaceholder />
         )}
@@ -322,7 +232,7 @@ function GalleryTile({
   src?: string;
 }>) {
   return (
-    <div className={`relative overflow-hidden rounded-2xl ${className}`}>
+    <div className={`relative overflow-hidden rounded-lg ${className}`}>
       {src ? (
         <Image
           alt={alt}
@@ -349,66 +259,166 @@ function GalleryPlaceholder() {
   );
 }
 
-function DetailMeta({ icon, children }: Readonly<{ icon: ReactNode; children: ReactNode }>) {
+function ListingBody({ detail }: Readonly<{ detail: DetailView }>) {
   return (
-    <div className="flex items-center gap-2">
-      {icon}
-      <span>{children}</span>
-    </div>
-  );
-}
+    <div className="relative grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="space-y-6">
+        <ListingHeader detail={detail} />
+        <DescriptionSection detail={detail} />
+        <FactsSection detail={detail} />
+        <AmenitiesSection amenities={detail.amenities} />
+      </div>
 
-function StickyRoomSummary({ detail }: Readonly<{ detail: DetailView }>) {
-  return (
-    <aside className="urban-band rounded-2xl p-6 text-on-primary">
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div>
-          <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-teal-100">Tóm tắt chi phí</span>
-          <strong className="block font-headline-sm text-3xl text-white">{detail.price}</strong>
+      <aside className="space-y-4 lg:sticky lg:top-28 lg:self-start">
+        <ContactCard detail={detail} />
+        <div id="dat-lich-xem">
+          <ViewingRequestPanel disabled={!detail.isAvailable} roomId={detail.id} />
         </div>
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${detail.isAvailable ? "bg-emerald-500 text-white" : "bg-white/20 text-white"}`}>
-          {detail.isAvailable ? "Còn trống" : detail.status}
-        </span>
-      </div>
+        <SafetyNote />
+      </aside>
+    </div>
+  );
+}
 
-      <div className="grid gap-3">
-        <SummaryLine label="Cọc dự kiến" value={detail.deposit} />
-        <SummaryLine label="Phí dịch vụ" value={detail.serviceFee} />
-        <SummaryLine label="Điện" value={detail.electricity} />
-        <SummaryLine label="Nước" value={detail.water} />
-        <SummaryLine label="Diện tích" value={detail.area} />
+function ListingHeader({ detail }: Readonly<{ detail: DetailView }>) {
+  return (
+    <header className="rounded-lg border border-outline-variant/20 bg-white p-5 shadow-sm md:p-6">
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-on-surface-variant">
+        <span>{detail.collection}</span>
+        <span>/</span>
+        <span>{detail.location}</span>
       </div>
-
-      <Link
-        className="premium-button mt-6 flex w-full justify-center rounded-xl bg-white px-5 py-3 font-button text-button text-primary transition hover:bg-teal-50"
-        href="#dat-lich-xem"
-      >
-        Đặt lịch xem phòng
-      </Link>
-      <p className="mt-4 text-sm leading-6 text-white/75">
-        Saler sẽ gọi lại xác nhận phòng còn trống, cọc và phí trước khi bạn đi xem.
+      <h1 className="text-2xl font-semibold leading-snug text-[#111827] md:text-3xl">{detail.title}</h1>
+      <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-on-surface-variant">
+        <MapPin className="mt-0.5 shrink-0 text-primary" size={18} strokeWidth={1.8} />
+        {detail.location || "Địa chỉ sẽ được saler xác nhận trước khi xem phòng"}
       </p>
-    </aside>
-  );
-}
-
-function SummaryLine({ label, value }: Readonly<{ label: string; value: string }>) {
-  return (
-    <div className="flex items-center justify-between gap-4 rounded-xl bg-white/10 px-4 py-3 text-sm">
-      <span className="text-white/70">{label}</span>
-      <span className="text-right font-semibold text-white">{value}</span>
-    </div>
-  );
-}
-
-function CostCard({ icon, label, value }: Readonly<{ icon: ReactNode; label: string; value: string }>) {
-  return (
-    <div className="rounded-xl border border-outline-variant/20 bg-[#f8fafc] p-4">
-      <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-secondary">
-        {icon}
-        {label}
+      <div className="mt-5 grid divide-y divide-outline-variant/20 rounded-lg border border-outline-variant/20 bg-[#f8fafc] sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+        <ListingStat label="Giá thuê" value={detail.price} />
+        <ListingStat label="Diện tích" value={detail.area} />
+        <ListingStat label="Tiền cọc" value={detail.deposit} />
+        <ListingStat label="Trạng thái" value={detail.isAvailable ? "Còn trống" : detail.status} />
       </div>
-      <p className="font-body-md text-body-md font-semibold text-primary">{value}</p>
+    </header>
+  );
+}
+
+function ListingStat({ label, value }: Readonly<{ label: string; value: string }>) {
+  return (
+    <div className="px-4 py-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-on-surface-variant">{label}</p>
+      <p className="mt-1 text-base font-semibold text-[#111827]">{value}</p>
     </div>
+  );
+}
+
+function DescriptionSection({ detail }: Readonly<{ detail: DetailView }>) {
+  return (
+    <section className="rounded-lg border border-outline-variant/20 bg-white p-5 shadow-sm md:p-6">
+      <h2 className="mb-4 text-xl font-semibold text-[#111827]">Thông tin mô tả</h2>
+      <div className="space-y-4 text-[15px] leading-7 text-[#374151]">
+        <p className="whitespace-pre-line">{detail.description}</p>
+        <p>{detail.secondaryDescription}</p>
+      </div>
+    </section>
+  );
+}
+
+function FactsSection({ detail }: Readonly<{ detail: DetailView }>) {
+  return (
+    <section className="rounded-lg border border-outline-variant/20 bg-white p-5 shadow-sm md:p-6">
+      <h2 className="mb-4 text-xl font-semibold text-[#111827]">Đặc điểm phòng</h2>
+      <div className="grid overflow-hidden rounded-lg border border-outline-variant/20 sm:grid-cols-2">
+        <DetailRow icon={<ReceiptText size={18} />} label="Giá thuê" value={detail.price} />
+        <DetailRow icon={<Ruler size={18} />} label="Diện tích" value={detail.area} />
+        <DetailRow icon={<ShieldCheck size={18} />} label="Cọc dự kiến" value={detail.deposit} />
+        <DetailRow icon={<CalendarCheck size={18} />} label="Cập nhật" value={detail.updatedAt} />
+        <DetailRow icon={<Zap size={18} />} label="Tiền điện" value={detail.electricity} />
+        <DetailRow icon={<Droplets size={18} />} label="Tiền nước" value={detail.water} />
+        <DetailRow icon={<ReceiptText size={18} />} label="Phí dịch vụ" value={detail.serviceFee} />
+        <DetailRow icon={<Sparkles size={18} />} label="Tiện ích" value={`${detail.amenities.length} tiện ích`} />
+      </div>
+    </section>
+  );
+}
+
+function DetailRow({ icon, label, value }: Readonly<{ icon: ReactNode; label: string; value: string }>) {
+  return (
+    <div className="flex items-center gap-3 border-b border-outline-variant/20 px-4 py-4 last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0">
+      <span className="text-primary">{icon}</span>
+      <div>
+        <p className="text-xs text-on-surface-variant">{label}</p>
+        <p className="mt-0.5 text-sm font-semibold text-[#111827]">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function AmenitiesSection({ amenities }: Readonly<{ amenities: ApiAmenity[] }>) {
+  return (
+    <section className="rounded-lg border border-outline-variant/20 bg-white p-5 shadow-sm md:p-6">
+      <h2 className="mb-5 text-xl font-semibold text-[#111827]">Tiện ích</h2>
+      {amenities.length ? (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+          {amenities.slice(0, 12).map((amenity) => (
+            <div className="flex items-center gap-3 rounded-lg border border-outline-variant/15 bg-[#f8fafc] px-3 py-3 text-sm text-[#111827]" key={amenity.id}>
+              {iconForAmenity(amenity.icon || amenity.name)}
+              <span>{amenity.name}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-lg border border-dashed border-outline-variant/30 bg-[#f8fafc] p-4 text-sm text-on-surface-variant">
+          Tiện ích đang được cập nhật. Saler sẽ xác nhận lại trước lịch xem.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function ContactCard({ detail }: Readonly<{ detail: DetailView }>) {
+  return (
+    <section className="rounded-lg border border-outline-variant/20 bg-white p-5 shadow-sm">
+      <div className="flex items-center gap-3 border-b border-outline-variant/15 pb-4">
+        <div className="flex size-12 items-center justify-center rounded-full bg-primary text-lg font-bold text-white">F</div>
+        <div>
+          <h2 className="font-semibold text-[#111827]">ForRent</h2>
+          <p className="text-sm text-on-surface-variant">Tư vấn phòng thuê Hà Nội</p>
+        </div>
+      </div>
+
+      <div className="my-4 rounded-lg bg-[#f8fafc] p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-on-surface-variant">Giá thuê</p>
+        <p className="mt-1 text-2xl font-bold text-primary">{detail.price}</p>
+        <p className="mt-2 text-sm text-on-surface-variant">{detail.isAvailable ? "Phòng còn trống, có thể đặt lịch xem." : detail.status}</p>
+      </div>
+
+      <div className="grid gap-2">
+        <a className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-semibold text-white transition hover:bg-surface-tint" href="tel:0382912254">
+          <Phone size={18} strokeWidth={1.8} />
+          0382912254
+        </a>
+        <a className="flex items-center justify-center gap-2 rounded-lg border border-primary px-4 py-3 font-semibold text-primary transition hover:bg-primary/5" href="mailto:buihoaowo@gmail.com">
+          <Mail size={18} strokeWidth={1.8} />
+          Gửi email
+        </a>
+        <Link className="flex items-center justify-center gap-2 rounded-lg border border-outline-variant/25 px-4 py-3 font-semibold text-[#111827] transition hover:bg-[#f8fafc]" href={`/contact?room_id=${detail.id}&room_title=${encodeURIComponent(detail.title)}`}>
+          <MessageCircle size={18} strokeWidth={1.8} />
+          Tư vấn phòng này
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function SafetyNote() {
+  return (
+    <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+      <h2 className="mb-2 flex items-center gap-2 font-semibold">
+        <AlertTriangle size={18} strokeWidth={1.8} />
+        Lưu ý an toàn
+      </h2>
+      <p>Không chuyển cọc khi chưa xem phòng hoặc chưa xác nhận rõ chủ nhà, phí và điều kiện thuê.</p>
+    </section>
   );
 }
