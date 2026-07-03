@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -27,6 +26,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { RoomGallery } from "@/components/room-gallery";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { ViewingRequestPanel } from "@/components/viewing-request-panel";
@@ -95,7 +95,7 @@ function galleryFor(room: ApiRoomDetail) {
     .map((image) => resolveMediaUrl(image))
     .filter((image): image is string => Boolean(image));
 
-  return images.slice(0, 4);
+  return images;
 }
 
 function mapDetail(room: ApiRoomDetail): DetailView {
@@ -175,7 +175,7 @@ export default async function RoomDetailsPage({ searchParams }: RoomDetailsPageP
           QUAY LẠI DANH SÁCH
         </Link>
 
-        <Gallery images={detail.gallery} title={detail.title} />
+        <RoomGallery images={detail.gallery} title={detail.title} />
 
         <ListingBody detail={detail} />
           </>
@@ -184,78 +184,6 @@ export default async function RoomDetailsPage({ searchParams }: RoomDetailsPageP
 
       <SiteFooter />
     </main>
-  );
-}
-
-function Gallery({ images, title }: Readonly<{ images: string[]; title: string }>) {
-  return (
-    <section className="mb-6 grid h-[360px] grid-cols-1 grid-rows-2 gap-2 md:h-[460px] md:grid-cols-4">
-      <GalleryTile
-        alt={`${title} - ảnh chính`}
-        className="col-span-1 row-span-2 md:col-span-2"
-        priority
-        src={images[0]}
-      />
-      <GalleryTile alt={`${title} - ảnh 2`} className="hidden md:col-span-1 md:row-span-1 md:block" src={images[1]} />
-      <GalleryTile alt={`${title} - ảnh 3`} className="hidden md:col-span-1 md:row-span-1 md:block" src={images[2]} />
-      <div className="relative hidden overflow-hidden rounded-lg md:col-span-2 md:row-span-1 md:block">
-        {images[3] ? (
-          <>
-            <Image
-              alt={`${title} - ảnh 4`}
-              className="object-cover transition-transform duration-700 hover:scale-105"
-              fill
-              sizes="(min-width: 768px) 50vw, 100vw"
-              src={images[3]}
-            />
-            <span className="absolute bottom-3 right-3 rounded-md bg-black/70 px-3 py-1 text-sm font-semibold text-white">
-              {images.length} ảnh
-            </span>
-          </>
-        ) : (
-          <GalleryPlaceholder />
-        )}
-      </div>
-    </section>
-  );
-}
-
-function GalleryTile({
-  alt,
-  className,
-  priority,
-  src,
-}: Readonly<{
-  alt: string;
-  className: string;
-  priority?: boolean;
-  src?: string;
-}>) {
-  return (
-    <div className={`relative overflow-hidden rounded-lg ${className}`}>
-      {src ? (
-        <Image
-          alt={alt}
-          className="shared-image object-cover transition-transform duration-700 hover:scale-105"
-          fill
-          loading={priority ? "eager" : "lazy"}
-          priority={priority}
-          quality={priority ? 82 : 78}
-          sizes="(min-width: 768px) 50vw, 100vw"
-          src={src}
-        />
-      ) : (
-        <GalleryPlaceholder />
-      )}
-    </div>
-  );
-}
-
-function GalleryPlaceholder() {
-  return (
-    <div className="flex h-full min-h-40 w-full items-center justify-center bg-surface-container-low text-center text-sm font-medium text-on-surface-variant">
-      Chưa có ảnh phòng
-    </div>
   );
 }
 
