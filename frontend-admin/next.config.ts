@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const supabaseHost = "rwblwugksbwnkzuakgcf.supabase.co";
+
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -13,7 +15,7 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https://lh3.googleusercontent.com https://images.unsplash.com https://api.forrent.io.vn http://localhost:8000 http://127.0.0.1:8000 http://backend:8000",
+      `img-src 'self' data: blob: https://lh3.googleusercontent.com https://images.unsplash.com https://${supabaseHost} https://api.forrent.io.vn http://localhost:8000 http://127.0.0.1:8000 http://backend:8000`,
       "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://backend:8000 https://api.forrent.io.vn",
       "object-src 'none'",
       "base-uri 'self'",
@@ -40,6 +42,10 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "api.forrent.io.vn",
+      },
+      {
+        protocol: "https",
+        hostname: supabaseHost,
       },
       {
         protocol: "http",

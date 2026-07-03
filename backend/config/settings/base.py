@@ -18,6 +18,7 @@ env = environ.Env(
     EMAIL_USE_TLS=(bool, False),
     EMAIL_USE_SSL=(bool, True),
     EMAIL_TIMEOUT=(int, 15),
+    SUPABASE_STORAGE_TIMEOUT=(int, 30),
 )
 
 env_file = BASE_DIR / ".env"
@@ -125,6 +126,21 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+SUPABASE_URL = env("SUPABASE_URL", default="")
+SUPABASE_SECRET_KEY = env("SUPABASE_SECRET_KEY", default="")
+SUPABASE_STORAGE_BUCKET = env("SUPABASE_STORAGE_BUCKET", default="")
+SUPABASE_STORAGE_TIMEOUT = env("SUPABASE_STORAGE_TIMEOUT")
+
+if SUPABASE_URL and SUPABASE_SECRET_KEY and SUPABASE_STORAGE_BUCKET:
+    STORAGES = {
+        "default": {
+            "BACKEND": "apps.common.storage.SupabaseMediaStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 
@@ -200,7 +216,7 @@ CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TIMEZONE = TIME_ZONE
 
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:3000")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@forrent.id.vn")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@forrent.io.vn")
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
 EMAIL_HOST = env("EMAIL_HOST", default="")
 EMAIL_PORT = env("EMAIL_PORT")
