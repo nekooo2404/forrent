@@ -185,7 +185,7 @@ export default async function Homepage() {
               </p>
             </div>
             <Link
-                className="premium-button shine-link mt-6 inline-flex items-center gap-2 border-b border-primary pb-1 font-button text-button text-primary transition-colors hover:border-gold hover:text-gold md:mt-0"
+              className="mt-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white px-5 py-3 font-button text-button text-primary shadow-soft transition hover:-translate-y-0.5 hover:border-primary hover:bg-primary hover:text-white md:mt-0"
               href="/rooms"
             >
               Xem tất cả phòng
@@ -197,7 +197,8 @@ export default async function Homepage() {
             {collections.map((item) => (
               <MotionItem className={item.className} key={item.title}>
                 <Link
-                  className="premium-card spotlight-card group relative block h-64 overflow-hidden rounded-xl shadow-soft md:h-full"
+                  aria-label={`Xem ${item.title}`}
+                  className="group relative block h-64 overflow-hidden rounded-xl bg-primary shadow-soft transition hover:-translate-y-1 md:h-full"
                   href={item.href}
                 >
                   <Image
