@@ -23,3 +23,11 @@ class SupabaseMediaStorageTests(SimpleTestCase):
         assert storage.url("room images/a b.jpg") == (
             "https://example.supabase.co/storage/v1/object/public/forrent-media/room%20images/a%20b.jpg"
         )
+
+    def test_available_name_adds_suffix_without_head_request(self):
+        storage = SupabaseMediaStorage()
+
+        name = storage.get_available_name("room-images/photo.jpg")
+
+        assert name.startswith("room-images/photo_")
+        assert name.endswith(".jpg")

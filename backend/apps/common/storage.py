@@ -3,6 +3,7 @@ import mimetypes
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured, SuspiciousFileOperation
@@ -72,6 +73,13 @@ class SupabaseMediaStorage(Storage):
 
     def _save(self, name, content):
         return self.upload(name, content, upsert=False)
+
+    def get_available_name(self, name, max_length=None):
+        name = self._clean_name(name)
+        folder, _, filename = name.rpartition("/")
+        stem, dot, suffix = filename.rpartition(".")
+        filename = f"{stem or filename}_{uuid.uuid4().hex[:12]}{dot}{suffix}" if dot else f"{filename}_{uuid.uuid4().hex[:12]}"
+        return f"{folder}/{filename}" if folder else filename
 
     def _open(self, name, mode="rb"):
         if "r" not in mode:
