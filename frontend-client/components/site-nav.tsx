@@ -14,7 +14,7 @@ const navItems: Array<{ key: NavKey; label: string; href: string }> = [
 
 export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
   return (
-    <nav className="glass-panel spotlight-card fixed top-0 z-50 w-full border-b border-outline-variant/10">
+    <nav className="glass-panel fixed top-0 z-50 w-full border-b border-outline-variant/10">
       <div className="mx-auto flex h-20 max-w-container-max items-center justify-between px-margin-mobile md:px-margin-desktop">
         <Link aria-label="ForRent - Trang chủ" className="inline-flex h-11 w-[142px] shrink-0 items-center md:h-12 md:w-[158px]" href="/homepage">
           <Image

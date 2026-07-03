@@ -13,11 +13,10 @@ import {
 
 export function ProfileMenu() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => hasStoredAuthSession());
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setIsLoggedIn(hasStoredAuthSession());
     if (!getStoredAccessToken()) {
       refreshStoredAuthSession()
         .then((token) => setIsLoggedIn(Boolean(token)))
@@ -82,7 +81,7 @@ export function ProfileMenu() {
   }
 
   return (
-    <div className="relative ml-1" ref={profileMenuRef}>
+    <div className="relative z-[60] ml-1" ref={profileMenuRef}>
       <button
         aria-expanded={isProfileMenuOpen}
         aria-haspopup="menu"
@@ -96,7 +95,7 @@ export function ProfileMenu() {
 
       {isProfileMenuOpen ? (
         <div
-          className="glass-panel scroll-reveal absolute right-0 top-full mt-3 w-52 overflow-hidden rounded-lg border py-2 text-left"
+          className="glass-panel scroll-reveal absolute right-0 top-full z-[60] mt-3 w-52 overflow-hidden rounded-lg border py-2 text-left"
           role="menu"
         >
           {isLoggedIn ? (
