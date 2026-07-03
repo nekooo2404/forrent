@@ -87,7 +87,7 @@ export default async function Homepage() {
     <MotionPage className="bg-surface text-on-surface">
       <SiteNav active="home" />
 
-      <header className="urban-band relative flex min-h-[100dvh] w-full flex-col justify-end px-margin-mobile pb-16 pt-32 md:px-margin-desktop lg:min-h-[820px]">
+      <header className="urban-band relative flex min-h-[760px] w-full flex-col justify-center px-margin-mobile pb-14 pt-28 md:px-margin-desktop lg:min-h-[780px]">
         <div className="absolute inset-0 z-0">
           <Image
             alt="Không gian phòng thuê sáng, gọn, có nội thất cơ bản và ánh sáng tự nhiên"
@@ -98,17 +98,17 @@ export default async function Homepage() {
             sizes="100vw"
             src={heroImage}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#061526] via-[#061526]/70 to-[#061526]/40" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#061526]/95 via-[#061526]/78 to-[#061526]/58" />
         </div>
         <div className="relative z-10 mx-auto flex w-full max-w-container-max flex-col gap-8">
           <MotionSection className="max-w-3xl text-reveal">
-            <span className="urban-badge mb-5 px-4 py-2 font-label-caps text-label-caps uppercase tracking-widest">
+            <span className="mb-5 inline-flex rounded-full border border-teal-200/35 bg-teal-100/15 px-4 py-2 font-label-caps text-label-caps uppercase tracking-widest text-teal-50">
               ForRent Hà Nội · Tây Mỗ · Cầu Giấy
             </span>
-            <h1 className="hero-gradient-text hero-typewriter mb-6 font-display-lg-mobile text-display-lg-mobile text-on-primary drop-shadow-md md:font-display-lg md:text-7xl">
+            <h1 className="mb-6 max-w-4xl font-display-lg-mobile text-display-lg-mobile text-white drop-shadow-sm md:font-display-lg md:text-7xl">
               Thuê phòng Hà Nội, xem nhanh, chốt rõ
             </h1>
-            <p className="max-w-2xl font-body-lg text-body-lg text-on-primary/90">
+            <p className="max-w-2xl font-body-lg text-body-lg font-medium text-white/90">
               Lọc phòng còn trống theo khu vực, giá tháng, cọc và tiện ích. Đặt lịch xem, saler gọi lại xác nhận trước khi bạn di chuyển.
             </p>
           </MotionSection>
