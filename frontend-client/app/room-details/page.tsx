@@ -146,17 +146,17 @@ export default async function RoomDetailsPage({ searchParams }: RoomDetailsPageP
   const detail = slug ? await getCachedRoomDetail(slug).then(mapDetail).catch(() => null) : null;
 
   return (
-    <main className="flex min-h-[100dvh] flex-col bg-surface text-on-surface">
+    <main className="flex min-h-[100dvh] flex-col bg-[#f5f7fb] text-on-surface">
       <SiteNav active="rooms" />
 
       <div className="mx-auto w-full max-w-container-max flex-grow px-margin-mobile pb-24 pt-28 md:px-margin-desktop md:pt-32">
         {!detail ? (
-          <section className="flex min-h-[520px] flex-col items-center justify-center rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-10 text-center shadow-soft">
+          <section className="urban-card flex min-h-[520px] flex-col items-center justify-center rounded-2xl p-10 text-center">
             <h1 className="font-headline-md text-headline-md text-primary">Chưa có phòng để hiển thị</h1>
             <p className="mt-4 max-w-xl font-body-md text-body-md leading-7 text-on-surface-variant">
               Dữ liệu phòng hiện chưa sẵn sàng hoặc backend đang tạm thời không phản hồi. Vui lòng quay lại danh sách phòng để thử lại.
             </p>
-            <Link className="mt-8 inline-flex rounded bg-primary px-6 py-3 font-button text-button text-on-primary" href="/rooms">
+            <Link className="premium-button urban-cta mt-8 inline-flex rounded-xl px-6 py-3 font-button text-button" href="/rooms">
               Xem danh sách phòng
             </Link>
           </section>
@@ -174,7 +174,7 @@ export default async function RoomDetailsPage({ searchParams }: RoomDetailsPageP
 
         <div className="relative grid grid-cols-1 gap-gutter md:grid-cols-12">
           <div className="space-y-12 pr-0 md:col-span-8 md:pr-8">
-            <header className="border-b border-outline-variant/20 pb-8">
+            <header className="urban-card rounded-2xl p-7">
               <div className="mb-4 flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
                 <div>
                   <span className="mb-2 block font-label-caps text-label-caps uppercase tracking-widest text-secondary">
@@ -186,7 +186,7 @@ export default async function RoomDetailsPage({ searchParams }: RoomDetailsPageP
                 </div>
                 <div className="text-left md:text-right">
                   <span className="block font-headline-md text-headline-md text-primary">{detail.price}</span>
-                  <span className={`mt-2 inline-flex rounded px-3 py-1 text-xs font-semibold ${detail.isAvailable ? "bg-primary text-white" : "bg-surface-variant text-on-surface"}`}>
+                  <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${detail.isAvailable ? "bg-emerald-500 text-white" : "bg-surface-variant text-on-surface"}`}>
                     {detail.isAvailable ? "Còn trống, có thể đặt lịch" : detail.status}
                   </span>
                 </div>
@@ -202,7 +202,7 @@ export default async function RoomDetailsPage({ searchParams }: RoomDetailsPageP
               </div>
             </header>
 
-            <section className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-6 shadow-soft">
+            <section className="urban-card rounded-2xl p-6">
               <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 className="font-headline-sm text-headline-sm text-primary">Chi phí cần biết</h2>
@@ -220,7 +220,7 @@ export default async function RoomDetailsPage({ searchParams }: RoomDetailsPageP
               </div>
             </section>
 
-            <section>
+            <section className="urban-card rounded-2xl p-7">
               <h2 className="mb-6 font-headline-sm text-headline-sm text-primary">Thông tin phòng</h2>
               <p className="mb-6 font-body-lg text-body-lg leading-relaxed text-on-surface-variant">{detail.description}</p>
               <p className="font-body-md text-body-md leading-relaxed text-on-surface-variant/80">
@@ -228,7 +228,7 @@ export default async function RoomDetailsPage({ searchParams }: RoomDetailsPageP
               </p>
             </section>
 
-            <section className="border-t border-outline-variant/20 pt-12">
+            <section className="urban-card rounded-2xl p-7">
               <h2 className="mb-8 font-headline-sm text-headline-sm text-primary">Tiện ích</h2>
               {detail.amenities.length ? (
                 <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3">
@@ -249,8 +249,11 @@ export default async function RoomDetailsPage({ searchParams }: RoomDetailsPageP
 
           <div className="mt-12 md:col-span-4 md:mt-0">
             <div className="sticky top-28 space-y-4">
-            <ViewingRequestPanel disabled={!detail.isAvailable} roomId={detail.id} />
-            <div className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-5 shadow-soft">
+            <StickyRoomSummary detail={detail} />
+            <div id="dat-lich-xem">
+              <ViewingRequestPanel disabled={!detail.isAvailable} roomId={detail.id} />
+            </div>
+            <div className="urban-card rounded-2xl p-5">
               <h3 className="mb-4 flex items-center gap-2 font-semibold text-primary">
                 <CalendarCheck size={18} strokeWidth={1.8} />
                 Sau khi gửi yêu cầu
@@ -262,7 +265,7 @@ export default async function RoomDetailsPage({ searchParams }: RoomDetailsPageP
               </ol>
             </div>
             <Link
-              className="premium-button flex w-full items-center justify-center rounded border border-primary px-5 py-3 font-button text-button text-primary transition hover:bg-primary hover:text-on-primary"
+              className="premium-button flex w-full items-center justify-center rounded-xl border border-primary px-5 py-3 font-button text-button text-primary transition hover:bg-primary hover:text-on-primary"
               href={`/contact?room_id=${detail.id}&room_title=${encodeURIComponent(detail.title)}`}
             >
               Tư vấn phòng này
@@ -281,7 +284,7 @@ export default async function RoomDetailsPage({ searchParams }: RoomDetailsPageP
 
 function Gallery({ images, title }: Readonly<{ images: string[]; title: string }>) {
   return (
-    <section className="mb-16 grid h-[512px] grid-cols-1 grid-rows-2 gap-unit md:h-[716px] md:grid-cols-4">
+    <section className="mb-16 grid h-[560px] grid-cols-1 grid-rows-2 gap-unit md:h-[740px] md:grid-cols-4">
       <GalleryTile
         alt={`${title} - ảnh chính`}
         className="col-span-1 row-span-2 md:col-span-2"
@@ -290,7 +293,7 @@ function Gallery({ images, title }: Readonly<{ images: string[]; title: string }
       />
       <GalleryTile alt={`${title} - ảnh 2`} className="hidden md:col-span-1 md:row-span-1 md:block" src={images[1]} />
       <GalleryTile alt={`${title} - ảnh 3`} className="hidden md:col-span-1 md:row-span-1 md:block" src={images[2]} />
-      <div className="relative hidden overflow-hidden rounded md:col-span-2 md:row-span-1 md:block md:rounded-lg">
+      <div className="relative hidden overflow-hidden rounded-2xl md:col-span-2 md:row-span-1 md:block">
         {images[3] ? (
           <Image
             alt={`${title} - ảnh 4`}
@@ -319,7 +322,7 @@ function GalleryTile({
   src?: string;
 }>) {
   return (
-    <div className={`relative overflow-hidden rounded md:rounded-lg ${className}`}>
+    <div className={`relative overflow-hidden rounded-2xl ${className}`}>
       {src ? (
         <Image
           alt={alt}
@@ -355,9 +358,52 @@ function DetailMeta({ icon, children }: Readonly<{ icon: ReactNode; children: Re
   );
 }
 
+function StickyRoomSummary({ detail }: Readonly<{ detail: DetailView }>) {
+  return (
+    <aside className="urban-band rounded-2xl p-6 text-on-primary">
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.12em] text-teal-100">Tóm tắt chi phí</span>
+          <strong className="block font-headline-sm text-3xl text-white">{detail.price}</strong>
+        </div>
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${detail.isAvailable ? "bg-emerald-500 text-white" : "bg-white/20 text-white"}`}>
+          {detail.isAvailable ? "Còn trống" : detail.status}
+        </span>
+      </div>
+
+      <div className="grid gap-3">
+        <SummaryLine label="Cọc dự kiến" value={detail.deposit} />
+        <SummaryLine label="Phí dịch vụ" value={detail.serviceFee} />
+        <SummaryLine label="Điện" value={detail.electricity} />
+        <SummaryLine label="Nước" value={detail.water} />
+        <SummaryLine label="Diện tích" value={detail.area} />
+      </div>
+
+      <Link
+        className="premium-button mt-6 flex w-full justify-center rounded-xl bg-white px-5 py-3 font-button text-button text-primary transition hover:bg-teal-50"
+        href="#dat-lich-xem"
+      >
+        Đặt lịch xem phòng
+      </Link>
+      <p className="mt-4 text-sm leading-6 text-white/75">
+        Saler sẽ gọi lại xác nhận phòng còn trống, cọc và phí trước khi bạn đi xem.
+      </p>
+    </aside>
+  );
+}
+
+function SummaryLine({ label, value }: Readonly<{ label: string; value: string }>) {
+  return (
+    <div className="flex items-center justify-between gap-4 rounded-xl bg-white/10 px-4 py-3 text-sm">
+      <span className="text-white/70">{label}</span>
+      <span className="text-right font-semibold text-white">{value}</span>
+    </div>
+  );
+}
+
 function CostCard({ icon, label, value }: Readonly<{ icon: ReactNode; label: string; value: string }>) {
   return (
-    <div className="rounded-md border border-outline-variant/15 bg-surface-container-low p-4">
+    <div className="rounded-xl border border-outline-variant/20 bg-[#f8fafc] p-4">
       <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-secondary">
         {icon}
         {label}

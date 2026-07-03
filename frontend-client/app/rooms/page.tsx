@@ -163,21 +163,32 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   const totalPages = Math.max(1, Math.ceil(totalCount / 12));
 
   return (
-    <main className="v-ui-shell flex min-h-[100dvh] flex-col bg-surface text-on-surface">
+    <main className="flex min-h-[100dvh] flex-col bg-[#f5f7fb] text-on-surface">
       <SiteNav active="rooms" />
-      <div className="h-20" />
 
-      <header className="scroll-reveal mx-auto flex w-full max-w-container-max flex-col items-start justify-between gap-6 border-b border-outline-variant/20 px-margin-mobile pb-8 pt-12 md:flex-row md:items-baseline md:px-margin-desktop">
-        <div>
-          <h1 className="mb-2 font-display-lg-mobile text-display-lg-mobile text-primary md:font-display-lg md:text-display-lg">
-            Phòng đang cho thuê
-          </h1>
-          <p className="font-body-lg text-body-lg text-on-surface-variant">
-            Hiển thị {rooms.length} trong {totalCount} phòng. Ưu tiên phòng còn trống và có thể đặt lịch xem.
-          </p>
+      <header className="urban-band px-margin-mobile pb-10 pt-32 text-on-primary md:px-margin-desktop">
+        <div className="scroll-reveal mx-auto flex w-full max-w-container-max flex-col justify-between gap-8 md:flex-row md:items-end">
+          <div className="max-w-3xl">
+            <span className="mb-4 inline-flex rounded-full border border-teal-300/25 bg-teal-300/10 px-4 py-2 font-label-caps text-label-caps uppercase tracking-widest text-teal-100">
+              Danh sách phòng Hà Nội
+            </span>
+            <h1 className="mb-4 font-display-lg-mobile text-display-lg-mobile text-white md:font-display-lg md:text-6xl">
+              Chọn phòng đang trống, rõ giá trước khi đi xem
+            </h1>
+            <p className="max-w-2xl font-body-lg text-body-lg text-white/80">
+              Hiển thị {rooms.length} trong {totalCount} phòng. Lọc theo khu vực, ngân sách, diện tích và tiện ích để chốt lịch xem nhanh hơn.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3 text-sm">
+              <span className="rounded-full bg-white/10 px-4 py-2 text-white/90">Còn trống được ưu tiên</span>
+              <span className="rounded-full bg-white/10 px-4 py-2 text-white/90">Cọc và phí hiện rõ</span>
+              <span className="rounded-full bg-white/10 px-4 py-2 text-white/90">Saler gọi xác nhận</span>
+            </div>
+          </div>
+
+          <div className="urban-panel w-full rounded-2xl p-4 text-on-surface md:w-auto">
+            <SortForm ordering={ordering} params={params} />
+          </div>
         </div>
-
-        <SortForm ordering={ordering} params={params} />
       </header>
 
       <section className="mx-auto flex w-full max-w-container-max flex-grow flex-col gap-gutter px-margin-mobile py-12 md:flex-row md:px-margin-desktop">
@@ -202,16 +213,16 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
               ))}
             </div>
           ) : (
-            <div className="rounded border border-outline-variant/20 bg-surface-container-lowest p-10 text-center shadow-soft">
+            <div className="urban-card rounded-2xl p-10 text-center">
               <h2 className="font-headline-sm text-headline-sm text-primary">Chưa có phòng phù hợp</h2>
               <p className="mt-3 font-body-md text-body-md text-on-surface-variant">
-                Thử xóa bớt bộ lọc hoặc gửi nhu cầu, saler sẽ báo khi có phòng phù hợp.
+                Thử xóa bớt bộ lọc hoặc gửi nhu cầu thuê phòng. Saler sẽ báo lại khi có phòng đúng khu vực và ngân sách.
               </p>
               <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-                <Link className="premium-button inline-flex rounded border border-primary px-5 py-3 font-button text-button text-primary" href="/rooms">
+                <Link className="premium-button inline-flex rounded-xl border border-primary px-5 py-3 font-button text-button text-primary" href="/rooms">
                   Xóa bộ lọc
                 </Link>
-                <Link className="premium-button inline-flex rounded bg-primary px-5 py-3 font-button text-button text-on-primary" href="/contact">
+                <Link className="premium-button urban-cta inline-flex rounded-xl px-5 py-3 font-button text-button" href="/contact">
                   Gửi nhu cầu thuê phòng
                 </Link>
               </div>
@@ -242,7 +253,7 @@ function SortForm({
       })}
       <select
         aria-label="Sắp xếp"
-        className="w-full rounded border border-outline-variant/30 bg-surface-container-lowest px-4 py-2 font-button text-button text-primary transition-colors focus:border-primary focus:ring-primary md:w-52"
+        className="w-full rounded-xl border border-outline-variant/30 bg-white px-4 py-3 font-button text-button text-primary transition-colors focus:border-primary focus:ring-primary md:w-52"
         defaultValue={ordering}
         name="ordering"
       >
@@ -251,7 +262,7 @@ function SortForm({
         <option value="-price">Giá cao trước</option>
         <option value="-actual_area">Diện tích lớn trước</option>
       </select>
-      <button className="premium-button rounded bg-primary px-4 py-2 font-button text-button text-on-primary" type="submit">
+      <button className="premium-button urban-cta rounded-xl px-5 py-3 font-button text-button" type="submit">
         Áp dụng
       </button>
     </form>
@@ -284,11 +295,17 @@ function FilterSidebar({
   const cityFilters = [{ id: "", name: "Tất cả khu vực", slug: "all", is_active: true }, ...filters.cities];
   const typeFilters = filters.room_types.length ? filters.room_types : fallbackFilters.room_types;
   const statusFilters = filters.statuses.length ? filters.statuses : fallbackFilters.statuses;
+  const visibleWards: RoomFilters["wards"] = [];
+  for (const ward of filters.wards) {
+    if (!activeCity || String(ward.city) === activeCity) {
+      visibleWards.push(ward);
+    }
+  }
 
   return (
-    <aside className="w-full flex-shrink-0 md:w-[280px]">
-      <form action="/rooms" className="custom-scrollbar sticky top-[104px] max-h-none overflow-visible pr-0 md:max-h-[calc(100vh-124px)] md:overflow-y-auto md:pr-4">
-        <div className="glass-panel spotlight-card mb-6 flex items-center justify-between rounded-lg border p-4">
+    <aside className="w-full flex-shrink-0 md:w-[304px]">
+      <form action="/rooms" className="custom-scrollbar urban-card sticky top-[104px] max-h-none overflow-visible rounded-2xl p-4 md:max-h-[calc(100vh-124px)] md:overflow-y-auto">
+        <div className="mb-4 flex items-center justify-between border-b border-outline-variant/20 pb-4">
           <h2 className="font-headline-sm text-headline-sm text-primary">Bộ lọc</h2>
           <Link className="font-button text-button text-secondary underline transition-colors hover:text-primary" href="/rooms">
             Xóa tất cả
@@ -297,7 +314,8 @@ function FilterSidebar({
 
         <FilterSection title="Tìm kiếm" icon={<Search size={18} strokeWidth={1.8} />}>
           <input
-            className="w-full rounded border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 font-body-md text-primary focus:border-primary focus:ring-primary"
+            aria-label="Tìm kiếm phòng"
+            className="w-full rounded-xl border border-outline-variant/30 bg-[#f8fafc] px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
             defaultValue={search}
             name="search"
             placeholder="Tên phòng, địa chỉ..."
@@ -327,18 +345,16 @@ function FilterSidebar({
         {filters.wards.length ? (
           <FilterSection title="Phường" icon={<Minus size={18} strokeWidth={1.8} />}>
             <select
-              className="w-full rounded border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 font-body-md text-primary focus:border-primary focus:ring-primary"
+              className="w-full rounded-xl border border-outline-variant/30 bg-[#f8fafc] px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
               defaultValue={activeWard ?? ""}
               name="ward"
             >
               <option value="">Tất cả phường</option>
-              {filters.wards
-                .filter((ward) => !activeCity || String(ward.city) === activeCity)
-                .map((ward) => (
-                  <option key={ward.id} value={ward.id}>
-                    {ward.name}
-                  </option>
-                ))}
+              {visibleWards.map((ward) => (
+                <option key={ward.id} value={ward.id}>
+                  {ward.name}
+                </option>
+              ))}
             </select>
           </FilterSection>
         ) : null}
@@ -346,7 +362,8 @@ function FilterSidebar({
         <FilterSection title="Khoảng giá" icon={<Minus size={18} strokeWidth={1.8} />}>
           <div className="grid grid-cols-1 gap-3">
             <input
-              className="w-full rounded border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 font-body-md text-primary focus:border-primary focus:ring-primary"
+              aria-label="Giá từ"
+              className="w-full rounded-xl border border-outline-variant/30 bg-[#f8fafc] px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
               defaultValue={activeMinPrice}
               min="0"
               name="min_price"
@@ -354,7 +371,8 @@ function FilterSidebar({
               type="number"
             />
             <input
-              className="w-full rounded border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 font-body-md text-primary focus:border-primary focus:ring-primary"
+              aria-label="Giá đến"
+              className="w-full rounded-xl border border-outline-variant/30 bg-[#f8fafc] px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
               defaultValue={activeMaxPrice}
               min="0"
               name="max_price"
@@ -416,7 +434,7 @@ function FilterSidebar({
 
         <FilterSection title="Trạng thái" icon={<Minus size={18} strokeWidth={1.8} />}>
           <select
-            className="w-full rounded border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 font-body-md text-primary focus:border-primary focus:ring-primary"
+            className="w-full rounded-xl border border-outline-variant/30 bg-[#f8fafc] px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
             defaultValue={activeStatus ?? ""}
             name="status"
           >
@@ -447,7 +465,7 @@ function FilterSidebar({
             ))}
           </div>
         </FilterSection>
-        <button className="premium-button mt-6 w-full rounded bg-primary px-4 py-3 font-button text-button text-on-primary transition hover:bg-secondary" type="submit">
+        <button className="premium-button urban-cta mt-6 w-full rounded-xl px-4 py-3 font-button text-button" type="submit">
           Áp dụng bộ lọc
         </button>
       </form>
@@ -465,7 +483,7 @@ function FilterSection({
   children: ReactNode;
 }>) {
   return (
-    <div className="border-b border-outline-variant/20 py-6 last:border-b-0">
+    <div className="border-b border-outline-variant/20 py-5 last:border-b-0">
       <div className="mb-4 flex w-full items-center justify-between font-button text-button text-primary">
         {title}
         <span>{icon}</span>
@@ -480,7 +498,7 @@ function RoomCard({ room }: Readonly<{ room: RoomCardView }>) {
 
   return (
     <article
-      className={`premium-card spotlight-card scroll-reveal group flex flex-col overflow-hidden rounded-xl border border-outline-variant/5 bg-surface-container-lowest shadow-soft ${
+      className={`premium-card urban-card spotlight-card scroll-reveal group flex flex-col overflow-hidden rounded-2xl ${
         room.unavailable ? "opacity-80" : ""
       }`}
     >
@@ -500,14 +518,25 @@ function RoomCard({ room }: Readonly<{ room: RoomCardView }>) {
             <ImagePlaceholder />
           )}
         </Link>
+        <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#061526]/70 to-transparent" />
         <div className="absolute left-4 top-4">
           <span
             className={`rounded-full px-3 py-1.5 font-label-caps text-label-caps uppercase tracking-wider shadow-sm backdrop-blur ${
-              room.unavailable ? "bg-surface-variant/95 text-on-surface" : "bg-primary text-white"
+              room.unavailable ? "bg-surface-variant/95 text-on-surface" : "bg-emerald-500 text-white"
             }`}
           >
             {room.unavailable ? room.status : "Còn trống"}
           </span>
+        </div>
+        <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4 text-white">
+          <div>
+            <p className="mb-1 text-sm font-medium text-white/80">{room.primaryMeta} · {room.area}</p>
+            <p className="line-clamp-1 font-headline-sm text-xl">{room.location}</p>
+          </div>
+          <div className="rounded-xl bg-white/10 px-3 py-2 text-right backdrop-blur">
+            <span className="block font-headline-sm text-xl">{room.price}</span>
+            <span className="text-xs text-white/75">{room.period}</span>
+          </div>
         </div>
       </div>
 
@@ -517,11 +546,11 @@ function RoomCard({ room }: Readonly<{ room: RoomCardView }>) {
             <Link className="mb-1 block font-headline-sm text-headline-sm text-primary hover:text-secondary" href={detailHref}>
               {room.title}
             </Link>
-            <p className="font-body-md text-body-md text-on-surface-variant">{room.location}</p>
+            <p className="font-body-md text-body-md text-on-surface-variant">{room.secondaryMeta}</p>
           </div>
           <div className="sm:text-right">
-            <span className="block font-headline-sm text-headline-sm text-primary">{room.price}</span>
-            <span className="font-body-md text-sm text-on-surface-variant">{room.period}</span>
+            <span className="block text-xs font-semibold uppercase tracking-[0.08em] text-secondary">Giá tháng</span>
+            <span className="font-body-md text-sm text-on-surface-variant">{room.price}{room.period}</span>
           </div>
         </div>
         <div className="mb-5 grid grid-cols-2 gap-3 text-sm text-on-surface-variant">
@@ -534,7 +563,7 @@ function RoomCard({ room }: Readonly<{ room: RoomCardView }>) {
         {room.featuredAmenities.length ? (
           <div className="mb-5 flex flex-wrap gap-2">
             {room.featuredAmenities.map((amenity) => (
-              <span className="rounded-full bg-surface-container px-3 py-1 text-xs font-medium text-primary" key={amenity}>
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary" key={amenity}>
                 {amenity}
               </span>
             ))}
@@ -545,7 +574,7 @@ function RoomCard({ room }: Readonly<{ room: RoomCardView }>) {
           <RoomMeta icon={<BedDouble size={20} strokeWidth={1.8} />} label={room.primaryMeta} />
           <RoomMeta icon={<Bath size={20} strokeWidth={1.8} />} label={room.secondaryMeta} />
           <RoomMeta icon={<Ruler size={20} strokeWidth={1.8} />} label={room.area} />
-          <Link className="premium-button ml-auto rounded bg-primary px-4 py-3 font-body-md text-sm text-on-primary" href={detailHref}>
+          <Link className="premium-button urban-cta ml-auto rounded-xl px-4 py-3 font-body-md text-sm" href={detailHref}>
             Xem và đặt lịch
           </Link>
         </div>
@@ -556,12 +585,12 @@ function RoomCard({ room }: Readonly<{ room: RoomCardView }>) {
 
 function CostPill({ icon, label, value }: Readonly<{ icon: ReactNode; label: string; value: string }>) {
   return (
-    <div className="rounded-md border border-outline-variant/15 bg-surface-container-low p-3">
+    <div className="rounded-xl border border-outline-variant/20 bg-[#f8fafc] p-3">
       <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-secondary">
         {icon}
         {label}
       </div>
-      <p className="line-clamp-1 font-body-md text-sm text-primary">{value}</p>
+      <p className="line-clamp-1 font-body-md text-sm font-semibold text-primary">{value}</p>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { CalendarDays, CheckCircle, Clock, X } from "lucide-react";
 import type { FormEvent } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 
 import { modalBackdrop, modalPanel, MotionDiv, MotionModal } from "@/components/motion";
 import { authFetch } from "@/lib/auth-storage";
@@ -27,6 +27,18 @@ const timeSlotLabels: Record<ViewingTimeSlot, string> = {
   evening: "Tối, 16:00 - 19:00",
 };
 
+function subscribeToDate() {
+  return () => undefined;
+}
+
+function getTodaySnapshot() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getServerTodaySnapshot() {
+  return "";
+}
+
 function errorText(payload: ViewingRequestApiResponse) {
   if (payload.message) {
     return payload.message;
@@ -47,6 +59,7 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
   const [state, setState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
   const [formSnapshot, setFormSnapshot] = useState<{ date: string; timeSlot: ViewingTimeSlot } | null>(null);
+  const today = useSyncExternalStore(subscribeToDate, getTodaySnapshot, getServerTodaySnapshot);
 
   const isReady = useMemo(() => !disabled && Number.isInteger(roomId) && Number(roomId) > 0, [disabled, roomId]);
 
@@ -113,7 +126,7 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
 
   return (
     <>
-      <div className="sticky top-32 rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-8 shadow-elevated">
+      <div className="rounded-2xl border border-outline-variant/10 bg-surface-container-lowest p-6 shadow-elevated md:p-7">
         <div className="mb-8">
           <span className="mb-2 block font-headline-sm text-headline-sm text-primary">Đặt lịch xem phòng</span>
           <span className="font-body-md text-body-md text-secondary">
@@ -136,7 +149,7 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
               <input
                 className="w-full border-none bg-transparent py-2 pl-8 font-body-md text-primary focus:ring-0"
                 id="viewing-date"
-                min={new Date().toISOString().slice(0, 10)}
+                min={today || undefined}
                 name="date"
                 required
                 disabled={disabled}

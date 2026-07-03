@@ -4,6 +4,10 @@
 
 :root {
   color-scheme: light;
+  --urban-ink: #061526;
+  --urban-ink-soft: #0f2742;
+  --urban-teal: #14b8a6;
+  --urban-orange: #f97316;
   --motion-fast: 160ms;
   --motion-base: 250ms;
   --motion-medium: 400ms;
@@ -254,6 +258,67 @@ input {
   border-color: rgba(203, 213, 225, 0.62);
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(12px);
+}
+
+.urban-band {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 16%, rgba(20, 184, 166, 0.22), transparent 28rem),
+    radial-gradient(circle at 86% 10%, rgba(249, 115, 22, 0.14), transparent 24rem),
+    linear-gradient(135deg, var(--urban-ink) 0%, var(--urban-ink-soft) 58%, #102f52 100%);
+}
+
+.urban-band::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.16;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black, transparent 86%);
+}
+
+.urban-band > * {
+  position: relative;
+  z-index: 2;
+}
+
+.urban-panel {
+  border: 1px solid rgba(203, 213, 225, 0.72);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 20px 54px rgba(6, 21, 38, 0.12);
+  backdrop-filter: blur(14px);
+}
+
+.urban-card {
+  border: 1px solid rgba(203, 213, 225, 0.74);
+  background: #ffffff;
+  box-shadow: 0 18px 44px rgba(6, 21, 38, 0.1);
+}
+
+.urban-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(20, 184, 166, 0.24);
+  background: rgba(20, 184, 166, 0.12);
+  color: #0f766e;
+}
+
+.urban-cta {
+  background: var(--urban-ink);
+  color: #ffffff;
+}
+
+.urban-cta:hover {
+  background: #0f2742;
 }
 
 .v-ui-stage,

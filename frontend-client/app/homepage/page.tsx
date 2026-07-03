@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BedDouble, MapPin, ReceiptText, Search, ShieldCheck, ShowerHead } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
@@ -86,34 +87,37 @@ export default async function Homepage() {
     <MotionPage className="bg-surface text-on-surface">
       <SiteNav active="home" />
 
-      <header className="v-ui-stage relative flex min-h-[100dvh] w-full flex-col justify-end px-margin-mobile pb-20 pt-28 md:px-margin-desktop lg:min-h-[800px]">
+      <header className="urban-band relative flex min-h-[100dvh] w-full flex-col justify-end px-margin-mobile pb-16 pt-32 md:px-margin-desktop lg:min-h-[820px]">
         <div className="absolute inset-0 z-0">
           <Image
             alt="Không gian phòng thuê sáng, gọn, có nội thất cơ bản và ánh sáng tự nhiên"
-            className="parallax-media object-cover"
+            className="parallax-media object-cover opacity-[0.62] mix-blend-screen"
             fill
             priority
             quality={82}
             sizes="100vw"
             src={heroImage}
           />
-          <div className="hero-vignette absolute inset-0" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#061526] via-[#061526]/70 to-[#061526]/40" />
         </div>
-        <div className="relative z-10 mx-auto flex w-full max-w-container-max flex-col items-end justify-between gap-gutter md:flex-row">
-          <MotionSection className="max-w-2xl text-reveal">
-            <h1 className="hero-gradient-text hero-typewriter mb-6 font-display-lg-mobile text-display-lg-mobile text-on-primary drop-shadow-md md:font-display-lg md:text-display-lg">
-              Tìm phòng thuê theo tháng phù hợp
+        <div className="relative z-10 mx-auto flex w-full max-w-container-max flex-col gap-8">
+          <MotionSection className="max-w-3xl text-reveal">
+            <span className="urban-badge mb-5 px-4 py-2 font-label-caps text-label-caps uppercase tracking-widest">
+              ForRent Hà Nội · Tây Mỗ · Cầu Giấy
+            </span>
+            <h1 className="hero-gradient-text hero-typewriter mb-6 font-display-lg-mobile text-display-lg-mobile text-on-primary drop-shadow-md md:font-display-lg md:text-7xl">
+              Thuê phòng Hà Nội, xem nhanh, chốt rõ
             </h1>
-            <p className="mb-8 max-w-xl font-body-lg text-body-lg text-on-primary/90">
-              Lọc theo khu vực, giá tháng, diện tích và đặt lịch xem với saler phụ trách.
+            <p className="max-w-2xl font-body-lg text-body-lg text-on-primary/90">
+              Lọc phòng còn trống theo khu vực, giá tháng, cọc và tiện ích. Đặt lịch xem, saler gọi lại xác nhận trước khi bạn di chuyển.
             </p>
           </MotionSection>
 
-          <MotionSection className="glass-panel spotlight-card w-full max-w-md rounded-xl border p-6 md:w-auto">
-            <form action="/rooms" className="flex flex-col gap-4">
-              <div className="flex flex-col">
-                <label className="mb-2 font-label-caps text-label-caps text-on-surface-variant">Khu vực</label>
-                <div className="relative border-b border-outline-variant transition-colors focus-within:border-gold">
+          <MotionSection className="urban-panel spotlight-card w-full rounded-2xl p-4 md:p-5">
+            <form action="/rooms" className="grid gap-4 md:grid-cols-[1.6fr_1fr_1fr_auto] md:items-end">
+              <div className="flex flex-col rounded-xl bg-white px-4 py-3">
+                <label className="mb-2 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-room-search">Khu vực</label>
+                <div className="relative">
                   <MapPin
                     aria-hidden="true"
                     className="absolute left-0 top-1/2 -translate-y-1/2 text-on-surface-variant"
@@ -121,30 +125,33 @@ export default async function Homepage() {
                     strokeWidth={1.8}
                   />
                   <input
-                    className="w-full border-none bg-transparent py-2 pl-8 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:ring-0"
+                    className="w-full border-none bg-transparent py-1 pl-8 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:ring-0"
+                    id="home-room-search"
                     name="search"
-                    placeholder="Nhập khu vực hoặc tên phòng"
+                    placeholder="Tây Mỗ, Cầu Giấy..."
                     type="text"
                   />
                 </div>
               </div>
-              <div className="flex gap-4">
-                <div className="flex w-1/2 flex-col">
-                  <label className="mb-2 font-label-caps text-label-caps text-on-surface-variant">Giá tối đa</label>
-                  <div className="border-b border-outline-variant transition-colors focus-within:border-gold">
+              <div className="grid grid-cols-2 gap-4 md:contents">
+                <div className="flex flex-col rounded-xl bg-white px-4 py-3">
+                  <label className="mb-2 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-max-price">Giá tối đa</label>
+                  <div>
                     <input
-                      className="w-full border-none bg-transparent py-2 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:ring-0"
+                      className="w-full border-none bg-transparent py-1 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:ring-0"
+                      id="home-max-price"
                       name="max_price"
-                      placeholder="VD: 8000000"
+                      placeholder="8.000.000"
                       type="number"
                     />
                   </div>
                 </div>
-                <div className="flex w-1/2 flex-col">
-                  <label className="mb-2 font-label-caps text-label-caps text-on-surface-variant">Loại phòng</label>
-                  <div className="border-b border-outline-variant transition-colors focus-within:border-gold">
+                <div className="flex flex-col rounded-xl bg-white px-4 py-3">
+                  <label className="mb-2 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-room-type">Loại phòng</label>
+                  <div>
                     <select
-                      className="w-full border-none bg-transparent py-2 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:ring-0"
+                      className="w-full border-none bg-transparent py-1 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:ring-0"
+                      id="home-room-type"
                       name="room_type"
                       defaultValue=""
                     >
@@ -157,11 +164,11 @@ export default async function Homepage() {
                 </div>
               </div>
               <button
-                className="premium-button group mt-4 flex w-full items-center justify-center gap-2 rounded bg-primary py-4 font-button text-button text-on-primary hover:bg-surface-tint"
+                className="premium-button urban-cta group flex h-full min-h-[68px] w-full items-center justify-center gap-2 rounded-xl px-7 font-button text-button"
                 type="submit"
               >
                 <Search className="transition-colors group-hover:text-gold" size={20} strokeWidth={1.8} />
-                Tìm phòng phù hợp
+                Tìm ngay
               </button>
             </form>
           </MotionSection>
@@ -216,10 +223,11 @@ export default async function Homepage() {
         </div>
       </section>
 
-      <section className="bg-surface-container-low px-margin-mobile py-24 md:px-margin-desktop">
+      <section className="bg-[#f5f7fb] px-margin-mobile py-24 md:px-margin-desktop">
         <div className="mx-auto max-w-container-max">
           <MotionSection className="mb-16 text-center">
-            <h2 className="mb-4 font-headline-md text-headline-md text-primary">Phòng có thể đặt lịch xem</h2>
+            <span className="urban-badge mb-4 px-3 py-1 font-label-caps text-label-caps uppercase tracking-widest">Còn trống thật</span>
+            <h2 className="mb-4 font-headline-md text-headline-md text-primary">Phòng đang trống, quét nhanh để chọn</h2>
             <p className="mx-auto max-w-2xl font-body-lg text-body-lg text-on-surface-variant">
               Ưu tiên phòng còn trống, có giá tháng, cọc dự kiến, khu vực và tiện ích nổi bật để bạn quyết định nhanh.
             </p>
@@ -245,12 +253,38 @@ export default async function Homepage() {
           )}
           <div className="mt-12 text-center">
             <Link
-              className="premium-button inline-flex rounded border border-primary bg-transparent px-8 py-3 font-button text-button text-primary transition-colors hover:bg-primary hover:text-on-primary"
+              className="premium-button urban-cta inline-flex rounded-xl px-8 py-4 font-button text-button"
               href="/rooms"
             >
               Xem tất cả phòng
             </Link>
           </div>
+        </div>
+      </section>
+
+      <section className="urban-band px-margin-mobile py-20 text-on-primary md:px-margin-desktop">
+        <div className="mx-auto grid max-w-container-max gap-gutter md:grid-cols-[1.2fr_2fr] md:items-center">
+          <MotionSection>
+            <span className="mb-4 block font-label-caps text-label-caps uppercase tracking-widest text-teal-200">Đi xem không mất thời gian</span>
+            <h2 className="font-headline-md text-headline-md">Trước khi đi, mọi thứ quan trọng đã được xác nhận.</h2>
+          </MotionSection>
+          <MotionList className="grid gap-4 md:grid-cols-3">
+            <MotionItem>
+              <UrbanStep icon={<ShieldCheck size={22} strokeWidth={1.8} />} title="Còn trống">
+                Saler xác nhận lại tình trạng phòng trước lịch xem.
+              </UrbanStep>
+            </MotionItem>
+            <MotionItem>
+              <UrbanStep icon={<ReceiptText size={22} strokeWidth={1.8} />} title="Rõ phí">
+                Giá tháng, cọc, điện nước và phí dịch vụ được nói trước.
+              </UrbanStep>
+            </MotionItem>
+            <MotionItem>
+              <UrbanStep icon={<Search size={22} strokeWidth={1.8} />} title="Đúng nhu cầu">
+                Chốt khu vực, ngân sách và giờ xem để tránh chạy lòng vòng.
+              </UrbanStep>
+            </MotionItem>
+          </MotionList>
         </div>
       </section>
 
@@ -264,9 +298,9 @@ function PropertyCard({ property }: Readonly<{ property: PropertyCardView }>) {
 
   return (
               <article
-                className="premium-card spotlight-card group cursor-pointer overflow-hidden rounded-xl border border-transparent bg-surface shadow-soft"
+                className="premium-card urban-card spotlight-card group cursor-pointer overflow-hidden rounded-2xl"
               >
-                <div className="relative h-64 overflow-hidden">
+                <div className="relative h-72 overflow-hidden">
                   <Link aria-label={`Xem chi tiết ${property.title}`} className="absolute inset-0" href={detailHref}>
                     {property.image ? (
                       <Image
@@ -287,13 +321,16 @@ function PropertyCard({ property }: Readonly<{ property: PropertyCardView }>) {
                       {property.label}
                     </div>
                   ) : null}
+                  <div className="absolute right-4 top-4 rounded-full bg-emerald-500 px-3 py-1 font-label-caps text-label-caps uppercase tracking-wider text-white shadow-sm">
+                    Còn trống
+                  </div>
                 </div>
                 <div className="p-6">
-                  <div className="mb-2 flex items-start justify-between gap-4">
+                  <div className="mb-3 flex items-start justify-between gap-4">
                     <Link className="font-headline-sm text-headline-sm text-primary hover:text-secondary" href={detailHref}>
                       {property.title}
                     </Link>
-                    <span className="text-right font-body-md text-body-md font-medium text-primary">{property.price}</span>
+                    <span className="text-right font-headline-sm text-headline-sm text-primary">{property.price}</span>
                   </div>
                   <p className="mb-4 font-body-md text-body-md text-on-surface-variant">
                     {property.location} · {property.descriptor}
@@ -330,12 +367,22 @@ function PropertyCard({ property }: Readonly<{ property: PropertyCardView }>) {
                     <div className="flex items-center gap-1 font-body-md text-sm">
                       <ShowerHead size={18} strokeWidth={1.8} /> {property.amenities}
                     </div>
-                    <Link className="ml-auto flex items-center gap-1 font-body-md text-sm text-gold group-hover:underline" href={detailHref}>
-                      Chi tiết
+                    <Link className="premium-button ml-auto rounded-lg bg-primary px-4 py-2 font-body-md text-sm text-on-primary" href={detailHref}>
+                      Xem phòng
                     </Link>
                   </div>
                 </div>
               </article>
+  );
+}
+
+function UrbanStep({ children, icon, title }: Readonly<{ children: ReactNode; icon: ReactNode; title: string }>) {
+  return (
+    <div className="h-full rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur">
+      <div className="mb-4 inline-flex rounded-xl bg-white/10 p-3 text-teal-200">{icon}</div>
+      <h3 className="mb-2 font-headline-sm text-xl text-white">{title}</h3>
+      <p className="font-body-md text-sm leading-6 text-white/75">{children}</p>
+    </div>
   );
 }
 
