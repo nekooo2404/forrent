@@ -9,6 +9,7 @@ const DEFAULT_API_TIMEOUT_MS = 5000;
 
 export const API_BASE_URL =
   process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL;
+export const PUBLIC_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || API_BASE_URL;
 
 function buildRequestHeaders(initHeaders?: HeadersInit, hasBody = false) {
   const headers = new Headers(initHeaders);
@@ -429,10 +430,16 @@ export function resolveMediaUrl(value?: string | null) {
   if (!value) {
     return null;
   }
-  if (value.startsWith("http://") || value.startsWith("https://")) {
-    return value;
+  const url = new URL(value, PUBLIC_API_BASE_URL);
+  const isInternalMediaUrl =
+    (url.pathname.startsWith("/media/") || url.pathname.startsWith("/static/")) &&
+    ["backend", "localhost", "127.0.0.1"].includes(url.hostname);
+
+  if (isInternalMediaUrl && process.env.NEXT_PUBLIC_API_BASE_URL) {
+    return new URL(`${url.pathname}${url.search}${url.hash}`, process.env.NEXT_PUBLIC_API_BASE_URL).toString();
   }
-  return new URL(value, API_BASE_URL).toString();
+
+  return url.toString();
 }
 
 export function formatVnd(value: string | number, suffix = "VNĐ") {

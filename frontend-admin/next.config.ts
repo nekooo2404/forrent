@@ -13,8 +13,8 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https://lh3.googleusercontent.com https://images.unsplash.com http://localhost:8000 http://127.0.0.1:8000 http://backend:8000",
-      "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://backend:8000 https://api.forrent.id.vn",
+      "img-src 'self' data: blob: https://lh3.googleusercontent.com https://images.unsplash.com https://api.forrent.io.vn http://localhost:8000 http://127.0.0.1:8000 http://backend:8000",
+      "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://backend:8000 https://api.forrent.io.vn",
       "object-src 'none'",
       "base-uri 'self'",
       "frame-ancestors 'none'",
@@ -36,6 +36,10 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "images.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "api.forrent.io.vn",
       },
       {
         protocol: "http",
