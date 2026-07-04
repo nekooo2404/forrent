@@ -1,12 +1,22 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BedDouble, MapPin, ReceiptText, Search, ShieldCheck, ShowerHead } from "lucide-react";
+import { ArrowRight, BedDouble, MapPin, ReceiptText, Search, ShieldCheck, ShowerHead, Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { MotionItem, MotionList, MotionPage, MotionSection } from "@/components/motion";
-import { formatArea, formatOptionalVnd, formatVnd, getRooms, resolveMediaUrl, roomTypeLabel, type ApiRoom } from "@/lib/api";
+import {
+  formatArea,
+  formatOptionalVnd,
+  formatVnd,
+  getBlogs,
+  getCachedRoomFilters,
+  getRooms,
+  resolveMediaUrl,
+  roomTypeLabel,
+  type ApiRoom,
+} from "@/lib/api";
 
 const heroImage =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuAPSq4B_hUK8gIy1VoWxO8icvb7rDIz281RK1JtAGr5UG_p9uUg5C5jUAHiq-j5gMhbAZQrkdG4TAoXvu3BdSNRxO9ZnHH3eOlTZ44a12OOmjgsMxgeXklRCRQWPH2UJC6Z9ykaKGOIvde5JLRbbMMboUij9Gho-kCl0irx9HVjqFT_SuVkEsuj40-k2w4AhsQKnHZkpKP1Hd6gBCYNzGg7Sk2lGNcr6BxNUQx7mYlIqx09zQavwK4n0VCFGaCT4Coe8S94NdPiJP7a";
@@ -59,6 +69,12 @@ type PropertyCardView = {
   alt: string;
 };
 
+type BackendSignal = {
+  label: string;
+  value: string;
+  note: string;
+};
+
 function mapProperty(room: ApiRoom, index: number): PropertyCardView {
   return {
     id: room.id,
@@ -80,40 +96,68 @@ function mapProperty(room: ApiRoom, index: number): PropertyCardView {
 }
 
 export default async function Homepage() {
-  const roomsResponse = await getRooms({ page_size: 3, status: "AVAILABLE", ordering: "-created_at" }).catch(() => null);
+  const [roomsResponse, filtersResponse, blogsResponse] = await Promise.all([
+    getRooms({ page_size: 3, status: "AVAILABLE", ordering: "-created_at" }).catch(() => null),
+    getCachedRoomFilters().catch(() => null),
+    getBlogs({ page_size: 1, ordering: "-published_at" }).catch(() => null),
+  ]);
   const properties = roomsResponse?.results.map(mapProperty) ?? [];
+  const signals: BackendSignal[] = [
+    { label: "Phòng trống", value: String(roomsResponse?.count ?? properties.length), note: "đồng bộ từ backend" },
+    { label: "Khu vực", value: String(filtersResponse?.wards.length ?? 0), note: "có thể lọc ngay" },
+    { label: "Tiện ích", value: String(filtersResponse?.amenities.length ?? 0), note: "đang map từ API" },
+    { label: "Bài viết", value: String(blogsResponse?.count ?? 0), note: "kinh nghiệm thuê" },
+  ];
 
   return (
     <MotionPage className="bg-surface text-on-surface">
       <SiteNav active="home" />
 
-      <header className="urban-band relative flex min-h-[760px] w-full flex-col justify-center px-margin-mobile pb-14 pt-28 md:px-margin-desktop lg:min-h-[780px]">
-        <div className="absolute inset-0 z-0">
-          <Image
-            alt="Không gian phòng thuê sáng, gọn, có nội thất cơ bản và ánh sáng tự nhiên"
-            className="parallax-media object-cover opacity-[0.62] mix-blend-screen"
-            fill
-            priority
-            quality={82}
-            sizes="100vw"
-            src={heroImage}
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#061526]/95 via-[#061526]/78 to-[#061526]/58" />
-        </div>
-        <div className="relative z-10 mx-auto flex w-full max-w-container-max flex-col gap-8">
-          <MotionSection className="max-w-3xl text-reveal">
-            <span className="mb-5 inline-flex rounded-full border border-teal-200/35 bg-teal-100/15 px-4 py-2 font-label-caps text-label-caps uppercase tracking-widest text-teal-50">
-              ForRent Hà Nội · Tây Mỗ · Cầu Giấy
+      <header className="v-ui-shell relative px-margin-mobile pb-16 pt-28 md:px-margin-desktop md:pt-32">
+        <div className="mx-auto grid min-h-[720px] w-full max-w-container-max items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+          <MotionSection className="text-reveal">
+            <span className="mb-5 inline-flex rounded-full border border-primary/15 bg-white px-4 py-2 font-label-caps text-label-caps uppercase tracking-widest text-primary shadow-soft">
+              ForRent live · Hà Nội · dữ liệu thật
             </span>
-            <h1 className="mb-6 max-w-4xl font-display-lg-mobile text-display-lg-mobile text-white drop-shadow-sm md:font-display-lg md:text-7xl">
-              Thuê phòng Hà Nội, xem nhanh, chốt rõ
+            <h1 className="mb-6 max-w-4xl text-[44px] font-extrabold leading-[1.04] text-primary md:text-[76px]">
+              Phòng đẹp, giá rõ, đặt lịch không vòng vo
             </h1>
-            <p className="max-w-2xl font-body-lg text-body-lg font-medium text-white/90">
-              Lọc phòng còn trống theo khu vực, giá tháng, cọc và tiện ích. Đặt lịch xem, saler gọi lại xác nhận trước khi bạn di chuyển.
+            <p className="max-w-2xl font-body-lg text-body-lg font-medium text-on-surface-variant">
+              Lọc phòng còn trống theo khu vực, giá tháng, cọc, phí và tiện ích. Chọn phòng xong, ForRent gọi lại xác nhận trước khi bạn đi xem.
             </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link className="premium-button urban-cta inline-flex rounded-xl px-6 py-4 font-button text-button" href="/rooms?status=AVAILABLE">
+                Xem phòng trống
+              </Link>
+              <Link className="premium-button inline-flex rounded-xl border border-primary/20 bg-white px-6 py-4 font-button text-button text-primary" href="/contact">
+                Gửi nhu cầu
+              </Link>
+            </div>
           </MotionSection>
 
-          <MotionSection className="urban-panel spotlight-card w-full rounded-2xl p-4 md:p-5">
+          <MotionSection className="relative">
+            <div className="premium-card relative aspect-[4/5] overflow-hidden rounded-[1.25rem] bg-primary shadow-high">
+              <Image
+                alt="Không gian phòng thuê sáng, gọn, có nội thất cơ bản và ánh sáng tự nhiên"
+                className="object-cover"
+                fill
+                priority
+                quality={82}
+                sizes="(min-width: 1024px) 520px, 100vw"
+                src={heroImage}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#061526]/82 via-transparent to-transparent" />
+              <div className="absolute bottom-5 left-5 right-5 rounded-xl border border-white/15 bg-white/12 p-4 text-white backdrop-blur">
+                <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-teal-100">
+                  <Sparkles size={15} strokeWidth={1.8} />
+                  Phòng mới cập nhật
+                </p>
+                <p className="text-sm leading-6 text-white/85">Ảnh, giá, cọc và trạng thái được lấy từ backend, không dùng dữ liệu fallback giả.</p>
+              </div>
+            </div>
+          </MotionSection>
+
+          <MotionSection className="urban-panel spotlight-card w-full rounded-2xl p-4 md:col-span-2 md:p-5">
             <form action="/rooms" className="grid gap-4 md:grid-cols-[1.6fr_1fr_1fr_auto] md:items-end">
               <div className="flex flex-col rounded-xl bg-white px-4 py-3">
                 <label className="mb-2 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-room-search">Khu vực</label>
@@ -171,6 +215,7 @@ export default async function Homepage() {
                 Tìm ngay
               </button>
             </form>
+            <BackendSignals signals={signals} />
           </MotionSection>
         </div>
       </header>
@@ -298,82 +343,94 @@ function PropertyCard({ property }: Readonly<{ property: PropertyCardView }>) {
   const detailHref = property.slug ? `/room-details?slug=${encodeURIComponent(property.slug)}` : "/room-details";
 
   return (
-              <article
-                className="premium-card urban-card spotlight-card group cursor-pointer overflow-hidden rounded-2xl"
-              >
-                <div className="relative h-72 overflow-hidden">
-                  <Link aria-label={`Xem chi tiết ${property.title}`} className="absolute inset-0" href={detailHref}>
-                    {property.image ? (
-                      <Image
-                        alt={property.alt}
-                        className="shared-image object-cover transition-transform duration-700 group-hover:scale-105"
-                        fill
-                        loading="lazy"
-                        quality={78}
-                        sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-                        src={property.image}
-                      />
-                    ) : (
-                      <ImagePlaceholder />
-                    )}
-                  </Link>
-                  {property.label ? (
-                    <div className={`absolute left-4 top-4 rounded px-3 py-1 font-label-caps text-label-caps shadow-sm ${property.labelClassName}`}>
-                      {property.label}
-                    </div>
-                  ) : null}
-                  <div className="absolute right-4 top-4 rounded-full bg-emerald-500 px-3 py-1 font-label-caps text-label-caps uppercase tracking-wider text-white shadow-sm">
-                    Còn trống
-                  </div>
-                </div>
-                <div className="p-6">
-                  <div className="mb-3 flex items-start justify-between gap-4">
-                    <Link className="font-headline-sm text-headline-sm text-primary hover:text-secondary" href={detailHref}>
-                      {property.title}
-                    </Link>
-                    <span className="text-right font-headline-sm text-headline-sm text-primary">{property.price}</span>
-                  </div>
-                  <p className="mb-4 font-body-md text-body-md text-on-surface-variant">
-                    {property.location} · {property.descriptor}
-                  </p>
-                  <div className="mb-4 grid grid-cols-2 gap-2 text-xs text-on-surface-variant">
-                    <div className="rounded-md bg-surface-container-low p-3">
-                      <div className="mb-1 flex items-center gap-1 font-semibold uppercase text-secondary">
-                        <ShieldCheck size={15} strokeWidth={1.8} />
-                        Cọc
-                      </div>
-                      <p className="line-clamp-1 text-primary">{property.deposit}</p>
-                    </div>
-                    <div className="rounded-md bg-surface-container-low p-3">
-                      <div className="mb-1 flex items-center gap-1 font-semibold uppercase text-secondary">
-                        <ReceiptText size={15} strokeWidth={1.8} />
-                        Phí DV
-                      </div>
-                      <p className="line-clamp-1 text-primary">{property.serviceFee}</p>
-                    </div>
-                  </div>
-                  {property.featuredAmenities.length ? (
-                    <div className="mb-4 flex flex-wrap gap-2">
-                      {property.featuredAmenities.map((amenity) => (
-                        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary" key={amenity}>
-                          {amenity}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-                  <div className="flex items-center gap-4 border-t border-outline-variant/20 pt-4 text-on-surface-variant">
-                    <div className="flex items-center gap-1 font-body-md text-sm">
-                      <BedDouble size={18} strokeWidth={1.8} /> {property.area}
-                    </div>
-                    <div className="flex items-center gap-1 font-body-md text-sm">
-                      <ShowerHead size={18} strokeWidth={1.8} /> {property.amenities}
-                    </div>
-                    <Link className="premium-button ml-auto rounded-lg bg-primary px-4 py-2 font-body-md text-sm text-on-primary" href={detailHref}>
-                      Xem phòng
-                    </Link>
-                  </div>
-                </div>
-              </article>
+    <article className="premium-card urban-card spotlight-card group cursor-pointer overflow-hidden rounded-2xl">
+      <div className="relative h-72 overflow-hidden">
+        <Link aria-label={`Xem chi tiết ${property.title}`} className="absolute inset-0" href={detailHref}>
+          {property.image ? (
+            <Image
+              alt={property.alt}
+              className="shared-image object-cover transition-transform duration-700 group-hover:scale-105"
+              fill
+              loading="lazy"
+              quality={78}
+              sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+              src={property.image}
+            />
+          ) : (
+            <ImagePlaceholder />
+          )}
+        </Link>
+        {property.label ? (
+          <div className={`absolute left-4 top-4 rounded px-3 py-1 font-label-caps text-label-caps shadow-sm ${property.labelClassName}`}>
+            {property.label}
+          </div>
+        ) : null}
+        <div className="absolute right-4 top-4 rounded-full bg-emerald-500 px-3 py-1 font-label-caps text-label-caps uppercase tracking-wider text-white shadow-sm">
+          Còn trống
+        </div>
+      </div>
+      <div className="p-6">
+        <div className="mb-3 flex items-start justify-between gap-4">
+          <Link className="font-headline-sm text-headline-sm text-primary hover:text-secondary" href={detailHref}>
+            {property.title}
+          </Link>
+          <span className="text-right font-headline-sm text-headline-sm text-primary">{property.price}</span>
+        </div>
+        <p className="mb-4 font-body-md text-body-md text-on-surface-variant">
+          {property.location} · {property.descriptor}
+        </p>
+        <div className="mb-4 grid grid-cols-2 gap-2 text-xs text-on-surface-variant">
+          <div className="rounded-md bg-surface-container-low p-3">
+            <div className="mb-1 flex items-center gap-1 font-semibold uppercase text-secondary">
+              <ShieldCheck size={15} strokeWidth={1.8} />
+              Cọc
+            </div>
+            <p className="line-clamp-1 text-primary">{property.deposit}</p>
+          </div>
+          <div className="rounded-md bg-surface-container-low p-3">
+            <div className="mb-1 flex items-center gap-1 font-semibold uppercase text-secondary">
+              <ReceiptText size={15} strokeWidth={1.8} />
+              Phí DV
+            </div>
+            <p className="line-clamp-1 text-primary">{property.serviceFee}</p>
+          </div>
+        </div>
+        {property.featuredAmenities.length ? (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {property.featuredAmenities.map((amenity) => (
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary" key={amenity}>
+                {amenity}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        <div className="flex items-center gap-4 border-t border-outline-variant/20 pt-4 text-on-surface-variant">
+          <div className="flex items-center gap-1 font-body-md text-sm">
+            <BedDouble size={18} strokeWidth={1.8} /> {property.area}
+          </div>
+          <div className="flex items-center gap-1 font-body-md text-sm">
+            <ShowerHead size={18} strokeWidth={1.8} /> {property.amenities}
+          </div>
+          <Link className="premium-button ml-auto rounded-lg bg-primary px-4 py-2 font-body-md text-sm text-on-primary" href={detailHref}>
+            Xem phòng
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function BackendSignals({ signals }: Readonly<{ signals: BackendSignal[] }>) {
+  return (
+    <div className="mt-4 grid gap-2 md:grid-cols-4">
+      {signals.map((signal) => (
+        <div className="rounded-xl border border-outline-variant/20 bg-[#f8fafc] px-4 py-3" key={signal.label}>
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-on-surface-variant">{signal.label}</p>
+          <p className="mt-1 text-2xl font-extrabold tabular-nums text-primary">{signal.value}</p>
+          <p className="mt-1 text-xs text-on-surface-variant">{signal.note}</p>
+        </div>
+      ))}
+    </div>
   );
 }
 

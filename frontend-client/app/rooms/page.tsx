@@ -161,6 +161,16 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   const filters = filtersResponse ?? fallbackFilters;
   const totalCount = roomsResponse?.count ?? rooms.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / 12));
+  const activeFilterLabels = [
+    search ? `Từ khóa: ${search}` : null,
+    city ? filters.cities.find((item) => String(item.id) === city)?.name : null,
+    ward ? filters.wards.find((item) => String(item.id) === ward)?.name : null,
+    roomType ? roomTypeLabel(roomType) : null,
+    areaRange ? filters.area_ranges.find((item) => String(item.id) === areaRange)?.name : null,
+    status ? roomStatusLabel(status) : null,
+    minPrice ? `Từ ${formatVnd(minPrice)}` : null,
+    maxPrice ? `Đến ${formatVnd(maxPrice)}` : null,
+  ].filter((item): item is string => Boolean(item));
 
   return (
     <main className="flex min-h-[100dvh] flex-col bg-[#f5f7fb] text-on-surface">
@@ -206,6 +216,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
         />
 
         <div className="flex w-full flex-col gap-10 md:w-[calc(100%-280px-24px)]">
+          <ResultHeader activeFilters={activeFilterLabels} currentPage={currentPage} totalCount={totalCount} />
           {rooms.length ? (
             <div className="stagger-list grid grid-cols-1 gap-gutter xl:grid-cols-2">
               {rooms.map((room) => (
@@ -234,6 +245,41 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
 
       <SiteFooter />
     </main>
+  );
+}
+
+function ResultHeader({
+  activeFilters,
+  currentPage,
+  totalCount,
+}: Readonly<{
+  activeFilters: string[];
+  currentPage: number;
+  totalCount: number;
+}>) {
+  return (
+    <div className="rounded-2xl border border-outline-variant/20 bg-white p-4 shadow-soft">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-on-surface-variant">Kết quả từ backend</p>
+          <h2 className="mt-1 font-headline-sm text-headline-sm text-primary">
+            {totalCount} phòng phù hợp · trang {currentPage}
+          </h2>
+        </div>
+        <Link className="premium-button rounded-xl border border-primary/20 px-4 py-3 text-sm font-semibold text-primary" href="/contact">
+          Không thấy phòng hợp? Gửi nhu cầu
+        </Link>
+      </div>
+      {activeFilters.length ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {activeFilters.map((filter) => (
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary" key={filter}>
+              {filter}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
