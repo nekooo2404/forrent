@@ -29,12 +29,12 @@ services:
       context: ../frontend-client
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_BASE_URL: https://api.forrent.id.vn
+        NEXT_PUBLIC_API_BASE_URL: https://api.forrent.io.vn
     restart: unless-stopped
     environment:
       NODE_ENV: production
       API_BASE_URL: http://backend:8000
-      NEXT_PUBLIC_API_BASE_URL: https://api.forrent.id.vn
+      NEXT_PUBLIC_API_BASE_URL: https://api.forrent.io.vn
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
@@ -46,14 +46,14 @@ services:
       context: ../frontend-admin
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_BASE_URL: https://api.forrent.id.vn
-        NEXT_PUBLIC_CLIENT_URL: https://forrent.id.vn
+        NEXT_PUBLIC_API_BASE_URL: https://api.forrent.io.vn
+        NEXT_PUBLIC_CLIENT_URL: https://forrent.io.vn
     restart: unless-stopped
     environment:
       NODE_ENV: production
       API_BASE_URL: http://backend:8000
-      NEXT_PUBLIC_API_BASE_URL: https://api.forrent.id.vn
-      NEXT_PUBLIC_CLIENT_URL: https://forrent.id.vn
+      NEXT_PUBLIC_API_BASE_URL: https://api.forrent.io.vn
+      NEXT_PUBLIC_CLIENT_URL: https://forrent.io.vn
     ports:
       - "127.0.0.1:3001:3001"
     depends_on:

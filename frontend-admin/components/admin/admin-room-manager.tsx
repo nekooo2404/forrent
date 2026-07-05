@@ -684,9 +684,9 @@ function RoomFormModal({
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Ảnh đang có</p>
                   {editingRoom.images.map((image, index) => (
                     <div className="flex items-center gap-3 rounded-md border border-primary/10 bg-surface-container-low p-2" key={image.id}>
-                      {image.image_url ? (
+                      {image.image_url || image.image ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img alt={`Ảnh phòng ${index + 1}`} className="size-14 rounded object-cover" src={image.image_url} />
+                        <img alt={`Ảnh phòng ${index + 1}`} className="size-14 rounded object-cover" src={image.image_url || image.image || ""} />
                       ) : (
                         <div className="grid size-14 place-items-center rounded bg-surface-container text-xs text-secondary">URL</div>
                       )}

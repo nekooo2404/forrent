@@ -126,12 +126,25 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+CLOUDINARY_CLOUD_NAME = env("CLOUDINARY_CLOUD_NAME", default="")
+CLOUDINARY_API_KEY = env("CLOUDINARY_API_KEY", default="")
+CLOUDINARY_API_SECRET = env("CLOUDINARY_API_SECRET", default="")
+
 SUPABASE_URL = env("SUPABASE_URL", default="")
 SUPABASE_SECRET_KEY = env("SUPABASE_SECRET_KEY", default="")
 SUPABASE_STORAGE_BUCKET = env("SUPABASE_STORAGE_BUCKET", default="")
 SUPABASE_STORAGE_TIMEOUT = env("SUPABASE_STORAGE_TIMEOUT")
 
-if SUPABASE_URL and SUPABASE_SECRET_KEY and SUPABASE_STORAGE_BUCKET:
+if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET:
+    STORAGES = {
+        "default": {
+            "BACKEND": "apps.common.storage.CloudinaryMediaStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+elif SUPABASE_URL and SUPABASE_SECRET_KEY and SUPABASE_STORAGE_BUCKET:
     STORAGES = {
         "default": {
             "BACKEND": "apps.common.storage.SupabaseMediaStorage",

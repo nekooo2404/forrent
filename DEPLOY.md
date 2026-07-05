@@ -1,15 +1,15 @@
 # Deploy ForRent
 
-Checklist toi thieu de chay production tren `forrent.id.vn`.
+Checklist toi thieu de chay production tren `forrent.io.vn`.
 
 ## 1. DNS
 
 Tao cac ban ghi `A` tro ve IP VPS:
 
-- `forrent.id.vn`
-- `www.forrent.id.vn`
-- `api.forrent.id.vn`
-- `admin.forrent.id.vn`
+- `forrent.io.vn`
+- `www.forrent.io.vn`
+- `api.forrent.io.vn`
+- `admin.forrent.io.vn`
 
 ## 2. Server
 
@@ -28,10 +28,11 @@ Sua `backend/.env` tren server:
 - `DJANGO_DEBUG=False`
 - `DJANGO_SECRET_KEY` phai la chuoi moi, dai, khong dung gia tri mau
 - `DATABASE_URL`, `POSTGRES_PASSWORD` phai dung password manh
-- `DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend,forrent.id.vn,api.forrent.id.vn,admin.forrent.id.vn`
-- `CORS_ALLOWED_ORIGINS=https://forrent.id.vn,https://admin.forrent.id.vn`
-- `CSRF_TRUSTED_ORIGINS=https://forrent.id.vn,https://admin.forrent.id.vn,https://api.forrent.id.vn`
-- Tao mailbox tren Email Pro, vi du `noreply@forrent.id.vn`, roi dien `EMAIL_HOST_USER` va `EMAIL_HOST_PASSWORD`
+- `DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend,forrent.io.vn,www.forrent.io.vn,api.forrent.io.vn,admin.forrent.io.vn`
+- `CORS_ALLOWED_ORIGINS=https://forrent.io.vn,https://www.forrent.io.vn,https://admin.forrent.io.vn`
+- `CSRF_TRUSTED_ORIGINS=https://forrent.io.vn,https://www.forrent.io.vn,https://admin.forrent.io.vn,https://api.forrent.io.vn`
+- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` de upload anh len Cloudinary
+- Tao mailbox tren Email Pro, vi du `noreply@forrent.io.vn`, roi dien `EMAIL_HOST_USER` va `EMAIL_HOST_PASSWORD`
 - Email Pro Mat Bao: `EMAIL_HOST=s129d209.emailserver.vn`, `EMAIL_PORT=465`, `EMAIL_USE_SSL=True`, `EMAIL_USE_TLS=False`
 
 ## 4. Build va chay app
@@ -56,14 +57,14 @@ sudo systemctl reload nginx
 Cap SSL:
 
 ```bash
-sudo certbot --nginx -d forrent.id.vn -d www.forrent.id.vn -d api.forrent.id.vn -d admin.forrent.id.vn
+sudo certbot --nginx -d forrent.io.vn -d www.forrent.io.vn -d api.forrent.io.vn -d admin.forrent.io.vn
 ```
 
 ## 6. Bao mat production
 
 Bat buoc truoc khi mo public:
 
-- Bat Cloudflare proxy cho `forrent.id.vn`, `admin.forrent.id.vn`, `api.forrent.id.vn`.
+- Bat Cloudflare proxy cho `forrent.io.vn`, `admin.forrent.io.vn`, `api.forrent.io.vn`.
 - Cloudflare SSL mode: Full strict. Bat Always Use HTTPS, WAF managed rules, rate limit cho `/api/auth/*`.
 - DB Postgres khong public internet. Chi backend container/app server duoc noi vao port 5432.
 - Dung user DB rieng cho app, khong dung `postgres` superuser trong `DATABASE_URL`.
@@ -77,9 +78,9 @@ Bat buoc truoc khi mo public:
 ## 7. Smoke test
 
 ```bash
-curl https://api.forrent.id.vn/api/health/
-curl https://forrent.id.vn
-curl https://admin.forrent.id.vn
+curl https://api.forrent.io.vn/api/health/
+curl https://forrent.io.vn
+curl https://admin.forrent.io.vn
 ```
 
 API health phai tra ve `{"status":"ok"}`.
