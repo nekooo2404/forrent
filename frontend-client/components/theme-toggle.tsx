@@ -14,46 +14,36 @@ export function ThemeToggle() {
   }, []);
 
   if (!mounted) {
-    return <div className="h-10 w-10" />;
+    return (
+      <div className="flex h-10 w-[120px] items-center gap-1 rounded-xl border border-outline-variant/20 bg-surface-container-low/50 p-1" />
+    );
   }
 
   return (
-    <div className="flex items-center gap-1 rounded-lg border border-outline-variant/20 bg-surface-container-low p-1">
+    <div className="genz-theme-toggle">
       <button
         aria-label="Light mode"
-        className={`inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded transition-colors ${
-          theme === "light"
-            ? "bg-primary text-on-primary"
-            : "text-on-surface-variant hover:bg-surface-container"
-        }`}
+        className={`genz-theme-button ${theme === "light" ? "genz-theme-button-active" : ""}`}
         onClick={() => setTheme("light")}
         type="button"
       >
-        <Sun size={18} strokeWidth={1.8} />
+        <Sun size={18} strokeWidth={2} />
       </button>
       <button
         aria-label="Dark mode"
-        className={`inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded transition-colors ${
-          theme === "dark"
-            ? "bg-primary text-on-primary"
-            : "text-on-surface-variant hover:bg-surface-container"
-        }`}
+        className={`genz-theme-button ${theme === "dark" ? "genz-theme-button-active" : ""}`}
         onClick={() => setTheme("dark")}
         type="button"
       >
-        <Moon size={18} strokeWidth={1.8} />
+        <Moon size={18} strokeWidth={2} />
       </button>
       <button
         aria-label="System theme"
-        className={`inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded transition-colors ${
-          theme === "system"
-            ? "bg-primary text-on-primary"
-            : "text-on-surface-variant hover:bg-surface-container"
-        }`}
+        className={`genz-theme-button ${theme === "system" ? "genz-theme-button-active" : ""}`}
         onClick={() => setTheme("system")}
         type="button"
       >
-        <Monitor size={18} strokeWidth={1.8} />
+        <Monitor size={18} strokeWidth={2} />
       </button>
     </div>
   );

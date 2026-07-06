@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -20,6 +20,16 @@ const navItems: Array<{ key: NavKey; label: string; href: string }> = [
 
 export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  // Detect scroll for glass effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Body scroll lock when mobile menu is open
   useEffect(() => {
@@ -48,64 +58,105 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
   }, [isMobileMenuOpen]);
 
   return (
-    <nav className="glass-panel fixed top-0 z-50 w-full border-b border-outline-variant/10">
-      <div className="mx-auto flex h-20 max-w-container-max items-center justify-between px-margin-mobile md:px-margin-desktop">
-        <Link aria-label="ForRent - Trang chủ" className="inline-flex h-11 w-[142px] shrink-0 items-center md:h-12 md:w-[158px]" href="/homepage">
-          <Image
-            alt="ForRent"
-            className="h-full w-full object-contain object-left"
-            height={241}
-            priority
-            sizes="(min-width: 768px) 158px, 142px"
-            src="/brand/forrent-logo.png"
-            width={760}
-          />
+    <nav className={`fixed top-0 z-50 w-full transition-all duration-500 ${
+      scrolled
+        ? "genz-navbar-scrolled"
+        : "genz-navbar"
+    }`}>
+      {/* Animated gradient background */}
+      <div className="genz-navbar-gradient" />
+
+      {/* Floating particles */}
+      <div className="genz-particles">
+        <span className="genz-particle" style={{ left: "10%", animationDelay: "0s" }} />
+        <span className="genz-particle" style={{ left: "30%", animationDelay: "2s" }} />
+        <span className="genz-particle" style={{ left: "50%", animationDelay: "1s" }} />
+        <span className="genz-particle" style={{ left: "70%", animationDelay: "3s" }} />
+        <span className="genz-particle" style={{ left: "90%", animationDelay: "1.5s" }} />
+      </div>
+
+      <div className="relative mx-auto flex h-20 max-w-container-max items-center justify-between px-margin-mobile md:h-24 md:px-margin-desktop">
+        {/* Logo with 3D effect */}
+        <Link
+          aria-label="ForRent - Trang chủ"
+          className="genz-logo-container group relative z-10"
+          href="/homepage"
+        >
+          <div className="genz-logo-glow" />
+          <div className="relative">
+            <Image
+              alt="ForRent"
+              className="h-full w-full object-contain object-left transition-transform duration-300 group-hover:scale-110"
+              height={241}
+              priority
+              sizes="(min-width: 768px) 158px, 142px"
+              src="/brand/forrent-logo.png"
+              width={760}
+            />
+          </div>
+          <Sparkles className="genz-logo-sparkle absolute -right-2 -top-2 text-gold" size={16} strokeWidth={2} />
         </Link>
 
-        <div className="hidden items-center gap-8 font-body-md text-body-md tracking-wide md:flex">
+        {/* Desktop Navigation with 3D pills */}
+        <div className="hidden items-center gap-2 md:flex">
           {navItems.map((item) => (
             <Link
               aria-current={item.key === active ? "page" : undefined}
-              className={
-                item.key === active
-                  ? "nav-link pb-1 text-primary transition-opacity duration-300 hover:opacity-70"
-                  : "nav-link text-secondary transition-colors duration-300 hover:text-primary hover:opacity-70"
-              }
+              className={`genz-nav-pill ${
+                item.key === active ? "genz-nav-pill-active" : ""
+              }`}
               href={item.href}
               key={item.key}
             >
-              {item.label}
+              <span className="genz-nav-pill-bg" />
+              <span className="relative z-10 font-body-md text-sm font-semibold tracking-wide">
+                {item.label}
+              </span>
+              {item.key === active && (
+                <span className="genz-nav-pill-indicator" />
+              )}
             </Link>
           ))}
         </div>
 
-        <div className="flex items-center gap-2 text-primary md:gap-4">
-          <ThemeToggle />
+        {/* Right actions with 3D buttons */}
+        <div className="flex items-center gap-3 md:gap-4">
+          <div className="genz-button-3d">
+            <ThemeToggle />
+          </div>
+
           <button
             aria-expanded={isMobileMenuOpen}
             aria-label="Menu"
-            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md transition-colors hover:bg-surface-container md:hidden"
+            className="genz-menu-button md:hidden"
             onClick={() => setIsMobileMenuOpen(true)}
             type="button"
           >
-            <Menu size={24} strokeWidth={1.8} />
+            <span className="genz-button-glow" />
+            <Menu size={24} strokeWidth={2} />
           </button>
-          <ProfileMenu />
+
+          <div className="genz-button-3d">
+            <ProfileMenu />
+          </div>
         </div>
       </div>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu with enhanced animations */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
             animate={{ opacity: 1 }}
-            className="fixed inset-0 z-[200] bg-surface-container-lowest"
+            className="genz-mobile-menu"
             exit={{ opacity: 0 }}
             initial={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.3 }}
           >
-            {/* Header with close button */}
-            <div className="flex h-20 items-center justify-between border-b border-outline-variant/10 px-margin-mobile">
+            {/* Animated gradient background */}
+            <div className="genz-mobile-gradient" />
+
+            {/* Header */}
+            <div className="relative z-10 flex h-20 items-center justify-between border-b border-white/10 px-margin-mobile backdrop-blur-xl">
               <Link
                 aria-label="ForRent - Trang chủ"
                 className="inline-flex h-11 w-[142px] shrink-0 items-center"
@@ -124,18 +175,19 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
               </Link>
               <button
                 aria-label="Đóng menu"
-                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md text-primary transition-colors hover:bg-surface-container"
+                className="genz-close-button"
                 onClick={() => setIsMobileMenuOpen(false)}
                 type="button"
               >
-                <X size={24} strokeWidth={1.8} />
+                <span className="genz-button-glow" />
+                <X size={24} strokeWidth={2} />
               </button>
             </div>
 
-            {/* Navigation items */}
+            {/* Navigation items with stagger animation */}
             <motion.nav
               animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col p-6"
+              className="relative z-10 flex flex-col gap-2 p-6"
               initial={{ opacity: 0, y: 20 }}
               transition={{ delay: 0.1, duration: 0.3 }}
             >
@@ -148,26 +200,32 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
                 >
                   <Link
                     aria-current={item.key === active ? "page" : undefined}
-                    className={`block min-h-[44px] border-b border-outline-variant/10 py-4 font-body-md text-lg transition-colors ${
-                      item.key === active ? "font-semibold text-primary" : "text-secondary hover:text-primary"
+                    className={`genz-mobile-link ${
+                      item.key === active ? "genz-mobile-link-active" : ""
                     }`}
                     href={item.href}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    {item.label}
+                    <span className="genz-mobile-link-bg" />
+                    <span className="relative z-10 font-body-md text-lg font-semibold">
+                      {item.label}
+                    </span>
+                    {item.key === active && (
+                      <Sparkles className="ml-auto text-gold" size={18} strokeWidth={2} />
+                    )}
                   </Link>
                 </motion.div>
               ))}
             </motion.nav>
 
-            {/* Profile section at bottom */}
+            {/* Bottom profile section */}
             <motion.div
               animate={{ opacity: 1 }}
-              className="absolute bottom-6 left-6 right-6"
+              className="genz-mobile-profile"
               initial={{ opacity: 0 }}
               transition={{ delay: 0.3, duration: 0.3 }}
             >
-              <div className="rounded-lg border border-outline-variant/10 bg-surface-container-low/50 p-4">
+              <div className="genz-profile-card">
                 <ProfileMenu />
               </div>
             </motion.div>
