@@ -104,8 +104,11 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
         </div>
 
         <div className="flex items-center gap-3 md:gap-4">
-          <div className="genz-button-3d">
+          <div className="genz-button-3d hidden sm:block">
             <ThemeToggle />
+          </div>
+          <div className="genz-button-3d sm:hidden">
+            <ThemeToggle compact />
           </div>
 
           <button

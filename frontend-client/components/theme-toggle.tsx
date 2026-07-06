@@ -4,8 +4,8 @@ import { Moon, Sun, Monitor } from "lucide-react";
 import { useTheme } from "./theme-provider";
 import { useEffect, useState } from "react";
 
-export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+export function ThemeToggle({ compact = false }: Readonly<{ compact?: boolean }>) {
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   // Avoid hydration mismatch
@@ -15,7 +15,25 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <div className="flex h-10 w-[120px] items-center gap-1 rounded-xl border border-outline-variant/20 bg-surface-container-low/50 p-1" />
+      <div className={`${compact ? "size-10" : "h-10 w-[120px]"} rounded-xl border border-outline-variant/20 bg-surface-container-low/50`} />
+    );
+  }
+
+  if (compact) {
+    const isDark = resolvedTheme === "dark";
+    const Icon = isDark ? Sun : Moon;
+    const label = isDark ? "Chuyển sang giao diện sáng" : "Chuyển sang giao diện tối";
+
+    return (
+      <button
+        aria-label={label}
+        className="inline-flex size-10 items-center justify-center rounded-md border border-outline-variant/60 bg-surface-container-lowest/90 text-primary shadow-sm transition hover:-translate-y-0.5 hover:bg-surface-container"
+        onClick={() => setTheme(isDark ? "light" : "dark")}
+        title={label}
+        type="button"
+      >
+        <Icon size={18} strokeWidth={2} />
+      </button>
     );
   }
 
