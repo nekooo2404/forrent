@@ -11,6 +11,7 @@ jobs:
     steps:
       - name: Check public sites
         run: |
-          curl --fail --silent --show-error --retry 3 --max-time 10 https://forrent.io.vn > /dev/null
-          curl --fail --silent --show-error --retry 3 --max-time 10 https://admin.forrent.io.vn > /dev/null
-          curl --fail --silent --show-error --retry 3 --max-time 10 https://api.forrent.io.vn/api/health/ | grep '"status":"ok"'
+          curl --fail --silent --show-error --location --retry 3 --max-time 20 https://forrent.io.vn/homepage > /dev/null
+          curl --fail --silent --show-error --location --retry 3 --max-time 20 https://admin.forrent.io.vn/log-in > /dev/null
+          curl --fail --silent --show-error --location --retry 3 --max-time 20 https://api.forrent.io.vn/api/health/ \
+            | python -c "import json, sys; assert json.load(sys.stdin).get('status') == 'ok'"
