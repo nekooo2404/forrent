@@ -1,0 +1,26 @@
+name: DAST
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Target URL to scan
+        required: false
+        default: https://forrent.io.vn
+  schedule:
+    - cron: "0 20 * * 0"
+
+jobs:
+  zap-baseline:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: OWASP ZAP baseline scan
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: ${{ github.event.inputs.target || 'https://forrent.io.vn' }}
+          fail_action: true
+          cmd_options: "-a"

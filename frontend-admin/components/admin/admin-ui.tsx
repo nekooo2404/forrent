@@ -133,14 +133,17 @@ export function AdminTableSkeleton({ rows = 6 }: Readonly<{ rows?: number }>) {
 export function AdminEmptyState({
   action,
   description,
+  icon,
   title,
 }: Readonly<{
   action?: ReactNode;
   description: string;
+  icon?: ReactNode;
   title: string;
 }>) {
   return (
     <div className="rounded-lg border border-dashed border-primary/20 bg-surface-container-low/60 p-8 text-center">
+      {icon && <div className="mb-4 flex justify-center text-secondary opacity-50">{icon}</div>}
       <h3 className="font-headline-sm text-xl text-primary">{title}</h3>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-secondary">{description}</p>
       {action ? <div className="mt-5 flex justify-center">{action}</div> : null}

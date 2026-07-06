@@ -224,3 +224,5 @@ Trong 60 phút đầu sau deploy:
 - [ ] Kiểm tra log backend, worker, beat, Nginx không có lỗi mới.
 - [ ] Kiểm tra uptime/error dashboard không có spike.
 - [ ] Chạy `curl -I https://admin.forrent.io.vn` và xác nhận có `X-Robots-Tag: noindex`.
+
+Runbook hardening chi tiết: `docs/production-hardening.md`.

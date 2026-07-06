@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 type RoomGalleryProps = Readonly<{
   images: string[];
@@ -12,6 +13,7 @@ type RoomGalleryProps = Readonly<{
 export function RoomGallery({ images, title }: RoomGalleryProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const activeImage = activeIndex === null ? null : images[activeIndex];
+  const modalRef = useFocusTrap<HTMLDivElement>(activeIndex !== null);
 
   useEffect(() => {
     if (activeIndex === null) return;
@@ -53,10 +55,10 @@ export function RoomGallery({ images, title }: RoomGalleryProps) {
       </section>
 
       {activeImage ? (
-        <div aria-modal="true" className="fixed inset-0 z-[100] bg-black/90 p-4 text-white" role="dialog">
+        <div aria-modal="true" className="fixed inset-0 z-[100] bg-black/90 p-4 text-white" ref={modalRef} role="dialog">
           <button
             aria-label="Đóng xem ảnh"
-            className="absolute right-4 top-4 z-10 rounded-full bg-white/10 p-3 transition hover:bg-white/20"
+            className="absolute right-4 top-4 z-10 min-h-[44px] min-w-[44px] rounded-full bg-white/10 p-3 transition hover:bg-white/20"
             onClick={() => setActiveIndex(null)}
             type="button"
           >
@@ -65,7 +67,7 @@ export function RoomGallery({ images, title }: RoomGalleryProps) {
 
           <button
             aria-label="Ảnh trước"
-            className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 p-3 transition hover:bg-white/20"
+            className="absolute left-4 top-1/2 z-10 min-h-[44px] min-w-[44px] -translate-y-1/2 rounded-full bg-white/10 p-3 transition hover:bg-white/20"
             onClick={() => setActiveIndex((current) => previousIndex(current, images.length))}
             type="button"
           >
@@ -85,7 +87,7 @@ export function RoomGallery({ images, title }: RoomGalleryProps) {
 
           <button
             aria-label="Ảnh tiếp theo"
-            className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/10 p-3 transition hover:bg-white/20"
+            className="absolute right-4 top-1/2 z-10 min-h-[44px] min-w-[44px] -translate-y-1/2 rounded-full bg-white/10 p-3 transition hover:bg-white/20"
             onClick={() => setActiveIndex((current) => nextIndex(current, images.length))}
             type="button"
           >

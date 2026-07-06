@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
 
 const config: Config = {
   content: [
@@ -15,7 +16,7 @@ const config: Config = {
         "primary-fixed": "#dbeafe",
         "tertiary-container": "#cffafe",
         "inverse-on-surface": "#f8fafc",
-        secondary: "#475569",
+        secondary: "#334155", // Changed from #475569 to #334155 for better contrast
         "on-primary-fixed-variant": "#1e3a8a",
         primary: "#2563eb",
         "secondary-fixed-dim": "#cbd5e1",
@@ -120,7 +121,19 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    plugin(function({ addUtilities }) {
+      addUtilities({
+        '.touch-target': {
+          minWidth: '44px',
+          minHeight: '44px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+      });
+    }),
+  ],
 };
 
 export default config;

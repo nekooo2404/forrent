@@ -1,6 +1,8 @@
 from rest_framework import status
 from rest_framework.response import Response
 
+from apps.common.audit import SENSITIVE_KEYS, audit_admin_action
+
 
 class StandardResponseReadOnlyMixin:
     def list(self, request, *args, **kwargs):
@@ -27,9 +29,11 @@ class StandardResponseUpdateMixin(StandardResponseReadOnlyMixin):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
+        changed_fields = [field for field in serializer.validated_data if field not in SENSITIVE_KEYS]
         self.perform_update(serializer)
         if getattr(instance, "_prefetched_objects_cache", None):
             instance._prefetched_objects_cache = {}
+        audit_admin_action(request, "resource_updated", serializer.instance, {"fields": changed_fields})
         return Response({"success": True, "message": self.success_update_message, "data": serializer.data})
 
 
@@ -41,6 +45,7 @@ class StandardResponseModelViewSetMixin(StandardResponseUpdateMixin):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
+        audit_admin_action(request, "resource_created", serializer.instance)
         headers = self.get_success_headers(serializer.data)
         return Response(
             {"success": True, "message": self.success_create_message, "data": serializer.data},
@@ -51,6 +56,7 @@ class StandardResponseModelViewSetMixin(StandardResponseUpdateMixin):
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         self.perform_destroy(instance)
+        audit_admin_action(request, "resource_deleted", instance)
         return Response(
             {"success": True, "message": self.success_delete_message, "data": {}},
             status=status.HTTP_200_OK,

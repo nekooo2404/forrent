@@ -353,60 +353,62 @@ function FilterSidebar({
 
   return (
     <aside className="w-full flex-shrink-0 md:w-[304px]">
-      <form action="/rooms" className="custom-scrollbar urban-card sticky top-[104px] max-h-none overflow-visible rounded-2xl p-4 md:max-h-[calc(100vh-124px)] md:overflow-y-auto">
-        <div className="mb-4 flex items-center justify-between border-b border-outline-variant/20 pb-4">
-          <h2 className="font-headline-sm text-headline-sm text-primary">Bộ lọc</h2>
-          <Link className="font-button text-button text-secondary underline transition-colors hover:text-primary" href="/rooms">
-            Xóa tất cả
-          </Link>
-        </div>
-
-        <FilterSection title="Tìm kiếm" icon={<Search size={18} strokeWidth={1.8} />}>
-          <input
-            aria-label="Tìm kiếm phòng"
-            className="w-full rounded-xl border border-outline-variant/30 bg-[#f8fafc] px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
-            defaultValue={search}
-            name="search"
-            placeholder="Tên phòng, địa chỉ..."
-            type="search"
-          />
-        </FilterSection>
-
-        <FilterSection title="Vị trí" icon={<Minus size={18} strokeWidth={1.8} />}>
-          <div className="space-y-3">
-            {cityFilters.map((item) => (
-              <label className="group flex cursor-pointer items-center gap-3" key={item.id || item.slug}>
-                <input
-                  className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary"
-                  defaultChecked={(activeCity ?? "") === String(item.id)}
-                  name="city"
-                  type="radio"
-                  value={item.id}
-                />
-                <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-primary">
-                  {item.name}
-                </span>
-              </label>
-            ))}
+      <form action="/rooms" className="custom-scrollbar urban-card sticky top-[104px] max-h-none overflow-visible rounded-2xl md:max-h-[calc(100vh-124px)] md:overflow-y-auto">
+        <div className="p-4">
+          <div className="mb-4 flex items-center justify-between border-b border-outline-variant/20 pb-4">
+            <h2 className="font-headline-sm text-headline-sm text-primary">Bộ lọc</h2>
+            <Link className="font-button text-button text-secondary underline transition-colors hover:text-primary" href="/rooms">
+              Xóa tất cả
+            </Link>
           </div>
-        </FilterSection>
 
-        {filters.wards.length ? (
-          <FilterSection title="Phường" icon={<Minus size={18} strokeWidth={1.8} />}>
-            <select
+          <FilterSection title="Tìm kiếm" icon={<Search size={18} strokeWidth={1.8} />}>
+            <input
+              aria-label="Tìm kiếm phòng"
               className="w-full rounded-xl border border-outline-variant/30 bg-[#f8fafc] px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
-              defaultValue={activeWard ?? ""}
-              name="ward"
-            >
-              <option value="">Tất cả phường</option>
-              {visibleWards.map((ward) => (
-                <option key={ward.id} value={ward.id}>
-                  {ward.name}
-                </option>
-              ))}
-            </select>
+              defaultValue={search}
+              name="search"
+              placeholder="Tên phòng, địa chỉ..."
+              type="search"
+            />
           </FilterSection>
-        ) : null}
+
+          <FilterSection title="Vị trí" icon={<Minus size={18} strokeWidth={1.8} />}>
+            <div className="space-y-3">
+              {cityFilters.map((item) => (
+                <label className="group flex cursor-pointer items-center gap-3" key={item.id || item.slug}>
+                  <input
+                    className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary"
+                    defaultChecked={(activeCity ?? "") === String(item.id)}
+                    name="city"
+                    type="radio"
+                    value={item.id}
+                  />
+                  <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-primary">
+                    {item.name}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </FilterSection>
+
+          {filters.wards.length ? (
+            <FilterSection title="Phường" icon={<Minus size={18} strokeWidth={1.8} />}>
+              <select
+                className="w-full rounded-xl border border-outline-variant/30 bg-[#f8fafc] px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
+                defaultValue={activeWard ?? ""}
+                disabled={!activeCity}
+                name="ward"
+              >
+                <option value="">{activeCity ? "Tất cả phường" : "(Vui lòng chọn thành phố trước)"}</option>
+                {visibleWards.map((ward) => (
+                  <option key={ward.id} value={ward.id}>
+                    {ward.name}
+                  </option>
+                ))}
+              </select>
+            </FilterSection>
+          ) : null}
 
         <FilterSection title="Khoảng giá" icon={<Minus size={18} strokeWidth={1.8} />}>
           <div className="grid grid-cols-1 gap-3">
@@ -514,9 +516,14 @@ function FilterSidebar({
             ))}
           </div>
         </FilterSection>
-        <button className="premium-button urban-cta mt-6 w-full rounded-xl px-4 py-3 font-button text-button" type="submit">
-          Áp dụng bộ lọc
-        </button>
+        </div>
+
+        {/* Sticky button at bottom on mobile */}
+        <div className="sticky bottom-0 border-t border-outline-variant/10 bg-white p-4 md:static md:border-none md:bg-transparent">
+          <button className="premium-button urban-cta w-full rounded-xl px-4 py-3 font-button text-button" type="submit">
+            Áp dụng bộ lọc
+          </button>
+        </div>
       </form>
     </aside>
   );

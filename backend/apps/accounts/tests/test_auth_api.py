@@ -5,6 +5,7 @@ from django.core import mail
 from rest_framework.test import APIClient
 
 from apps.accounts.models import PasswordResetToken
+from apps.common.models import AuditLog
 from apps.rooms.tests.factories import create_admin, create_user
 
 User = get_user_model()
@@ -107,6 +108,26 @@ class TestAuthAPI:
         assert response.status_code == 200
         assert "access" in response.data["data"]
         assert response.data["data"]["user"]["email"] == "tenant@example.com"
+        assert AuditLog.objects.filter(event="auth.login_succeeded", status=AuditLog.Status.SUCCESS).exists()
+
+    def test_failed_login_writes_audit_log_without_raw_identifier(self):
+        User.objects.create_user(
+            email="tenant@example.com",
+            phone="0911111111",
+            password="Password@123",
+            full_name="Tenant",
+        )
+
+        response = self.client.post(
+            "/api/auth/login/",
+            {"identifier": "tenant@example.com", "password": "WrongPassword@123"},
+            format="json",
+        )
+
+        log = AuditLog.objects.get(event="auth.login_failed")
+        assert response.status_code == 401
+        assert log.status == AuditLog.Status.FAILURE
+        assert log.metadata["identifier_hash"] != "tenant@example.com"
 
     def test_login_by_phone(self):
         User.objects.create_user(
@@ -320,6 +341,7 @@ class TestAuthAPI:
 
         assert missing_otp.status_code == 400
         assert valid_response.status_code == 200
+        assert AuditLog.objects.filter(event="auth.password_changed", actor=tenant).exists()
 
     def test_saler_admin_can_create_tenant_user(self):
         saler = create_admin()
@@ -396,6 +418,10 @@ class TestAuthAPI:
         assert valid_response.status_code == 200
         assert tenant.role == User.Role.SALER
         assert tenant.admin_updated_by == saler
+        log = AuditLog.objects.get(event="admin.resource_updated", target_id=str(tenant.id))
+        assert log.actor == saler
+        assert "role" in log.metadata["fields"]
+        assert "current_password" not in log.metadata["fields"]
 
     def test_tenant_cannot_manage_users(self):
         tenant = create_user(email="tenant2@example.com", phone="0944444444")

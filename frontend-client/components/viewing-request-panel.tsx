@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, CheckCircle, Clock, X } from "lucide-react";
+import { CalendarDays, CheckCircle, Clock, X, Info } from "lucide-react";
 import type { FormEvent } from "react";
 import { useMemo, useState, useSyncExternalStore } from "react";
 
@@ -127,11 +127,35 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
   return (
     <>
       <div className="rounded-2xl border border-outline-variant/10 bg-surface-container-lowest p-6 shadow-elevated md:p-7">
-        <div className="mb-8">
+        <div className="mb-6">
           <span className="mb-2 block font-headline-sm text-headline-sm text-primary">Đặt lịch xem phòng</span>
-          <span className="font-body-md text-body-md text-secondary">
-            {disabled ? "Phòng đã thuê, vui lòng chọn phòng còn trống." : "Chọn ngày/giờ mong muốn. Saler sẽ gọi lại để xác nhận phòng, cọc và phí trước khi xem."}
-          </span>
+          {!disabled && (
+            <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary">
+                <Info size={16} strokeWidth={1.8} />
+                Quy trình xem phòng
+              </h3>
+              <ol className="space-y-1.5 text-sm text-secondary">
+                <li className="flex gap-2">
+                  <span className="font-semibold">1.</span>
+                  <span>Chọn ngày và giờ phù hợp</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-semibold">2.</span>
+                  <span>Saler gọi lại xác nhận trong 24h</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-semibold">3.</span>
+                  <span>Đến xem phòng theo lịch hẹn</span>
+                </li>
+              </ol>
+            </div>
+          )}
+          {disabled && (
+            <span className="font-body-md text-body-md text-secondary">
+              Phòng đã thuê, vui lòng chọn phòng còn trống.
+            </span>
+          )}
         </div>
 
         <form className="space-y-6" onSubmit={handleSubmit}>
@@ -236,9 +260,13 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
           />
           <MotionDiv
             animate="show"
+            aria-describedby="confirm-modal-description"
+            aria-labelledby="confirm-modal-title"
+            aria-modal="true"
             className="relative w-full max-w-md rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-8 shadow-elevated"
             exit="hidden"
             initial="hidden"
+            role="dialog"
             variants={modalPanel}
           >
             <button
@@ -249,8 +277,10 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
             >
               <X size={20} strokeWidth={1.8} />
             </button>
-            <h3 className="mb-4 font-headline-sm text-headline-sm text-primary">Xác nhận yêu cầu xem</h3>
-            <p className="mb-4 font-body-md text-body-md text-on-surface-variant">
+            <h3 className="mb-4 font-headline-sm text-headline-sm text-primary" id="confirm-modal-title">
+              Xác nhận yêu cầu xem
+            </h3>
+            <p className="mb-4 font-body-md text-body-md text-on-surface-variant" id="confirm-modal-description">
               ForRent sẽ gửi yêu cầu này cho saler phụ trách. Saler gọi lại để xác nhận phòng còn trống, cọc, phí và giờ xem thực tế.
             </p>
             {formSnapshot ? (

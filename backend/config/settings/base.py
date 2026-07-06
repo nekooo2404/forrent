@@ -19,6 +19,7 @@ env = environ.Env(
     EMAIL_USE_SSL=(bool, True),
     EMAIL_TIMEOUT=(int, 15),
     SUPABASE_STORAGE_TIMEOUT=(int, 30),
+    SENTRY_TRACES_SAMPLE_RATE=(float, 0.0),
 )
 
 env_file = BASE_DIR / ".env"
@@ -241,6 +242,22 @@ if EMAIL_HOST_PASSWORD_B64:
 EMAIL_USE_TLS = env("EMAIL_USE_TLS")
 EMAIL_USE_SSL = env("EMAIL_USE_SSL")
 EMAIL_TIMEOUT = env("EMAIL_TIMEOUT")
+
+SENTRY_DSN = env("SENTRY_DSN", default="")
+SENTRY_ENVIRONMENT = env("SENTRY_ENVIRONMENT", default="local")
+SENTRY_TRACES_SAMPLE_RATE = env("SENTRY_TRACES_SAMPLE_RATE")
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=SENTRY_ENVIRONMENT,
+        integrations=[DjangoIntegration(), CeleryIntegration()],
+        send_default_pii=False,
+        traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,
+    )
 
 CACHES = {
     "default": {

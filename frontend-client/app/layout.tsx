@@ -4,6 +4,8 @@ import "./globals.css";
 
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
 
+const noindex = process.env.NEXT_PUBLIC_NOINDEX === "true";
+
 const openSans = Open_Sans({
   subsets: ["latin", "vietnamese"],
   weight: ["300", "400", "500", "600", "700", "800"],
@@ -36,8 +38,8 @@ export const metadata: Metadata = {
     ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
     : undefined,
   robots: {
-    index: true,
-    follow: true,
+    index: !noindex,
+    follow: !noindex,
   },
 };
 

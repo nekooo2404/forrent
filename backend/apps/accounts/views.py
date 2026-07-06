@@ -1,6 +1,7 @@
 from drf_spectacular.utils import extend_schema
 from django.contrib.auth import get_user_model
 from rest_framework import status
+from rest_framework.exceptions import APIException
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
@@ -21,6 +22,8 @@ from apps.accounts.serializers import (
 )
 from apps.common.permissions import IsAdmin
 from apps.common.responses import success_response
+from apps.common.audit import audit_event, audit_hash
+from apps.common.models import AuditLog
 from apps.common.viewsets import StandardResponseModelViewSetMixin
 
 User = get_user_model()
@@ -51,8 +54,18 @@ class LoginAPIView(APIView):
     @extend_schema(request=LoginSerializer, responses=LoginResponseSerializer)
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except APIException:
+            audit_event(
+                "auth.login_failed",
+                request=request,
+                status=AuditLog.Status.FAILURE,
+                metadata={"identifier_hash": audit_hash(request.data.get("identifier"))},
+            )
+            raise
         auth_data = serializer.validated_data["auth_data"]
+        audit_event("auth.login_succeeded", request=request, actor=auth_data["user"])
         data = {
             "access": auth_data["access"],
             "refresh": auth_data["refresh"],
@@ -124,6 +137,7 @@ class ChangePasswordAPIView(APIView):
         serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        audit_event("auth.password_changed", request=request, actor=request.user)
         return success_response(message="Password changed successfully.")
 
 
@@ -165,6 +179,12 @@ class PasswordResetConfirmAPIView(APIView):
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        audit_event(
+            "auth.password_reset_confirmed",
+            request=request,
+            status=AuditLog.Status.SUCCESS,
+            metadata={"email_hash": audit_hash(request.data.get("email"))},
+        )
         return success_response(message="Password reset successfully.")
 
 

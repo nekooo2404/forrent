@@ -1,0 +1,16 @@
+name: Production Uptime
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check public sites
+        run: |
+          curl --fail --silent --show-error --retry 3 --max-time 10 https://forrent.io.vn > /dev/null
+          curl --fail --silent --show-error --retry 3 --max-time 10 https://admin.forrent.io.vn > /dev/null
+          curl --fail --silent --show-error --retry 3 --max-time 10 https://api.forrent.io.vn/api/health/ | grep '"status":"ok"'

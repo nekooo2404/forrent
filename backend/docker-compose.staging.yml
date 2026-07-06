@@ -1,0 +1,36 @@
+name: forrent_staging
+
+services:
+  backend:
+    ports:
+      - "127.0.0.1:18000:8000"
+
+  frontend_client:
+    build:
+      args:
+        NEXT_PUBLIC_API_BASE_URL: https://staging-api.forrent.io.vn
+        NEXT_PUBLIC_SITE_URL: https://staging.forrent.io.vn
+        NEXT_PUBLIC_NOINDEX: "true"
+    environment:
+      API_BASE_URL: http://backend:8000
+      NEXT_PUBLIC_API_BASE_URL: https://staging-api.forrent.io.vn
+      NEXT_PUBLIC_SITE_URL: https://staging.forrent.io.vn
+      NEXT_PUBLIC_NOINDEX: "true"
+    ports:
+      - "127.0.0.1:13000:3000"
+
+  frontend_admin:
+    build:
+      args:
+        NEXT_PUBLIC_API_BASE_URL: https://staging-api.forrent.io.vn
+        NEXT_PUBLIC_CLIENT_URL: https://staging.forrent.io.vn
+    environment:
+      API_BASE_URL: http://backend:8000
+      NEXT_PUBLIC_API_BASE_URL: https://staging-api.forrent.io.vn
+      NEXT_PUBLIC_CLIENT_URL: https://staging.forrent.io.vn
+    ports:
+      - "127.0.0.1:13001:3001"
+
+  redis:
+    ports:
+      - "127.0.0.1:16379:6379"

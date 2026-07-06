@@ -353,72 +353,135 @@ export function AdminRoomManager() {
         {isLoading ? (
           <AdminTableSkeleton />
         ) : rooms.length ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-primary/10 text-xs uppercase tracking-[0.16em] text-secondary">
-                <tr>
-                  <th className="py-3 pr-5 font-semibold">Phòng</th>
-                  <th className="py-3 pr-5 font-semibold">Vị trí</th>
-                  <th className="py-3 pr-5 font-semibold">Giá thuê</th>
-                  <th className="py-3 pr-5 font-semibold">Hoa hồng</th>
-                  <th className="py-3 pr-5 font-semibold">Trạng thái</th>
-                  <th className="py-3 pr-5 font-semibold">Cập nhật</th>
-                  <th className="py-3 text-right font-semibold">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-primary/10">
-                {rooms.map((room) => (
-                  <tr className="transition hover:bg-surface-container-low/70" key={room.id}>
-                    <td className="max-w-[280px] py-4 pr-5">
-                      <p className="line-clamp-1 font-semibold text-primary">{room.title}</p>
-                      <p className="mt-1 line-clamp-1 text-xs text-secondary">{room.slug}</p>
-                    </td>
-                    <td className="py-4 pr-5 text-secondary">
-                      <p>{wardById.get(room.ward)?.name ?? `Ward #${room.ward}`}</p>
-                      <p className="mt-1 text-xs">{cityById.get(room.city)?.name ?? `City #${room.city}`}</p>
-                    </td>
-                    <td className="py-4 pr-5">
-                      <p className="tabular-nums text-primary">{formatAdminVnd(room.price)}</p>
-                      <p className="mt-1 text-xs text-secondary">Cọc {formatAdminVnd(room.deposit_amount)}</p>
-                    </td>
-                    <td className="py-4 pr-5">
-                      <p className="tabular-nums text-primary">{formatAdminVnd(room.estimated_commission_amount)}</p>
-                      <p className="mt-1 text-xs text-secondary">{room.commission_percent}% · {formatAdminVnd(room.commission_base_amount)}</p>
-                    </td>
-                    <td className="py-4 pr-5">
-                      <AdminRoomBadge status={room.status} />
-                    </td>
-                    <td className="py-4 pr-5 text-secondary">{formatAdminDate(room.updated_at)}</td>
-                    <td className="py-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          aria-label={`Sửa ${room.title}`}
-                          className="rounded-md border border-primary/10 bg-white p-2 text-secondary transition hover:border-primary/25 hover:text-primary"
-                          onClick={() => openEditModal(room)}
-                          type="button"
-                        >
-                          <Pencil size={17} strokeWidth={1.8} />
-                        </button>
-                        <button
-                          aria-label={`Xóa ${room.title}`}
-                          className={`rounded-md border p-2 transition ${
-                            pendingDeleteId === room.id
-                              ? "border-error/30 bg-error-container text-error"
-                              : "border-primary/10 bg-white text-secondary hover:border-error/25 hover:text-error"
-                          }`}
-                          onClick={() => handleDelete(room.id)}
-                          type="button"
-                        >
-                          <Trash2 size={17} strokeWidth={1.8} />
-                        </button>
-                      </div>
-                      {pendingDeleteId === room.id ? <p className="mt-1 text-xs text-error">Bấm lần nữa để xóa</p> : null}
-                    </td>
+          <>
+            {/* Desktop: Table */}
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="min-w-full text-left text-sm">
+                <thead className="border-b border-primary/10 text-xs uppercase tracking-[0.16em] text-secondary">
+                  <tr>
+                    <th className="py-3 pr-5 font-semibold">Phòng</th>
+                    <th className="py-3 pr-5 font-semibold">Vị trí</th>
+                    <th className="py-3 pr-5 font-semibold">Giá thuê</th>
+                    <th className="py-3 pr-5 font-semibold">Hoa hồng</th>
+                    <th className="py-3 pr-5 font-semibold">Trạng thái</th>
+                    <th className="py-3 pr-5 font-semibold">Cập nhật</th>
+                    <th className="py-3 text-right font-semibold">Thao tác</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-primary/10">
+                  {rooms.map((room) => (
+                    <tr className="transition hover:bg-surface-container-low/70" key={room.id}>
+                      <td className="max-w-[280px] py-4 pr-5">
+                        <p className="line-clamp-1 font-semibold text-primary">{room.title}</p>
+                        <p className="mt-1 line-clamp-1 text-xs text-secondary">{room.slug}</p>
+                      </td>
+                      <td className="py-4 pr-5 text-secondary">
+                        <p>{wardById.get(room.ward)?.name ?? `Ward #${room.ward}`}</p>
+                        <p className="mt-1 text-xs">{cityById.get(room.city)?.name ?? `City #${room.city}`}</p>
+                      </td>
+                      <td className="py-4 pr-5">
+                        <p className="tabular-nums text-primary">{formatAdminVnd(room.price)}</p>
+                        <p className="mt-1 text-xs text-secondary">Cọc {formatAdminVnd(room.deposit_amount)}</p>
+                      </td>
+                      <td className="py-4 pr-5">
+                        <p className="tabular-nums text-primary">{formatAdminVnd(room.estimated_commission_amount)}</p>
+                        <p className="mt-1 text-xs text-secondary">{room.commission_percent}% · {formatAdminVnd(room.commission_base_amount)}</p>
+                      </td>
+                      <td className="py-4 pr-5">
+                        <AdminRoomBadge status={room.status} />
+                      </td>
+                      <td className="py-4 pr-5 text-secondary">{formatAdminDate(room.updated_at)}</td>
+                      <td className="py-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            aria-label={`Sửa ${room.title}`}
+                            className="rounded-md border border-primary/10 bg-white p-2 text-secondary transition hover:border-primary/25 hover:text-primary"
+                            onClick={() => openEditModal(room)}
+                            type="button"
+                          >
+                            <Pencil size={17} strokeWidth={1.8} />
+                          </button>
+                          <button
+                            aria-label={`Xóa ${room.title}`}
+                            className={`rounded-md border p-2 transition ${
+                              pendingDeleteId === room.id
+                                ? "border-error/30 bg-error-container text-error"
+                                : "border-primary/10 bg-white text-secondary hover:border-error/25 hover:text-error"
+                            }`}
+                            onClick={() => handleDelete(room.id)}
+                            type="button"
+                          >
+                            <Trash2 size={17} strokeWidth={1.8} />
+                          </button>
+                        </div>
+                        {pendingDeleteId === room.id ? <p className="mt-1 text-xs text-error">Bấm lần nữa để xóa</p> : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile: Card list */}
+            <div className="grid gap-4 lg:hidden">
+              {rooms.map((room) => (
+                <div className="rounded-lg border border-primary/10 bg-white p-4" key={room.id}>
+                  <div className="mb-3 flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate font-semibold text-primary">{room.title}</h3>
+                      <p className="mt-1 truncate text-xs text-secondary">{room.slug}</p>
+                    </div>
+                    <AdminRoomBadge status={room.status} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-xs text-secondary">Vị trí</span>
+                      <p className="font-medium text-primary">{wardById.get(room.ward)?.name ?? `Ward #${room.ward}`}</p>
+                      <p className="text-xs text-secondary">{cityById.get(room.city)?.name ?? `City #${room.city}`}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-secondary">Giá thuê</span>
+                      <p className="font-semibold tabular-nums text-primary">{formatAdminVnd(room.price)}</p>
+                      <p className="text-xs text-secondary">Cọc {formatAdminVnd(room.deposit_amount)}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-secondary">Hoa hồng</span>
+                      <p className="font-semibold tabular-nums text-primary">{formatAdminVnd(room.estimated_commission_amount)}</p>
+                      <p className="text-xs text-secondary">{room.commission_percent}%</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-secondary">Cập nhật</span>
+                      <p className="font-medium text-primary">{formatAdminDate(room.updated_at)}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex gap-2 border-t border-primary/10 pt-3">
+                    <button
+                      className="flex flex-1 items-center justify-center gap-2 rounded-md border border-primary/10 bg-white px-3 py-2 text-sm font-medium text-secondary transition hover:border-primary/25 hover:text-primary"
+                      onClick={() => openEditModal(room)}
+                      type="button"
+                    >
+                      <Pencil size={16} strokeWidth={1.8} />
+                      Sửa
+                    </button>
+                    <button
+                      className={`flex flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition ${
+                        pendingDeleteId === room.id
+                          ? "border-error/30 bg-error-container text-error"
+                          : "border-primary/10 bg-white text-secondary hover:border-error/25 hover:text-error"
+                      }`}
+                      onClick={() => handleDelete(room.id)}
+                      type="button"
+                    >
+                      <Trash2 size={16} strokeWidth={1.8} />
+                      {pendingDeleteId === room.id ? "Xác nhận xóa" : "Xóa"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         ) : (
           <AdminEmptyState
             action={
