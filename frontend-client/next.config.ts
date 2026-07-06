@@ -76,9 +76,6 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
-  // Performance: Enable SWC minification
-  swcMinify: true,
-
   // Performance: Experimental features
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
