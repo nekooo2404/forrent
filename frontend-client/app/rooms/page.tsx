@@ -176,7 +176,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   ].filter((item): item is string => Boolean(item));
 
   return (
-    <main className="flex min-h-[100dvh] flex-col bg-[#f5f7fb] text-on-surface">
+    <main className="flex min-h-[100dvh] flex-col bg-surface text-on-surface">
       <SiteNav active="rooms" />
 
       <header className="urban-band px-margin-mobile pb-10 pt-32 text-on-primary md:px-margin-desktop">
@@ -261,7 +261,7 @@ function ResultHeader({
   totalCount: number;
 }>) {
   return (
-    <div className="rounded-2xl border border-outline-variant/20 bg-white p-4 shadow-soft">
+    <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-4 shadow-soft">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.1em] text-on-surface-variant">Kết quả từ backend</p>
@@ -302,7 +302,7 @@ function SortForm({
       })}
       <select
         aria-label="Sắp xếp"
-        className="w-full rounded-xl border border-outline-variant/30 bg-white px-4 py-3 font-button text-button text-primary transition-colors focus:border-primary focus:ring-primary md:w-52"
+        className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-4 py-3 font-button text-button text-primary transition-colors focus:border-primary focus:ring-primary md:w-52"
         defaultValue={ordering}
         name="ordering"
       >
@@ -365,7 +365,7 @@ function FilterSidebar({
           <FilterSection title="Tìm kiếm" icon={<Search size={18} strokeWidth={1.8} />}>
             <input
               aria-label="Tìm kiếm phòng"
-              className="w-full rounded-xl border border-outline-variant/30 bg-[#f8fafc] px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
+              className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
               defaultValue={search}
               name="search"
               placeholder="Tên phòng, địa chỉ..."
@@ -395,7 +395,7 @@ function FilterSidebar({
           {filters.wards.length ? (
             <FilterSection title="Phường" icon={<Minus size={18} strokeWidth={1.8} />}>
               <select
-                className="w-full rounded-xl border border-outline-variant/30 bg-[#f8fafc] px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
                 defaultValue={activeWard ?? ""}
                 disabled={!activeCity}
                 name="ward"
@@ -414,7 +414,7 @@ function FilterSidebar({
           <div className="grid grid-cols-1 gap-3">
             <input
               aria-label="Giá từ"
-              className="w-full rounded-xl border border-outline-variant/30 bg-[#f8fafc] px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
+              className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
               defaultValue={activeMinPrice}
               min="0"
               name="min_price"
@@ -423,7 +423,7 @@ function FilterSidebar({
             />
             <input
               aria-label="Giá đến"
-              className="w-full rounded-xl border border-outline-variant/30 bg-[#f8fafc] px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
+              className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
               defaultValue={activeMaxPrice}
               min="0"
               name="max_price"
@@ -485,7 +485,7 @@ function FilterSidebar({
 
         <FilterSection title="Trạng thái" icon={<Minus size={18} strokeWidth={1.8} />}>
           <select
-            className="w-full rounded-xl border border-outline-variant/30 bg-[#f8fafc] px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
+            className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
             defaultValue={activeStatus ?? ""}
             name="status"
           >
@@ -519,7 +519,7 @@ function FilterSidebar({
         </div>
 
         {/* Sticky button at bottom on mobile */}
-        <div className="sticky bottom-0 border-t border-outline-variant/10 bg-white p-4 md:static md:border-none md:bg-transparent">
+        <div className="sticky bottom-0 border-t border-outline-variant/10 bg-surface-container-lowest/95 p-4 md:static md:border-none md:bg-transparent">
           <button className="premium-button urban-cta w-full rounded-xl px-4 py-3 font-button text-button" type="submit">
             Áp dụng bộ lọc
           </button>
@@ -641,7 +641,7 @@ function RoomCard({ room }: Readonly<{ room: RoomCardView }>) {
 
 function CostPill({ icon, label, value }: Readonly<{ icon: ReactNode; label: string; value: string }>) {
   return (
-    <div className="rounded-xl border border-outline-variant/20 bg-[#f8fafc] p-3">
+    <div className="rounded-xl border border-outline-variant/20 bg-surface-container-low p-3">
       <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-secondary">
         {icon}
         {label}
