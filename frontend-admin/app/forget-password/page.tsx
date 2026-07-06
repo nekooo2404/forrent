@@ -18,7 +18,7 @@ export default function ForgetPasswordPage() {
         </Link>
         <p className="mt-2 text-sm text-secondary">Khôi phục quyền truy cập tài khoản quản trị.</p>
       </div>
-      <Suspense fallback={<div className="h-96 w-full max-w-md animate-pulse rounded-lg bg-white/80 shadow-soft" />}>
+      <Suspense fallback={<div className="h-96 w-full max-w-md animate-pulse rounded-lg bg-surface-container-lowest/80 shadow-soft" />}>
         <ForgotPasswordClient />
       </Suspense>
     </main>

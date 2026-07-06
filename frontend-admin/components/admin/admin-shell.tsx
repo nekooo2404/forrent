@@ -36,6 +36,7 @@ import {
 
 import type { ApiUser } from "@/lib/api";
 import { MotionPage } from "@/components/motion";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   authFetch,
   clearAuthSession,
@@ -145,7 +146,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   if (isLoading) {
     return (
       <main className="grid min-h-[100dvh] place-items-center bg-surface px-6 text-primary">
-        <div className="flex items-center gap-3 rounded-lg bg-white px-6 py-4 shadow-soft">
+        <div className="flex items-center gap-3 rounded-lg bg-surface-container-lowest px-6 py-4 shadow-soft">
           <LoaderCircle className="animate-spin" size={20} strokeWidth={1.8} />
           <span className="font-body-md text-sm">Đang kiểm tra phiên admin...</span>
         </div>
@@ -187,7 +188,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
 
         <div className="flex min-h-[100dvh]">
           <aside
-            className={`sticky top-0 hidden h-[100dvh] shrink-0 border-r border-primary/10 bg-white/90 backdrop-blur-xl transition-[width] duration-300 lg:block ${
+            className={`sticky top-0 hidden h-[100dvh] shrink-0 border-r border-primary/10 bg-surface-container-lowest/90 backdrop-blur-xl transition-[width] duration-300 lg:block ${
               isSidebarCollapsed ? "w-[88px]" : "w-[284px]"
             }`}
           >
@@ -202,7 +203,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
 
           {isMobileOpen ? (
             <div className="fixed inset-0 z-40 bg-primary/25 backdrop-blur-sm lg:hidden" role="presentation">
-              <aside className="h-full w-[310px] border-r border-primary/10 bg-white shadow-elevated">
+              <aside className="h-full w-[310px] border-r border-primary/10 bg-surface-container-lowest shadow-elevated">
                 <SidebarContent
                   collapsed={false}
                   onClose={() => setIsMobileOpen(false)}
@@ -220,7 +221,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
                 <div className="flex min-w-0 items-center gap-3">
                   <button
                     aria-label="Mở menu admin"
-                    className="inline-flex size-10 items-center justify-center rounded-md border border-primary/10 bg-white text-primary shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 lg:hidden"
+                    className="inline-flex size-10 items-center justify-center rounded-md border border-primary/10 bg-surface-container-lowest text-primary shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 lg:hidden"
                     onClick={() => setIsMobileOpen(true)}
                     type="button"
                   >
@@ -236,8 +237,9 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <ThemeToggle />
                   <Link
-                    className="hidden items-center gap-3 rounded-md border border-primary/10 bg-white py-1.5 pl-2 pr-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 sm:flex"
+                    className="hidden items-center gap-3 rounded-md border border-primary/10 bg-surface-container-lowest py-1.5 pl-2 pr-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 sm:flex"
                     href="/admin/settings"
                   >
                     <span className="inline-flex size-8 items-center justify-center rounded-md bg-primary text-on-primary">
@@ -407,7 +409,7 @@ function AdminGateMessage({
 }>) {
   return (
     <main className="grid min-h-[100dvh] place-items-center bg-surface px-6 py-16 text-center text-primary">
-      <section className="max-w-lg rounded-xl bg-white p-8 shadow-elevated">
+      <section className="max-w-lg rounded-xl bg-surface-container-lowest p-8 shadow-elevated">
         <span className="mx-auto mb-6 grid size-16 place-items-center rounded-lg bg-primary text-on-primary">
           <DoorOpen size={28} strokeWidth={1.8} />
         </span>

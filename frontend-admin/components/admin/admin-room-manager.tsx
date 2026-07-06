@@ -395,7 +395,7 @@ export function AdminRoomManager() {
                         <div className="flex justify-end gap-2">
                           <button
                             aria-label={`Sửa ${room.title}`}
-                            className="rounded-md border border-primary/10 bg-white p-2 text-secondary transition hover:border-primary/25 hover:text-primary"
+                            className="rounded-md border border-primary/10 bg-surface-container-lowest p-2 text-secondary transition hover:border-primary/25 hover:text-primary"
                             onClick={() => openEditModal(room)}
                             type="button"
                           >
@@ -406,7 +406,7 @@ export function AdminRoomManager() {
                             className={`rounded-md border p-2 transition ${
                               pendingDeleteId === room.id
                                 ? "border-error/30 bg-error-container text-error"
-                                : "border-primary/10 bg-white text-secondary hover:border-error/25 hover:text-error"
+                                : "border-primary/10 bg-surface-container-lowest text-secondary hover:border-error/25 hover:text-error"
                             }`}
                             onClick={() => handleDelete(room.id)}
                             type="button"
@@ -425,7 +425,7 @@ export function AdminRoomManager() {
             {/* Mobile: Card list */}
             <div className="grid gap-4 lg:hidden">
               {rooms.map((room) => (
-                <div className="rounded-lg border border-primary/10 bg-white p-4" key={room.id}>
+                <div className="rounded-lg border border-primary/10 bg-surface-container-lowest p-4" key={room.id}>
                   <div className="mb-3 flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate font-semibold text-primary">{room.title}</h3>
@@ -458,7 +458,7 @@ export function AdminRoomManager() {
 
                   <div className="mt-4 flex gap-2 border-t border-primary/10 pt-3">
                     <button
-                      className="flex flex-1 items-center justify-center gap-2 rounded-md border border-primary/10 bg-white px-3 py-2 text-sm font-medium text-secondary transition hover:border-primary/25 hover:text-primary"
+                      className="flex flex-1 items-center justify-center gap-2 rounded-md border border-primary/10 bg-surface-container-lowest px-3 py-2 text-sm font-medium text-secondary transition hover:border-primary/25 hover:text-primary"
                       onClick={() => openEditModal(room)}
                       type="button"
                     >
@@ -469,7 +469,7 @@ export function AdminRoomManager() {
                       className={`flex flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition ${
                         pendingDeleteId === room.id
                           ? "border-error/30 bg-error-container text-error"
-                          : "border-primary/10 bg-white text-secondary hover:border-error/25 hover:text-error"
+                          : "border-primary/10 bg-surface-container-lowest text-secondary hover:border-error/25 hover:text-error"
                       }`}
                       onClick={() => handleDelete(room.id)}
                       type="button"
@@ -686,7 +686,7 @@ function RoomFormModal({
           </div>
 
           <aside className="space-y-5 md:col-span-4">
-            <section className="rounded-xl border border-primary/10 bg-white p-4 shadow-sm">
+            <section className="rounded-xl border border-primary/10 bg-surface-container-lowest p-4 shadow-sm">
               <div className="mb-4 flex items-center gap-2">
                 <Calculator size={18} strokeWidth={1.8} />
                 <h3 className="font-semibold">Hoa hồng</h3>
@@ -705,7 +705,7 @@ function RoomFormModal({
               </div>
             </section>
 
-            <section className="rounded-xl border border-primary/10 bg-white p-4 shadow-sm">
+            <section className="rounded-xl border border-primary/10 bg-surface-container-lowest p-4 shadow-sm">
               <div className="mb-4 flex items-center gap-2">
                 <ImageIcon size={18} strokeWidth={1.8} />
                 <h3 className="font-semibold">Ảnh gallery</h3>
@@ -798,7 +798,7 @@ function RoomFormModal({
               ) : null}
             </section>
 
-            <section className="rounded-xl border border-primary/10 bg-white p-4 shadow-sm">
+            <section className="rounded-xl border border-primary/10 bg-surface-container-lowest p-4 shadow-sm">
               <h3 className="mb-4 font-semibold">Tiện ích</h3>
               <div className="grid max-h-48 gap-2 overflow-y-auto pr-1">
                 {lookups.amenities.map((amenity) => (

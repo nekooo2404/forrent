@@ -269,7 +269,7 @@ export function AdminUserManager() {
                       <td className="py-4 pr-5 text-secondary">{formatAdminDate(user.created_at)}</td>
                       <td className="py-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <button className="rounded-md border border-primary/10 bg-white p-2 text-secondary transition hover:border-primary/25 hover:text-primary" onClick={() => editUser(user)} type="button">
+                          <button className="rounded-md border border-primary/10 bg-surface-container-lowest p-2 text-secondary transition hover:border-primary/25 hover:text-primary" onClick={() => editUser(user)} type="button">
                             <Pencil size={16} strokeWidth={1.8} />
                           </button>
                           <button className={adminButtonSecondary} disabled={isSaving} onClick={() => toggleActive(user)} type="button">

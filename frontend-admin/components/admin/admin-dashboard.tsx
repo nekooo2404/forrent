@@ -216,7 +216,7 @@ export function AdminDashboard() {
 
           <AdminPanel title="Nội dung & liên hệ">
             <div className="grid gap-3">
-              <Link className="group flex items-center justify-between rounded-lg border border-primary/10 bg-white p-4 transition hover:-translate-y-0.5 hover:border-primary/25" href="/admin/blogs">
+              <Link className="group flex items-center justify-between rounded-lg border border-primary/10 bg-surface-container-lowest p-4 transition hover:-translate-y-0.5 hover:border-primary/25" href="/admin/blogs">
                 <span className="flex items-center gap-3">
                   <span className="grid size-10 place-items-center rounded-md bg-surface-container text-primary">
                     <Newspaper size={18} strokeWidth={1.8} />
@@ -228,7 +228,7 @@ export function AdminDashboard() {
                 </span>
                 <ArrowRight className="text-secondary transition group-hover:translate-x-1 group-hover:text-primary" size={17} strokeWidth={1.8} />
               </Link>
-              <Link className="group flex items-center justify-between rounded-lg border border-primary/10 bg-white p-4 transition hover:-translate-y-0.5 hover:border-primary/25" href="/admin/contacts">
+              <Link className="group flex items-center justify-between rounded-lg border border-primary/10 bg-surface-container-lowest p-4 transition hover:-translate-y-0.5 hover:border-primary/25" href="/admin/contacts">
                 <span className="flex items-center gap-3">
                   <span className="grid size-10 place-items-center rounded-md bg-surface-container text-primary">
                     <Mail size={18} strokeWidth={1.8} />

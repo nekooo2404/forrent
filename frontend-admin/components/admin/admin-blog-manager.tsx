@@ -303,7 +303,7 @@ export function AdminBlogManager() {
                         {blog.status === "PUBLISHED" ? (
                           <Link
                             aria-label={`Mở ${blog.title}`}
-                            className="rounded-md border border-primary/10 bg-white p-2 text-secondary transition hover:border-primary/25 hover:text-primary"
+                            className="rounded-md border border-primary/10 bg-surface-container-lowest p-2 text-secondary transition hover:border-primary/25 hover:text-primary"
                             href={`${process.env.NEXT_PUBLIC_CLIENT_URL || "http://localhost:3000"}/blogs/${blog.slug}`}
                             target="_blank"
                           >
@@ -312,7 +312,7 @@ export function AdminBlogManager() {
                         ) : null}
                         <button
                           aria-label={`Sửa ${blog.title}`}
-                          className="rounded-md border border-primary/10 bg-white p-2 text-secondary transition hover:border-primary/25 hover:text-primary"
+                          className="rounded-md border border-primary/10 bg-surface-container-lowest p-2 text-secondary transition hover:border-primary/25 hover:text-primary"
                           onClick={() => openEditModal(blog)}
                           type="button"
                         >
@@ -323,7 +323,7 @@ export function AdminBlogManager() {
                           className={`rounded-md border p-2 transition ${
                             pendingDeleteId === blog.id
                               ? "border-error/30 bg-error-container text-error"
-                              : "border-primary/10 bg-white text-secondary hover:border-error/25 hover:text-error"
+                              : "border-primary/10 bg-surface-container-lowest text-secondary hover:border-error/25 hover:text-error"
                           }`}
                           onClick={() => handleDelete(blog.id)}
                           type="button"
@@ -371,7 +371,7 @@ export function AdminBlogManager() {
 
 function MiniMetric({ label, value }: Readonly<{ label: string; value: number }>) {
   return (
-    <div className="rounded-xl border border-primary/10 bg-white/90 p-4 shadow-soft">
+    <div className="rounded-xl border border-primary/10 bg-surface-container-lowest/90 p-4 shadow-soft">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-secondary">{label}</p>
       <p className="mt-2 text-2xl font-semibold tabular-nums text-primary">{value}</p>
     </div>
@@ -432,7 +432,7 @@ function BlogFormModal({
           </div>
 
           <aside className="space-y-5 md:col-span-4">
-            <section className="rounded-xl border border-primary/10 bg-white p-4 shadow-sm">
+            <section className="rounded-xl border border-primary/10 bg-surface-container-lowest p-4 shadow-sm">
               <h3 className="mb-4 font-semibold">Xuất bản</h3>
               <Field label="Thời gian publish">
                 <input
@@ -447,7 +447,7 @@ function BlogFormModal({
               </p>
             </section>
 
-            <section className="rounded-xl border border-primary/10 bg-white p-4 shadow-sm">
+            <section className="rounded-xl border border-primary/10 bg-surface-container-lowest p-4 shadow-sm">
               <h3 className="mb-3 font-semibold">Ảnh thumbnail</h3>
               <input
                 accept="image/*"

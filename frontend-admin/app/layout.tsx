@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Open_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 
+import { ThemeProvider } from "@/components/theme-provider";
+
 import "./globals.css";
 
 const openSans = Open_Sans({
@@ -26,9 +28,9 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html className="light" lang="vi">
+    <html className="light" lang="vi" suppressHydrationWarning>
       <body className={`${openSans.variable} bg-surface font-body-md text-body-md text-on-surface antialiased`}>
-        {children}
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

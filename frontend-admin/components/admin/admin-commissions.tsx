@@ -161,7 +161,7 @@ export function AdminCommissions() {
                       <td className="py-4 text-right">
                         {payout.status !== "PAID" && payout.status !== "CANCELLED" ? (
                           <input
-                            className="mb-2 w-full rounded-md border border-primary/10 bg-white px-3 py-2 text-xs text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                            className="mb-2 w-full rounded-md border border-primary/10 bg-surface-container-lowest px-3 py-2 text-xs text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
                             onChange={(event) => setCancelNotes((current) => ({ ...current, [payout.id]: event.target.value }))}
                             placeholder="Lý do hủy nếu chọn hủy"
                             value={cancelNotes[payout.id] ?? payout.note ?? ""}
@@ -228,7 +228,7 @@ export function AdminCommissions() {
                 <div className="rounded-lg bg-surface-container-low p-4" key={item.month ?? "unknown"}>
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <p className="font-semibold text-primary">{formatAdminDateOnly(item.month)}</p>
-                    <span className="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-secondary">{item.lead_count} lead</span>
+                    <span className="rounded-md bg-surface-container-lowest px-2.5 py-1 text-xs font-semibold text-secondary">{item.lead_count} lead</span>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Metric label="Dự kiến" value={formatAdminVnd(item.total_estimated_commission ?? 0)} />
@@ -266,7 +266,7 @@ function payoutOptions(status: string) {
 
 function Metric({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
-    <div className="rounded-md bg-white p-3">
+    <div className="rounded-md bg-surface-container-lowest p-3">
       <p className="text-xs text-secondary">{label}</p>
       <p className="mt-1 font-semibold tabular-nums text-primary">{value}</p>
     </div>

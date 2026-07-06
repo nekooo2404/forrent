@@ -694,17 +694,17 @@ function ResourceTable<T extends { id: number; is_active: boolean }>({
               ))}
               <td className="py-4 text-right">
                 <div className="flex justify-end gap-2">
-                  <button className="rounded-md border border-primary/10 bg-white p-2 text-secondary transition hover:border-primary/25 hover:text-primary" onClick={() => onEdit(row.item)} type="button">
+                  <button className="rounded-md border border-primary/10 bg-surface-container-lowest p-2 text-secondary transition hover:border-primary/25 hover:text-primary" onClick={() => onEdit(row.item)} type="button">
                     <Pencil size={16} strokeWidth={1.8} />
                   </button>
-                  <button className="rounded-md border border-primary/10 bg-white p-2 text-secondary transition hover:border-primary/25 hover:text-primary" onClick={() => onToggleActive(row.item)} type="button">
+                  <button className="rounded-md border border-primary/10 bg-surface-container-lowest p-2 text-secondary transition hover:border-primary/25 hover:text-primary" onClick={() => onToggleActive(row.item)} type="button">
                     {row.item.is_active ? <X size={16} strokeWidth={1.8} /> : <Check size={16} strokeWidth={1.8} />}
                   </button>
                   <button
                     className={`rounded-md border p-2 transition ${
                       pendingDelete === `${path}:${row.id}`
                         ? "border-error/30 bg-error-container text-error"
-                        : "border-primary/10 bg-white text-secondary hover:border-error/25 hover:text-error"
+                        : "border-primary/10 bg-surface-container-lowest text-secondary hover:border-error/25 hover:text-error"
                     }`}
                     onClick={() => onDelete(row.item)}
                     type="button"

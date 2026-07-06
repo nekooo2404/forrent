@@ -278,7 +278,7 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
                 </label>
               </div>
 
-              <div className="rounded-lg border border-primary/10 bg-white p-4">
+              <div className="rounded-lg border border-primary/10 bg-surface-container-lowest p-4">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Xác nhận lịch xem riêng</p>
                 <div className="grid gap-3 md:grid-cols-2">
                   <input className={adminInputClass} onChange={(event) => setAppointmentDate(event.target.value)} type="date" value={appointmentDate} />

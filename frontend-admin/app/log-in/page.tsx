@@ -14,11 +14,11 @@ const publicClientUrl = process.env.NEXT_PUBLIC_CLIENT_URL || "http://localhost:
 export default function AdminLogInPage() {
   return (
     <main className="admin-surface grid min-h-[100dvh] place-items-center px-4 py-12 text-primary">
-      <section className="grid w-full max-w-6xl overflow-hidden rounded-2xl border border-primary/10 bg-white/90 shadow-elevated backdrop-blur lg:grid-cols-[0.9fr_1fr]">
+      <section className="grid w-full max-w-6xl overflow-hidden rounded-2xl border border-primary/10 bg-surface-container-lowest/90 shadow-elevated backdrop-blur lg:grid-cols-[0.9fr_1fr]">
         <aside className="hidden min-h-[680px] flex-col justify-between bg-primary p-10 text-on-primary lg:flex">
           <div>
             <Link className="inline-flex items-center gap-3" href="/admin">
-              <span className="grid size-11 place-items-center rounded-lg bg-white text-primary">
+              <span className="grid size-11 place-items-center rounded-lg bg-surface-container-lowest text-primary">
                 <KeyRound size={20} strokeWidth={1.8} />
               </span>
               <span>

@@ -1015,4 +1015,99 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
   }
 }
 
+/* Enterprise navbar polish */
+.genz-navbar,
+.genz-navbar-scrolled {
+  background: rgb(var(--surface) / 0.86);
+  border-bottom: 1px solid rgb(var(--outline-variant) / 0.52);
+  box-shadow: none;
+}
+
+.genz-navbar-scrolled {
+  background: rgb(var(--surface-container-lowest) / 0.94);
+  box-shadow: 0 10px 30px rgb(15 23 42 / 0.08);
+}
+
+.dark .genz-navbar,
+.dark .genz-navbar-scrolled {
+  background: rgb(var(--surface-container-lowest) / 0.9);
+  border-bottom-color: rgb(var(--outline-variant) / 0.58);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.2);
+}
+
+.genz-navbar-gradient,
+.genz-particles,
+.genz-logo-glow,
+.genz-logo-sparkle,
+.genz-mobile-gradient,
+.genz-button-glow {
+  display: none;
+}
+
+.genz-logo-container {
+  display: inline-flex;
+  height: 44px;
+  width: 142px;
+  align-items: center;
+}
+
+@media (min-width: 768px) {
+  .genz-logo-container {
+    height: 48px;
+    width: 158px;
+  }
+}
+
+.genz-logo-container:hover,
+.genz-nav-pill:hover,
+.genz-theme-button:hover,
+.genz-menu-button:hover {
+  transform: translateY(-1px);
+}
+
+.genz-nav-pill {
+  min-height: 44px;
+  border-radius: 8px;
+  color: rgb(var(--secondary));
+}
+
+.genz-nav-pill-active {
+  background: rgb(var(--primary-container) / 0.78);
+  border: 1px solid rgb(var(--primary) / 0.22);
+  color: rgb(var(--on-primary-container));
+  box-shadow: inset 0 0 0 1px rgb(var(--surface-bright) / 0.22);
+}
+
+.dark .genz-nav-pill-active {
+  background: rgb(var(--primary-container) / 0.54);
+  border-color: rgb(var(--primary) / 0.28);
+}
+
+.genz-menu-button,
+.genz-close-button,
+.genz-theme-toggle {
+  border-color: rgb(var(--outline-variant) / 0.58);
+  background: rgb(var(--surface-container-lowest) / 0.88);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.06);
+}
+
+.genz-theme-button-active {
+  animation: none;
+}
+
+.genz-mobile-menu,
+.dark .genz-mobile-menu {
+  background: rgb(var(--surface) / 0.98);
+}
+
+.genz-mobile-link {
+  border-radius: 8px;
+  color: rgb(var(--on-surface));
+}
+
+.genz-mobile-link-active {
+  background: rgb(var(--primary-container) / 0.72);
+  border: 1px solid rgb(var(--primary) / 0.24);
+  color: rgb(var(--on-primary-container));
+}
 

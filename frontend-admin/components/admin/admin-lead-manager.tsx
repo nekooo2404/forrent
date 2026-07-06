@@ -263,7 +263,7 @@ export function AdminLeadManager() {
           ["MOVED_IN", "Chuyển vào"],
         ].map(([key, label]) => (
           <button
-            className="rounded-xl border border-primary/10 bg-white/90 p-4 text-left shadow-soft transition hover:-translate-y-0.5 hover:border-primary/25"
+            className="rounded-xl border border-primary/10 bg-surface-container-lowest/90 p-4 text-left shadow-soft transition hover:-translate-y-0.5 hover:border-primary/25"
             key={key}
             onClick={() => {
               setStatus(key);
@@ -463,7 +463,7 @@ export function AdminLeadManager() {
                 </label>
               </div>
 
-              <div className="rounded-lg border border-primary/10 bg-white p-4">
+              <div className="rounded-lg border border-primary/10 bg-surface-container-lowest p-4">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Lịch xem đã chốt</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <input className={adminInputClass} onChange={(event) => setAppointmentDateDraft(event.target.value)} type="date" value={appointmentDateDraft} />
@@ -521,7 +521,7 @@ function toDateTimeLocal(value?: string | null) {
 
 function Info({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
-    <div className="rounded-md bg-white p-3">
+    <div className="rounded-md bg-surface-container-lowest p-3">
       <p className="text-xs text-secondary">{label}</p>
       <p className="mt-1 font-medium text-primary">{value}</p>
     </div>

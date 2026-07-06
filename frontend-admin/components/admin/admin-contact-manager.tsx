@@ -290,7 +290,7 @@ export function AdminContactManager() {
                     className={`w-full rounded-lg border p-4 text-left transition ${
                       isSelected
                         ? "border-primary/35 bg-surface-container-low shadow-soft"
-                        : "border-primary/10 bg-white hover:-translate-y-0.5 hover:border-primary/25"
+                        : "border-primary/10 bg-surface-container-lowest hover:-translate-y-0.5 hover:border-primary/25"
                     }`}
                     key={contact.id}
                     onClick={() => setSelectedId(contact.id)}
@@ -349,7 +349,7 @@ export function AdminContactManager() {
 
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Nội dung</p>
-                <div className="rounded-lg border border-primary/10 bg-white p-5 text-sm leading-7 text-primary">
+                <div className="rounded-lg border border-primary/10 bg-surface-container-lowest p-5 text-sm leading-7 text-primary">
                   {selectedContact.message}
                 </div>
               </div>
@@ -435,7 +435,7 @@ export function AdminContactManager() {
                   className={`inline-flex items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-semibold transition ${
                     pendingDeleteId === selectedContact.id
                       ? "border-error/30 bg-error-container text-error"
-                      : "border-primary/10 bg-white text-secondary hover:border-error/25 hover:text-error"
+                      : "border-primary/10 bg-surface-container-lowest text-secondary hover:border-error/25 hover:text-error"
                   }`}
                   onClick={() => handleDelete(selectedContact.id)}
                   type="button"
@@ -459,7 +459,7 @@ export function AdminContactManager() {
 
 function MiniMetric({ label, value }: Readonly<{ label: string; value: number }>) {
   return (
-    <div className="rounded-xl border border-primary/10 bg-white/90 p-4 shadow-soft">
+    <div className="rounded-xl border border-primary/10 bg-surface-container-lowest/90 p-4 shadow-soft">
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-secondary">{label}</p>
       <p className="mt-2 text-2xl font-semibold tabular-nums text-primary">{value}</p>
     </div>

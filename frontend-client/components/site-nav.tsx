@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Menu, X, Sparkles } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -63,30 +63,16 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
         ? "genz-navbar-scrolled"
         : "genz-navbar"
     }`}>
-      {/* Animated gradient background */}
-      <div className="genz-navbar-gradient" />
-
-      {/* Floating particles */}
-      <div className="genz-particles">
-        <span className="genz-particle" style={{ left: "10%", animationDelay: "0s" }} />
-        <span className="genz-particle" style={{ left: "30%", animationDelay: "2s" }} />
-        <span className="genz-particle" style={{ left: "50%", animationDelay: "1s" }} />
-        <span className="genz-particle" style={{ left: "70%", animationDelay: "3s" }} />
-        <span className="genz-particle" style={{ left: "90%", animationDelay: "1.5s" }} />
-      </div>
-
       <div className="relative mx-auto flex h-20 max-w-container-max items-center justify-between px-margin-mobile md:h-24 md:px-margin-desktop">
-        {/* Logo with 3D effect */}
         <Link
           aria-label="ForRent - Trang chủ"
           className="genz-logo-container group relative z-10"
           href="/homepage"
         >
-          <div className="genz-logo-glow" />
           <div className="relative">
             <Image
               alt="ForRent"
-              className="h-full w-full object-contain object-left transition-transform duration-300 group-hover:scale-110"
+              className="h-full w-full object-contain object-left transition-transform duration-300 group-hover:scale-[1.02]"
               height={241}
               priority
               sizes="(min-width: 768px) 158px, 142px"
@@ -94,10 +80,8 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
               width={760}
             />
           </div>
-          <Sparkles className="genz-logo-sparkle absolute -right-2 -top-2 text-gold" size={16} strokeWidth={2} />
         </Link>
 
-        {/* Desktop Navigation with 3D pills */}
         <div className="hidden items-center gap-2 md:flex">
           {navItems.map((item) => (
             <Link
@@ -119,7 +103,6 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
           ))}
         </div>
 
-        {/* Right actions with 3D buttons */}
         <div className="flex items-center gap-3 md:gap-4">
           <div className="genz-button-3d">
             <ThemeToggle />
@@ -132,7 +115,6 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
             onClick={() => setIsMobileMenuOpen(true)}
             type="button"
           >
-            <span className="genz-button-glow" />
             <Menu size={24} strokeWidth={2} />
           </button>
 
@@ -142,7 +124,6 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
         </div>
       </div>
 
-      {/* Mobile Menu with enhanced animations */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
@@ -152,10 +133,6 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
             initial={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {/* Animated gradient background */}
-            <div className="genz-mobile-gradient" />
-
-            {/* Header */}
             <div className="relative z-10 flex h-20 items-center justify-between border-b border-white/10 px-margin-mobile backdrop-blur-xl">
               <Link
                 aria-label="ForRent - Trang chủ"
@@ -179,12 +156,10 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
                 onClick={() => setIsMobileMenuOpen(false)}
                 type="button"
               >
-                <span className="genz-button-glow" />
                 <X size={24} strokeWidth={2} />
               </button>
             </div>
 
-            {/* Navigation items with stagger animation */}
             <motion.nav
               animate={{ opacity: 1, y: 0 }}
               className="relative z-10 flex flex-col gap-2 p-6"
@@ -211,7 +186,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
                       {item.label}
                     </span>
                     {item.key === active && (
-                      <Sparkles className="ml-auto text-gold" size={18} strokeWidth={2} />
+                      <span className="ml-auto size-2 rounded-full bg-primary" />
                     )}
                   </Link>
                 </motion.div>

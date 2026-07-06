@@ -23,7 +23,7 @@ export function Button({
 
   const variantStyles = {
     primary: "bg-primary text-on-primary shadow-sm hover:bg-secondary",
-    secondary: "border border-primary/10 bg-white text-primary shadow-sm hover:border-primary/30",
+    secondary: "border border-primary/10 bg-surface-container-lowest text-primary shadow-sm hover:border-primary/30",
     ghost: "text-primary hover:bg-surface-container-low",
     danger: "bg-error text-white shadow-sm hover:bg-error/90",
   };
