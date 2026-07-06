@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Menu, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -63,16 +63,27 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
         ? "genz-navbar-scrolled"
         : "genz-navbar"
     }`}>
+      <div className="genz-navbar-gradient" />
+
+      <div className="genz-particles">
+        <span className="genz-particle" style={{ left: "10%", animationDelay: "0s" }} />
+        <span className="genz-particle" style={{ left: "30%", animationDelay: "2s" }} />
+        <span className="genz-particle" style={{ left: "50%", animationDelay: "1s" }} />
+        <span className="genz-particle" style={{ left: "70%", animationDelay: "3s" }} />
+        <span className="genz-particle" style={{ left: "90%", animationDelay: "1.5s" }} />
+      </div>
+
       <div className="relative mx-auto flex h-20 max-w-container-max items-center justify-between px-margin-mobile md:h-24 md:px-margin-desktop">
         <Link
           aria-label="ForRent - Trang chủ"
           className="genz-logo-container group relative z-10"
           href="/homepage"
         >
+          <div className="genz-logo-glow" />
           <div className="relative">
             <Image
               alt="ForRent"
-              className="h-full w-full object-contain object-left transition-transform duration-300 group-hover:scale-[1.02]"
+              className="h-full w-full object-contain object-left transition-transform duration-300 group-hover:scale-110"
               height={241}
               priority
               sizes="(min-width: 768px) 158px, 142px"
@@ -80,6 +91,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
               width={760}
             />
           </div>
+          <Sparkles className="genz-logo-sparkle absolute -right-2 -top-2 text-gold" size={16} strokeWidth={2} />
         </Link>
 
         <div className="hidden items-center gap-2 md:flex">
@@ -104,7 +116,12 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
         </div>
 
         <div className="flex items-center gap-3 md:gap-4">
-          <ThemeToggle compact />
+          <div className="genz-button-3d hidden sm:block">
+            <ThemeToggle />
+          </div>
+          <div className="genz-button-3d sm:hidden">
+            <ThemeToggle compact />
+          </div>
 
           <button
             aria-expanded={isMobileMenuOpen}
@@ -113,6 +130,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
             onClick={() => setIsMobileMenuOpen(true)}
             type="button"
           >
+            <span className="genz-button-glow" />
             <Menu size={24} strokeWidth={2} />
           </button>
 
@@ -131,6 +149,8 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
             initial={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
+            <div className="genz-mobile-gradient" />
+
             <div className="relative z-10 flex h-20 items-center justify-between border-b border-white/10 px-margin-mobile backdrop-blur-xl">
               <Link
                 aria-label="ForRent - Trang chủ"
@@ -154,6 +174,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
                 onClick={() => setIsMobileMenuOpen(false)}
                 type="button"
               >
+                <span className="genz-button-glow" />
                 <X size={24} strokeWidth={2} />
               </button>
             </div>
@@ -184,7 +205,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
                       {item.label}
                     </span>
                     {item.key === active && (
-                      <span className="ml-auto size-2 rounded-full bg-primary" />
+                      <Sparkles className="ml-auto text-gold" size={18} strokeWidth={2} />
                     )}
                   </Link>
                 </motion.div>
@@ -198,6 +219,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
               initial={{ opacity: 0 }}
               transition={{ delay: 0.3, duration: 0.3 }}
             >
+              <ThemeToggle />
               <div className="genz-profile-card">
                 <ProfileMenu />
               </div>
