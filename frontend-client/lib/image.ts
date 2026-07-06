@@ -14,13 +14,21 @@ function isCloudinaryImage(src: string) {
   }
 }
 
-function cloudinaryLoader({ src, width, quality }: ImageLoaderProps) {
+function cloudinaryUrl(src: string, width: number, quality?: number) {
   const url = new URL(src);
   const [prefix, imagePath] = url.pathname.split(cloudinaryUploadPath);
   const q = quality && quality >= 80 ? "q_auto:good" : "q_auto:eco";
 
   url.pathname = `${prefix}${cloudinaryUploadPath}f_auto,${q},c_limit,w_${width}/${imagePath}`;
   return url.toString();
+}
+
+function cloudinaryLoader({ src, width, quality }: ImageLoaderProps) {
+  return cloudinaryUrl(src, width, quality);
+}
+
+export function fastImageUrl(src: string, width = 1200, quality = 78) {
+  return isCloudinaryImage(src) ? cloudinaryUrl(src, width, quality) : src;
 }
 
 export function fastImageProps(src: string): Pick<ImageProps, "loader" | "placeholder" | "blurDataURL"> {

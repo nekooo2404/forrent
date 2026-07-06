@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
-import { fastImageProps } from "@/lib/image";
+import { fastImageProps, fastImageUrl } from "@/lib/image";
 
 type RoomGalleryProps = Readonly<{
   images: string[];
@@ -33,6 +33,13 @@ export function RoomGallery({ images, title }: RoomGalleryProps) {
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [activeIndex, images.length]);
+
+  useEffect(() => {
+    if (activeIndex === null || images.length < 2) return;
+
+    preloadGalleryImage(images[previousIndex(activeIndex, images.length) ?? 0]);
+    preloadGalleryImage(images[nextIndex(activeIndex, images.length) ?? 0]);
+  }, [activeIndex, images]);
 
   return (
     <>
@@ -82,7 +89,8 @@ export function RoomGallery({ images, title }: RoomGalleryProps) {
               decoding="async"
               fill
               priority
-              sizes="100vw"
+              quality={78}
+              sizes="(min-width: 1280px) 1152px, 100vw"
               src={activeImage}
               {...fastImageProps(activeImage)}
             />
@@ -166,4 +174,14 @@ function previousIndex(current: number | null, total: number) {
 function nextIndex(current: number | null, total: number) {
   if (!total) return null;
   return current === null || current === total - 1 ? 0 : current + 1;
+}
+
+function preloadGalleryImage(src?: string) {
+  if (!src || typeof window === "undefined") return;
+
+  for (const width of [1200, 1920]) {
+    const image = new window.Image();
+    image.decoding = "async";
+    image.src = fastImageUrl(src, width, 78);
+  }
 }
