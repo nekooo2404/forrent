@@ -131,7 +131,7 @@ export default async function Homepage() {
       <header className="v-ui-shell relative px-margin-mobile pb-16 pt-28 md:px-margin-desktop md:pt-32">
         <div className="mx-auto grid min-h-[720px] w-full max-w-container-max items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
           <MotionSection className="text-reveal">
-            <span className="mb-5 inline-flex rounded-full border border-primary/15 bg-white px-4 py-2 font-label-caps text-label-caps uppercase tracking-widest text-primary shadow-soft">
+            <span className="mb-5 inline-flex rounded-full border border-primary/15 bg-surface-container-lowest px-4 py-2 font-label-caps text-label-caps uppercase tracking-widest text-primary shadow-soft">
               ForRent live · Hà Nội · dữ liệu thật
             </span>
             <h1 className="mb-6 max-w-4xl text-[44px] font-extrabold leading-[1.04] text-primary md:text-[76px]">
@@ -144,7 +144,7 @@ export default async function Homepage() {
               <Link className="premium-button urban-cta inline-flex rounded-xl px-6 py-4 font-button text-button" href="/rooms?status=AVAILABLE">
                 Xem phòng trống
               </Link>
-              <Link className="premium-button inline-flex rounded-xl border border-primary/20 bg-white px-6 py-4 font-button text-button text-primary" href="/contact">
+              <Link className="premium-button inline-flex rounded-xl border border-primary/20 bg-surface-container-lowest px-6 py-4 font-button text-button text-primary" href="/contact">
                 Gửi nhu cầu
               </Link>
             </div>
@@ -174,7 +174,7 @@ export default async function Homepage() {
 
           <MotionSection className="urban-panel spotlight-card w-full rounded-2xl p-4 md:col-span-2 md:p-5">
             <form action="/rooms" className="grid gap-4 md:grid-cols-[1.6fr_1fr_1fr_auto] md:items-end">
-              <div className="flex flex-col rounded-xl bg-white px-4 py-3">
+              <div className="flex flex-col rounded-xl bg-surface-container-lowest px-4 py-3">
                 <label className="mb-2 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-room-search">Khu vực</label>
                 <div className="relative">
                   <MapPin
@@ -193,7 +193,7 @@ export default async function Homepage() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4 md:contents">
-                <div className="flex flex-col rounded-xl bg-white px-4 py-3">
+                <div className="flex flex-col rounded-xl bg-surface-container-lowest px-4 py-3">
                   <label className="mb-2 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-max-price">Giá tối đa</label>
                   <div>
                     <input
@@ -205,7 +205,7 @@ export default async function Homepage() {
                     />
                   </div>
                 </div>
-                <div className="flex flex-col rounded-xl bg-white px-4 py-3">
+                <div className="flex flex-col rounded-xl bg-surface-container-lowest px-4 py-3">
                   <label className="mb-2 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-room-type">Loại phòng</label>
                   <div>
                     <select
@@ -245,7 +245,7 @@ export default async function Homepage() {
               </p>
             </div>
             <Link
-              className="mt-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white px-5 py-3 font-button text-button text-primary shadow-soft transition hover:-translate-y-0.5 hover:border-primary hover:bg-primary hover:text-white md:mt-0"
+              className="mt-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-surface-container-lowest px-5 py-3 font-button text-button text-primary shadow-soft transition hover:-translate-y-0.5 hover:border-primary hover:bg-primary hover:text-on-primary md:mt-0"
               href="/rooms"
             >
               Xem tất cả phòng
@@ -284,7 +284,7 @@ export default async function Homepage() {
         </div>
       </section>
 
-      <section className="bg-[#f5f7fb] px-margin-mobile py-24 md:px-margin-desktop">
+      <section className="bg-surface-container-low px-margin-mobile py-24 md:px-margin-desktop">
         <div className="mx-auto max-w-container-max">
           <MotionSection className="mb-16 text-center">
             <span className="urban-badge mb-4 px-3 py-1 font-label-caps text-label-caps uppercase tracking-widest">Còn trống thật</span>
@@ -380,7 +380,7 @@ function PropertyCard({ property }: Readonly<{ property: PropertyCardView }>) {
             {property.label}
           </div>
         ) : null}
-        <div className="absolute right-4 top-4 rounded-full bg-emerald-500 px-3 py-1 font-label-caps text-label-caps uppercase tracking-wider text-white shadow-sm">
+        <div className="absolute right-4 top-4 rounded-full bg-success px-3 py-1 font-label-caps text-label-caps uppercase tracking-wider text-on-success shadow-sm">
           Còn trống
         </div>
       </div>
@@ -439,7 +439,7 @@ function BackendSignals({ signals }: Readonly<{ signals: BackendSignal[] }>) {
   return (
     <div className="mt-4 grid gap-2 md:grid-cols-4">
       {signals.map((signal) => (
-        <div className="rounded-xl border border-outline-variant/20 bg-[#f8fafc] px-4 py-3" key={signal.label}>
+        <div className="rounded-xl border border-outline-variant/20 bg-surface-container-low px-4 py-3" key={signal.label}>
           <p className="text-xs font-semibold uppercase tracking-[0.08em] text-on-surface-variant">{signal.label}</p>
           <p className="mt-1 text-2xl font-extrabold tabular-nums text-primary">{signal.value}</p>
           <p className="mt-1 text-xs text-on-surface-variant">{signal.note}</p>

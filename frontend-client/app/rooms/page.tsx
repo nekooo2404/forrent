@@ -578,7 +578,7 @@ function RoomCard({ room }: Readonly<{ room: RoomCardView }>) {
         <div className="absolute left-4 top-4">
           <span
             className={`rounded-full px-3 py-1.5 font-label-caps text-label-caps uppercase tracking-wider shadow-sm backdrop-blur ${
-              room.unavailable ? "bg-surface-variant/95 text-on-surface" : "bg-emerald-500 text-white"
+              room.unavailable ? "bg-surface-variant/95 text-on-surface" : "bg-success text-on-success"
             }`}
           >
             {room.unavailable ? room.status : "Còn trống"}

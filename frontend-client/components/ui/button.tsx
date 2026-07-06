@@ -25,7 +25,7 @@ export function Button({
     primary: "bg-primary text-on-primary hover:bg-surface-tint",
     secondary: "border border-primary/20 bg-transparent text-primary hover:bg-surface-container-low",
     ghost: "text-primary hover:bg-surface-container-low",
-    danger: "bg-error text-white hover:bg-error/90",
+    danger: "bg-error text-on-error hover:bg-error/90",
   };
 
   const sizeStyles = {

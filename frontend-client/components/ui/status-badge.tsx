@@ -6,14 +6,14 @@ interface StatusBadgeProps {
 }
 
 const roomStatusConfig: Record<string, { label: string; className: string }> = {
-  AVAILABLE: { label: "Còn trống", className: "bg-emerald-500 text-white" },
+  AVAILABLE: { label: "Còn trống", className: "bg-success text-on-success" },
   UNAVAILABLE: { label: "Đã thuê", className: "bg-surface-variant/95 text-on-surface" },
   HIDDEN: { label: "Đã ẩn", className: "bg-surface-variant/70 text-on-surface" },
 };
 
 const blogStatusConfig: Record<string, { label: string; className: string }> = {
   DRAFT: { label: "Nháp", className: "bg-surface-variant text-on-surface" },
-  PUBLISHED: { label: "Đã xuất bản", className: "bg-success text-white" },
+  PUBLISHED: { label: "Đã xuất bản", className: "bg-success text-on-success" },
   HIDDEN: { label: "Đã ẩn", className: "bg-warning text-on-warning" },
 };
 

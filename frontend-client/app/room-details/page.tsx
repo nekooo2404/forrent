@@ -195,7 +195,7 @@ export default async function RoomDetailsPage({ searchParams }: RoomDetailsPageP
   const detail = slug ? await getCachedRoomDetail(slug).then(mapDetail).catch(() => null) : null;
 
   return (
-    <main className="flex min-h-[100dvh] flex-col bg-[#f5f7fb] text-on-surface">
+    <main className="flex min-h-[100dvh] flex-col bg-surface text-on-surface">
       <SiteNav active="rooms" />
 
       <div className="mx-auto w-full max-w-container-max flex-grow px-margin-mobile pb-24 pt-28 md:px-margin-desktop md:pt-32">
@@ -254,18 +254,18 @@ function ListingBody({ detail }: Readonly<{ detail: DetailView }>) {
 
 function ListingHeader({ detail }: Readonly<{ detail: DetailView }>) {
   return (
-    <header className="rounded-lg border border-outline-variant/20 bg-white p-5 shadow-sm md:p-6">
+    <header className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-5 shadow-sm md:p-6">
       <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-on-surface-variant">
         <span>{detail.collection}</span>
         <span>/</span>
         <span>{detail.location}</span>
       </div>
-      <h1 className="text-2xl font-semibold leading-snug text-[#111827] md:text-3xl">{detail.title}</h1>
+      <h1 className="text-2xl font-semibold leading-snug text-on-surface md:text-3xl">{detail.title}</h1>
       <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-on-surface-variant">
         <MapPin className="mt-0.5 shrink-0 text-primary" size={18} strokeWidth={1.8} />
         {detail.location || "Địa chỉ sẽ được saler xác nhận trước khi xem phòng"}
       </p>
-      <div className="mt-5 grid divide-y divide-outline-variant/20 rounded-lg border border-outline-variant/20 bg-[#f8fafc] sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+      <div className="mt-5 grid divide-y divide-outline-variant/20 rounded-lg border border-outline-variant/20 bg-surface-container-low sm:grid-cols-4 sm:divide-x sm:divide-y-0">
         <ListingStat label="Giá thuê" value={detail.price} />
         <ListingStat label="Diện tích" value={detail.area} />
         <ListingStat label="Tiền cọc" value={detail.deposit} />
@@ -279,16 +279,16 @@ function ListingStat({ label, value }: Readonly<{ label: string; value: string }
   return (
     <div className="px-4 py-4">
       <p className="text-xs font-semibold uppercase tracking-[0.08em] text-on-surface-variant">{label}</p>
-      <p className="mt-1 text-base font-semibold text-[#111827]">{value}</p>
+      <p className="mt-1 text-base font-semibold text-on-surface">{value}</p>
     </div>
   );
 }
 
 function DescriptionSection({ detail }: Readonly<{ detail: DetailView }>) {
   return (
-    <section className="rounded-lg border border-outline-variant/20 bg-white p-5 shadow-sm md:p-6">
-      <h2 className="mb-4 text-xl font-semibold text-[#111827]">Thông tin mô tả</h2>
-      <div className="space-y-4 text-[15px] leading-7 text-[#374151]">
+    <section className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-5 shadow-sm md:p-6">
+      <h2 className="mb-4 text-xl font-semibold text-on-surface">Thông tin mô tả</h2>
+      <div className="space-y-4 text-[15px] leading-7 text-on-surface-variant">
         <p className="whitespace-pre-line">{detail.description}</p>
         <p>{detail.secondaryDescription}</p>
       </div>
@@ -298,8 +298,8 @@ function DescriptionSection({ detail }: Readonly<{ detail: DetailView }>) {
 
 function FactsSection({ detail }: Readonly<{ detail: DetailView }>) {
   return (
-    <section className="rounded-lg border border-outline-variant/20 bg-white p-5 shadow-sm md:p-6">
-      <h2 className="mb-4 text-xl font-semibold text-[#111827]">Đặc điểm phòng</h2>
+    <section className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-5 shadow-sm md:p-6">
+      <h2 className="mb-4 text-xl font-semibold text-on-surface">Đặc điểm phòng</h2>
       <div className="grid overflow-hidden rounded-lg border border-outline-variant/20 sm:grid-cols-2">
         <DetailRow icon={<ReceiptText size={18} />} label="Giá thuê" value={detail.price} />
         <DetailRow icon={<Ruler size={18} />} label="Diện tích" value={detail.area} />
@@ -320,7 +320,7 @@ function DetailRow({ icon, label, value }: Readonly<{ icon: ReactNode; label: st
       <span className="text-primary">{icon}</span>
       <div>
         <p className="text-xs text-on-surface-variant">{label}</p>
-        <p className="mt-0.5 text-sm font-semibold text-[#111827]">{value}</p>
+        <p className="mt-0.5 text-sm font-semibold text-on-surface">{value}</p>
       </div>
     </div>
   );
@@ -328,19 +328,19 @@ function DetailRow({ icon, label, value }: Readonly<{ icon: ReactNode; label: st
 
 function AmenitiesSection({ amenities }: Readonly<{ amenities: ApiAmenity[] }>) {
   return (
-    <section className="rounded-lg border border-outline-variant/20 bg-white p-5 shadow-sm md:p-6">
-      <h2 className="mb-5 text-xl font-semibold text-[#111827]">Tiện ích</h2>
+    <section className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-5 shadow-sm md:p-6">
+      <h2 className="mb-5 text-xl font-semibold text-on-surface">Tiện ích</h2>
       {amenities.length ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
           {amenities.slice(0, 12).map((amenity) => (
-            <div className="flex items-center gap-3 rounded-lg border border-outline-variant/15 bg-[#f8fafc] px-3 py-3 text-sm text-[#111827]" key={amenity.id}>
+            <div className="flex items-center gap-3 rounded-lg border border-outline-variant/15 bg-surface-container-low px-3 py-3 text-sm text-on-surface" key={amenity.id}>
               {iconForAmenity(amenity.icon || amenity.name)}
               <span>{amenity.name}</span>
             </div>
           ))}
         </div>
       ) : (
-        <p className="rounded-lg border border-dashed border-outline-variant/30 bg-[#f8fafc] p-4 text-sm text-on-surface-variant">
+        <p className="rounded-lg border border-dashed border-outline-variant/30 bg-surface-container-low p-4 text-sm text-on-surface-variant">
           Tiện ích đang được cập nhật. Saler sẽ xác nhận lại trước lịch xem.
         </p>
       )}
@@ -350,23 +350,23 @@ function AmenitiesSection({ amenities }: Readonly<{ amenities: ApiAmenity[] }>) 
 
 function ContactCard({ detail }: Readonly<{ detail: DetailView }>) {
   return (
-    <section className="rounded-lg border border-outline-variant/20 bg-white p-5 shadow-sm">
+    <section className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-5 shadow-sm">
       <div className="flex items-center gap-3 border-b border-outline-variant/15 pb-4">
-        <div className="flex size-12 items-center justify-center rounded-full bg-primary text-lg font-bold text-white">F</div>
+        <div className="flex size-12 items-center justify-center rounded-full bg-primary text-lg font-bold text-on-primary">F</div>
         <div>
-          <h2 className="font-semibold text-[#111827]">ForRent</h2>
+          <h2 className="font-semibold text-on-surface">ForRent</h2>
           <p className="text-sm text-on-surface-variant">Tư vấn phòng thuê Hà Nội</p>
         </div>
       </div>
 
-      <div className="my-4 rounded-lg bg-[#f8fafc] p-4">
+      <div className="my-4 rounded-lg bg-surface-container-low p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.08em] text-on-surface-variant">Giá thuê</p>
         <p className="mt-1 text-2xl font-bold text-primary">{detail.price}</p>
         <p className="mt-2 text-sm text-on-surface-variant">{detail.isAvailable ? "Phòng còn trống, có thể đặt lịch xem." : detail.status}</p>
       </div>
 
       <div className="grid gap-2">
-        <a className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-semibold text-white transition hover:bg-surface-tint" href="tel:0382912254">
+        <a className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-semibold text-on-primary transition hover:bg-surface-tint" href="tel:0382912254">
           <Phone size={18} strokeWidth={1.8} />
           0382912254
         </a>
@@ -374,7 +374,7 @@ function ContactCard({ detail }: Readonly<{ detail: DetailView }>) {
           <Mail size={18} strokeWidth={1.8} />
           Gửi email
         </a>
-        <Link className="flex items-center justify-center gap-2 rounded-lg border border-outline-variant/25 px-4 py-3 font-semibold text-[#111827] transition hover:bg-[#f8fafc]" href={`/contact?room_id=${detail.id}&room_title=${encodeURIComponent(detail.title)}`}>
+        <Link className="flex items-center justify-center gap-2 rounded-lg border border-outline-variant/25 px-4 py-3 font-semibold text-on-surface transition hover:bg-surface-container-low" href={`/contact?room_id=${detail.id}&room_title=${encodeURIComponent(detail.title)}`}>
           <MessageCircle size={18} strokeWidth={1.8} />
           Tư vấn phòng này
         </Link>
@@ -385,7 +385,7 @@ function ContactCard({ detail }: Readonly<{ detail: DetailView }>) {
 
 function SafetyNote() {
   return (
-    <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+    <section className="rounded-lg border border-warning/30 bg-warning-container/25 p-4 text-sm leading-6 text-warning">
       <h2 className="mb-2 flex items-center gap-2 font-semibold">
         <AlertTriangle size={18} strokeWidth={1.8} />
         Lưu ý an toàn

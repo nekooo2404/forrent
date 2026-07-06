@@ -164,7 +164,7 @@ function RelatedPosts({ posts }: Readonly<{ posts: ApiBlog[] }>) {
             const image = resolveMediaUrl(post.thumbnail);
             return (
               <Link
-                className="group rounded-lg border border-primary/10 bg-white/85 p-4 shadow-soft transition hover:-translate-y-0.5 hover:border-primary/25"
+                className="group rounded-lg border border-primary/10 bg-surface-container-lowest/85 p-4 shadow-soft transition hover:-translate-y-0.5 hover:border-primary/25"
                 href={`/blogs/${post.slug}`}
                 key={post.id}
               >

@@ -202,7 +202,7 @@ export function ProfileClient() {
     <div className="mx-auto max-w-[1000px] px-margin-mobile py-24 md:px-margin-desktop">
       <section className="mb-16 flex flex-col items-center gap-8 md:flex-row md:items-end">
         <div className="relative">
-          <div className="flex size-40 items-center justify-center rounded-full border-4 border-white bg-surface-container-lowest shadow-soft md:size-56">
+          <div className="flex size-40 items-center justify-center rounded-full border-4 border-surface-container-low bg-surface-container-lowest shadow-soft md:size-56">
             <UserRound size={84} strokeWidth={1.5} className="text-secondary" />
           </div>
         </div>
@@ -301,7 +301,7 @@ function ViewingRequestsSummary({ requests }: Readonly<{ requests: MyViewingRequ
         <div className="space-y-4">
           {recentRequests.map((request) => (
             <Link
-              className="group block rounded-md border border-outline-variant/20 bg-white/70 p-4 transition hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-soft"
+              className="group block rounded-md border border-outline-variant/20 bg-surface-container-low/70 p-4 transition hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-soft"
               href={`/room-details?slug=${encodeURIComponent(request.room.slug)}`}
               key={request.id}
             >
