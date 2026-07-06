@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 type FormState = "idle" | "submitting" | "success" | "error";
 
@@ -33,14 +34,18 @@ function errorText(payload: ContactApiResponse) {
 
 export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | null; roomTitle?: string }>) {
   const [state, setState] = useState<FormState>("idle");
-  const [statusMessage, setStatusMessage] = useState("");
+  const { toast } = useToast();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     if (!form.checkValidity()) {
       setState("error");
-      setStatusMessage("Vui lòng kiểm tra lại các trường bắt buộc.");
+      toast({
+        type: "error",
+        title: "Lỗi xác thực",
+        message: "Vui lòng kiểm tra lại các trường bắt buộc.",
+      });
       form.reportValidity();
       return;
     }
@@ -55,7 +60,6 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
     };
 
     setState("submitting");
-    setStatusMessage("");
 
     try {
       const response = await fetch("/api/contact", {
@@ -69,16 +73,28 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
 
       if (!response.ok || !data.success) {
         setState("error");
-        setStatusMessage(errorText(data));
+        toast({
+          type: "error",
+          title: "Gửi thất bại",
+          message: errorText(data),
+        });
         return;
       }
 
       form.reset();
       setState("success");
-      setStatusMessage("Đã nhận yêu cầu. Saler sẽ liên hệ để xác nhận phòng, cọc và lịch xem.");
+      toast({
+        type: "success",
+        title: "Gửi thành công",
+        message: "Đã nhận yêu cầu. Saler sẽ liên hệ để xác nhận phòng, cọc và lịch xem.",
+      });
     } catch {
       setState("error");
-      setStatusMessage("Không thể gửi yêu cầu lúc này. Vui lòng thử lại sau.");
+      toast({
+        type: "error",
+        title: "Lỗi kết nối",
+        message: "Không thể gửi yêu cầu lúc này. Vui lòng thử lại sau.",
+      });
     }
   }
 

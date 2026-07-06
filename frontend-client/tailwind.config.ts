@@ -7,6 +7,8 @@ const config: Config = {
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   darkMode: "class",
+  // Enable JIT mode for faster builds
+  mode: "jit",
   theme: {
     extend: {
       colors: {
@@ -16,7 +18,7 @@ const config: Config = {
         "primary-fixed": "#dbeafe",
         "tertiary-container": "#cffafe",
         "inverse-on-surface": "#f8fafc",
-        secondary: "#334155", // Changed from #475569 to #334155 for better contrast
+        secondary: "#334155", // Improved contrast from #475569
         "on-primary-fixed-variant": "#1e3a8a",
         primary: "#2563eb",
         "secondary-fixed-dim": "#cbd5e1",
@@ -65,44 +67,16 @@ const config: Config = {
         "warning-container": "#fef9c3",
         gold: "#f97316",
       },
-      borderRadius: {
-        DEFAULT: "0.25rem",
-        sm: "0.25rem",
-        md: "0.5rem",
-        lg: "0.5rem",
-        xl: "0.75rem",
-        "2xl": "1rem",
-        full: "9999px",
-      },
       spacing: {
-        "margin-desktop": "64px",
-        gutter: "24px",
-        unit: "8px",
         "margin-mobile": "16px",
-        "container-max": "1280px",
+        "margin-desktop": "24px",
       },
       fontFamily: {
-        "body-lg": ["var(--font-open-sans)", "sans-serif"],
-        "display-lg": ["var(--font-open-sans)", "sans-serif"],
-        button: ["var(--font-open-sans)", "sans-serif"],
-        "headline-sm": ["var(--font-open-sans)", "sans-serif"],
-        "headline-md": ["var(--font-open-sans)", "sans-serif"],
-        "display-lg-mobile": ["var(--font-open-sans)", "sans-serif"],
-        "body-md": ["var(--font-open-sans)", "sans-serif"],
-        "label-caps": ["var(--font-open-sans)", "sans-serif"],
+        sans: ["var(--font-open-sans)", "sans-serif"],
       },
       fontSize: {
-        h1: ["48px", { lineHeight: "1.1", letterSpacing: "0", fontWeight: "700" }],
-        h2: ["36px", { lineHeight: "1.15", letterSpacing: "0", fontWeight: "700" }],
-        h3: ["30px", { lineHeight: "1.2", letterSpacing: "0", fontWeight: "600" }],
-        h4: ["24px", { lineHeight: "1.3", letterSpacing: "0", fontWeight: "600" }],
-        h5: ["20px", { lineHeight: "1.4", letterSpacing: "0", fontWeight: "600" }],
-        h6: ["16px", { lineHeight: "1.5", letterSpacing: "0", fontWeight: "600" }],
-        body: ["16px", { lineHeight: "1.5", fontWeight: "400" }],
-        caption: ["12px", { lineHeight: "1.4", fontWeight: "500" }],
-        "body-lg": ["18px", { lineHeight: "1.6", fontWeight: "400" }],
-        "display-lg": ["48px", { lineHeight: "1.1", letterSpacing: "0", fontWeight: "700" }],
-        button: ["14px", { lineHeight: "1.0", letterSpacing: "0.05em", fontWeight: "500" }],
+        "display-lg": ["58px", { lineHeight: "1.0", fontWeight: "800" }],
+        button: ["15px", { lineHeight: "1.0", letterSpacing: "0.05em", fontWeight: "500" }],
         "headline-sm": ["24px", { lineHeight: "1.3", fontWeight: "600" }],
         "headline-md": ["32px", { lineHeight: "1.2", fontWeight: "600" }],
         "display-lg-mobile": ["32px", { lineHeight: "1.2", fontWeight: "700" }],
@@ -120,6 +94,10 @@ const config: Config = {
         elevated: "0 8px 24px rgba(15,23,42,0.10)",
       },
     },
+  },
+  // Enable future flags for performance
+  future: {
+    hoverOnlyWhenSupported: true,
   },
   plugins: [
     plugin(function({ addUtilities }) {

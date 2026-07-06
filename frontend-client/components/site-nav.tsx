@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import { ProfileMenu } from "@/components/profile-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type NavKey = "home" | "rooms" | "blogs" | "contact";
 
@@ -79,6 +80,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
         </div>
 
         <div className="flex items-center gap-2 text-primary md:gap-4">
+          <ThemeToggle />
           <button
             aria-expanded={isMobileMenuOpen}
             aria-label="Menu"

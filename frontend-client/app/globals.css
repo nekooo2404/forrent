@@ -18,6 +18,16 @@
   --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Dark mode color overrides */
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
 * {
   box-sizing: border-box;
 }

@@ -74,6 +74,22 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  reactStrictMode: true,
+
+  // Performance: Enable SWC minification
+  swcMinify: true,
+
+  // Performance: Experimental features
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'framer-motion'],
+    webpackBuildWorker: true,
+  },
+
+  // Performance: Compiler options
+  compiler: {
+    removeConsole: isProduction ? { exclude: ['error', 'warn'] } : false,
+  },
+
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },
