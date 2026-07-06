@@ -1,4 +1,6 @@
 import type { StorybookConfig } from "@storybook/react-webpack5";
+import tailwindcss from "tailwindcss";
+import autoprefixer from "autoprefixer";
 
 const config: StorybookConfig = {
   stories: ["../components/**/*.stories.@(js|jsx|ts|tsx)"],
@@ -25,7 +27,7 @@ const config: StorybookConfig = {
           loader: "postcss-loader",
           options: {
             postcssOptions: {
-              plugins: [require("tailwindcss"), require("autoprefixer")],
+              plugins: [tailwindcss, autoprefixer],
             },
           },
         },
