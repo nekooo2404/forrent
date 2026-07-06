@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { MotionItem, MotionList, MotionPage, MotionSection } from "@/components/motion";
+import { fastImageProps } from "@/lib/image";
 import {
   formatArea,
   formatOptionalVnd,
@@ -365,11 +366,13 @@ function PropertyCard({ property }: Readonly<{ property: PropertyCardView }>) {
             <Image
               alt={property.alt}
               className="shared-image object-cover transition-transform duration-700 group-hover:scale-105"
+              decoding="async"
               fill
               loading="lazy"
               quality={78}
               sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
               src={property.image}
+              {...fastImageProps(property.image)}
             />
           ) : (
             <ImagePlaceholder />

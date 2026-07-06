@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { fastImageProps } from "@/lib/image";
 
 type RoomGalleryProps = Readonly<{
   images: string[];
@@ -78,10 +79,12 @@ export function RoomGallery({ images, title }: RoomGalleryProps) {
             <Image
               alt={`${title} - ảnh ${(activeIndex ?? 0) + 1}`}
               className="object-contain"
+              decoding="async"
               fill
               priority
               sizes="100vw"
               src={activeImage}
+              {...fastImageProps(activeImage)}
             />
           </div>
 
@@ -131,12 +134,14 @@ function GalleryTile({
           <Image
             alt={alt}
             className="object-cover transition-transform duration-700 group-hover:scale-105"
+            decoding="async"
             fill
             loading={priority ? "eager" : "lazy"}
             priority={priority}
             quality={priority ? 82 : 78}
             sizes="(min-width: 768px) 50vw, 100vw"
             src={src}
+            {...fastImageProps(src)}
           />
           {badge ? (
             <span className="absolute bottom-3 right-3 rounded-md bg-black/70 px-3 py-1 text-sm font-semibold text-white">

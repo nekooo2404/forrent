@@ -19,6 +19,7 @@ import type { ReactNode } from "react";
 
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
+import { fastImageProps } from "@/lib/image";
 import {
   formatArea,
   formatOptionalVnd,
@@ -222,8 +223,8 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
           <ResultHeader activeFilters={activeFilterLabels} currentPage={currentPage} totalCount={totalCount} />
           {rooms.length ? (
             <div className="stagger-list grid grid-cols-1 gap-gutter xl:grid-cols-2">
-              {rooms.map((room) => (
-                <RoomCard key={room.id} room={room} />
+              {rooms.map((room, index) => (
+                <RoomCard key={room.id} priority={index < 2} room={room} />
               ))}
             </div>
           ) : (
@@ -549,7 +550,7 @@ function FilterSection({
   );
 }
 
-function RoomCard({ room }: Readonly<{ room: RoomCardView }>) {
+function RoomCard({ priority = false, room }: Readonly<{ priority?: boolean; room: RoomCardView }>) {
   const detailHref = room.slug ? `/room-details?slug=${encodeURIComponent(room.slug)}` : "/room-details";
 
   return (
@@ -564,11 +565,14 @@ function RoomCard({ room }: Readonly<{ room: RoomCardView }>) {
             <Image
               alt={room.alt}
               className="shared-image object-cover transition-transform duration-700 group-hover:scale-105"
+              decoding="async"
               fill
-              loading="lazy"
+              loading={priority ? "eager" : "lazy"}
+              priority={priority}
               quality={78}
               sizes="(min-width: 1280px) 500px, (min-width: 768px) 50vw, 100vw"
               src={room.image}
+              {...fastImageProps(room.image)}
             />
           ) : (
             <ImagePlaceholder />
