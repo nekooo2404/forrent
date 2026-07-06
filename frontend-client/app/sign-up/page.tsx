@@ -7,6 +7,10 @@ import { SiteNav } from "@/components/site-nav";
 export const metadata: Metadata = {
   title: "Đăng ký tài khoản - ForRent",
   description: "Tạo tài khoản ForRent để đặt lịch xem phòng và theo dõi yêu cầu thuê phòng.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function SignUpPage() {

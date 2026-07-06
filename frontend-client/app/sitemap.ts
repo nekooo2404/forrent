@@ -1,0 +1,39 @@
+import type { MetadataRoute } from "next";
+
+import { getBlogs, getRooms } from "@/lib/api";
+import { absoluteUrl } from "@/lib/seo";
+
+export const revalidate = 3600;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const now = new Date();
+  const staticRoutes: MetadataRoute.Sitemap = [
+    { url: absoluteUrl("/homepage"), lastModified: now, changeFrequency: "daily", priority: 1 },
+    { url: absoluteUrl("/rooms"), lastModified: now, changeFrequency: "hourly", priority: 0.9 },
+    { url: absoluteUrl("/blogs"), lastModified: now, changeFrequency: "daily", priority: 0.7 },
+    { url: absoluteUrl("/contact"), lastModified: now, changeFrequency: "monthly", priority: 0.6 },
+  ];
+
+  const [rooms, blogs] = await Promise.all([
+    getRooms({ page_size: 100, status: "AVAILABLE", ordering: "-updated_at" }).catch(() => null),
+    getBlogs({ page_size: 100, ordering: "-published_at" }).catch(() => null),
+  ]);
+
+  const roomRoutes: MetadataRoute.Sitemap =
+    rooms?.results.map((room) => ({
+      url: absoluteUrl(`/room-details?slug=${encodeURIComponent(room.slug)}`),
+      lastModified: new Date(room.updated_at),
+      changeFrequency: "daily",
+      priority: 0.8,
+    })) ?? [];
+
+  const blogRoutes: MetadataRoute.Sitemap =
+    blogs?.results.map((post) => ({
+      url: absoluteUrl(`/blogs/${post.slug}`),
+      lastModified: new Date(post.updated_at),
+      changeFrequency: "weekly",
+      priority: 0.6,
+    })) ?? [];
+
+  return [...staticRoutes, ...roomRoutes, ...blogRoutes];
+}

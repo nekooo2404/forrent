@@ -8,6 +8,10 @@ import { SiteNav } from "@/components/site-nav";
 export const metadata: Metadata = {
   title: "Đăng nhập - ForRent",
   description: "Đăng nhập tài khoản ForRent để đặt lịch xem phòng và theo dõi yêu cầu.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 const loginImage =

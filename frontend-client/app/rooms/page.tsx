@@ -33,8 +33,11 @@ import {
 } from "@/lib/api";
 
 export const metadata: Metadata = {
-  title: "Danh sách phòng - ForRent",
+  title: "Danh sách phòng thuê Hà Nội",
   description: "Danh sách phòng thuê theo tháng, lọc theo khu vực, giá, diện tích, loại phòng và tiện ích.",
+  alternates: {
+    canonical: "/rooms",
+  },
 };
 
 type RoomCardView = {

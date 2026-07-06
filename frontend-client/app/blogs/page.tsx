@@ -9,8 +9,11 @@ import { SiteNav } from "@/components/site-nav";
 import { formatDate, getBlogs, resolveMediaUrl, type ApiBlog } from "@/lib/api";
 
 export const metadata: Metadata = {
-  title: "Blog - ForRent",
+  title: "Blog kinh nghiệm thuê phòng",
   description: "Kinh nghiệm thuê phòng theo tháng, chọn khu vực, xem phòng và chuẩn bị hồ sơ thuê.",
+  alternates: {
+    canonical: "/blogs",
+  },
 };
 
 type BlogPostView = {

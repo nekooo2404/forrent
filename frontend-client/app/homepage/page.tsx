@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BedDouble, MapPin, ReceiptText, Search, ShieldCheck, ShowerHead, Sparkles } from "lucide-react";
@@ -17,6 +18,20 @@ import {
   roomTypeLabel,
   type ApiRoom,
 } from "@/lib/api";
+import { SITE_DESCRIPTION } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  title: "Thuê phòng theo tháng tại Hà Nội",
+  description: SITE_DESCRIPTION,
+  alternates: {
+    canonical: "/homepage",
+  },
+  openGraph: {
+    title: "ForRent - Thuê phòng theo tháng tại Hà Nội",
+    description: SITE_DESCRIPTION,
+    url: "/homepage",
+  },
+};
 
 const heroImage =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuAPSq4B_hUK8gIy1VoWxO8icvb7rDIz281RK1JtAGr5UG_p9uUg5C5jUAHiq-j5gMhbAZQrkdG4TAoXvu3BdSNRxO9ZnHH3eOlTZ44a12OOmjgsMxgeXklRCRQWPH2UJC6Z9ykaKGOIvde5JLRbbMMboUij9Gho-kCl0irx9HVjqFT_SuVkEsuj40-k2w4AhsQKnHZkpKP1Hd6gBCYNzGg7Sk2lGNcr6BxNUQx7mYlIqx09zQavwK4n0VCFGaCT4Coe8S94NdPiJP7a";

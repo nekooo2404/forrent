@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, CalendarDays, UserRound } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { formatDate, getBlogs, getCachedBlogDetail, resolveMediaUrl, type ApiBlog } from "@/lib/api";
+import { shortDescription } from "@/lib/seo";
 
 type BlogDetailPageProps = {
   params: Promise<{ slug: string }>;
@@ -22,9 +23,25 @@ export async function generateMetadata({ params }: BlogDetailPageProps): Promise
     };
   }
 
+  const description = shortDescription(post.short_description || post.content);
+  const image = resolveMediaUrl(post.thumbnail);
+
   return {
-    title: `${post.title} - ForRent`,
-    description: post.short_description || post.content.slice(0, 150),
+    title: post.title,
+    description,
+    alternates: {
+      canonical: `/blogs/${post.slug}`,
+    },
+    openGraph: {
+      type: "article",
+      title: post.title,
+      description,
+      url: `/blogs/${post.slug}`,
+      publishedTime: post.published_at || post.created_at,
+      modifiedTime: post.updated_at,
+      authors: post.author_name ? [post.author_name] : ["ForRent"],
+      images: image ? [image] : undefined,
+    },
   };
 }
 

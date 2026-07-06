@@ -14,6 +14,10 @@ const openSans = Open_Sans({
 export const metadata: Metadata = {
   title: "ForRent Admin",
   description: "Cổng quản trị ForRent cho phòng, lead, hoa hồng và cấu hình hệ thống.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function RootLayout({

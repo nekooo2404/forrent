@@ -8,6 +8,10 @@ import { SiteNav } from "@/components/site-nav";
 export const metadata: Metadata = {
   title: "Quên mật khẩu - ForRent",
   description: "Yêu cầu liên kết đặt lại mật khẩu cho tài khoản ForRent.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function ForgetPasswordPage() {

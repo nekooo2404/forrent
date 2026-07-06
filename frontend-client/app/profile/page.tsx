@@ -7,6 +7,10 @@ import { SiteNav } from "@/components/site-nav";
 export const metadata: Metadata = {
   title: "Thông tin người dùng - ForRent",
   description: "Quản lý thông tin cá nhân, cập nhật hồ sơ và bảo mật tài khoản ForRent.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function ProfilePage() {

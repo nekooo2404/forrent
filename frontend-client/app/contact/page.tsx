@@ -9,6 +9,9 @@ import { SiteNav } from "@/components/site-nav";
 export const metadata: Metadata = {
   title: "Liên hệ - ForRent",
   description: "Liên hệ saler ForRent để nhận tư vấn phòng thuê theo khu vực, giá và lịch xem.",
+  alternates: {
+    canonical: "/contact",
+  },
 };
 
 const offices = [

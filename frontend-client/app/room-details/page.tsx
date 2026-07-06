@@ -43,11 +43,7 @@ import {
   type ApiAmenity,
   type ApiRoomDetail,
 } from "@/lib/api";
-
-export const metadata: Metadata = {
-  title: "Chi tiết phòng - ForRent",
-  description: "Thông tin chi tiết phòng thuê theo tháng, tiện ích, khu vực và lịch xem phòng.",
-};
+import { shortDescription } from "@/lib/seo";
 
 type RoomDetailsPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -76,6 +72,54 @@ type DetailView = {
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+export async function generateMetadata({ searchParams }: RoomDetailsPageProps): Promise<Metadata> {
+  const params = (await searchParams) ?? {};
+  const slug = firstParam(params.slug);
+
+  if (!slug) {
+    return {
+      title: "Chi tiết phòng thuê",
+      description: "Thông tin chi tiết phòng thuê theo tháng, tiện ích, khu vực và lịch xem phòng.",
+      robots: {
+        index: false,
+        follow: true,
+      },
+    };
+  }
+
+  const room = await getCachedRoomDetail(slug).catch(() => null);
+  if (!room) {
+    return {
+      title: "Không tìm thấy phòng",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  const location = [room.ward?.name, room.city?.name].filter(Boolean).join(", ");
+  const description = shortDescription(
+    `${room.short_description || room.description || room.title}. Giá ${formatVnd(room.price)}/tháng, diện tích ${formatArea(room.actual_area)}${location ? ` tại ${location}` : ""}.`,
+  );
+  const image = galleryFor(room)[0];
+  const canonical = `/room-details?slug=${encodeURIComponent(room.slug)}`;
+
+  return {
+    title: `${room.title}${location ? ` - ${location}` : ""}`,
+    description,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      title: room.title,
+      description,
+      url: canonical,
+      images: image ? [image] : undefined,
+    },
+  };
 }
 
 async function findInitialSlug(slug?: string) {
