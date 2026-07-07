@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Eye, EyeOff, LoaderCircle } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
 
+import { useToast } from "@/hooks/use-toast";
 import { saveAuthSession } from "@/lib/auth-storage";
 import type { LoginResponse } from "@/lib/api";
 
@@ -40,8 +41,8 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [touched, setTouched] = useState<TouchedFields>({});
-  const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -51,10 +52,12 @@ export function LoginForm() {
     const passwordValue = String(formData.get("password") ?? "");
 
     setTouched({ identifier: true, password: true });
-    setFormError("");
-
     if (!identifierValue || passwordValue.length < 8) {
-      setFormError("Vui lòng nhập email hoặc số điện thoại và mật khẩu hợp lệ.");
+      toast({
+        type: "error",
+        title: "Thông tin chưa hợp lệ",
+        message: "Vui lòng nhập email hoặc số điện thoại và mật khẩu hợp lệ.",
+      });
       return;
     }
 
@@ -69,7 +72,11 @@ export function LoginForm() {
       const payload = (await response.json()) as AuthApiResponse<LoginResponse>;
 
       if (!response.ok || !payload.success || !payload.data) {
-        setFormError(firstErrorMessage(payload));
+        toast({
+          type: "error",
+          title: "Đăng nhập thất bại",
+          message: firstErrorMessage(payload),
+        });
         return;
       }
 
@@ -77,7 +84,11 @@ export function LoginForm() {
       router.replace("/homepage");
       router.refresh();
     } catch {
-      setFormError("Không thể kết nối hệ thống đăng nhập. Vui lòng thử lại sau.");
+      toast({
+        type: "error",
+        title: "Lỗi kết nối",
+        message: "Không thể kết nối hệ thống đăng nhập. Vui lòng thử lại sau.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -168,13 +179,6 @@ export function LoginForm() {
             Quên mật khẩu?
           </Link>
         </div>
-
-        {formError ? (
-          <div className="flex gap-3 border border-error bg-error-container/30 p-4 text-error">
-            <AlertCircle className="mt-0.5 flex-shrink-0" size={18} strokeWidth={1.8} />
-            <p className="font-body-md text-sm">{formError}</p>
-          </div>
-        ) : null}
 
         <button
           className="mt-6 flex w-full items-center justify-center gap-2 rounded bg-primary px-4 py-4 font-button text-button uppercase tracking-widest text-on-primary transition-colors duration-300 hover:bg-surface-tint disabled:cursor-wait disabled:opacity-70"

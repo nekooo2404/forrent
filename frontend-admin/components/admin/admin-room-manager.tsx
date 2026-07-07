@@ -24,13 +24,14 @@ import {
   AdminPageHeader,
   AdminPagination,
   AdminPanel,
-  AdminRoomBadge,
   AdminTableSkeleton,
   adminButtonPrimary,
   adminButtonSecondary,
   adminInputClass,
   adminSelectClass,
 } from "./admin-ui";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 type RoomFormState = {
   actual_area: string;
@@ -388,7 +389,7 @@ export function AdminRoomManager() {
                         <p className="mt-1 text-xs text-secondary">{room.commission_percent}% · {formatAdminVnd(room.commission_base_amount)}</p>
                       </td>
                       <td className="py-4 pr-5">
-                        <AdminRoomBadge status={room.status} />
+                        <StatusBadge status={room.status} type="room" />
                       </td>
                       <td className="py-4 pr-5 text-secondary">{formatAdminDate(room.updated_at)}</td>
                       <td className="py-4 text-right">
@@ -431,7 +432,7 @@ export function AdminRoomManager() {
                       <h3 className="truncate font-semibold text-primary">{room.title}</h3>
                       <p className="mt-1 truncate text-xs text-secondary">{room.slug}</p>
                     </div>
-                    <AdminRoomBadge status={room.status} />
+                    <StatusBadge status={room.status} type="room" />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 text-sm">
@@ -573,14 +574,26 @@ function RoomFormModal({
 }>) {
   const wards = form.city ? lookups.wards.filter((ward) => String(ward.city) === form.city) : lookups.wards;
   const commissionPreview = (Number(form.commission_base_amount || 0) * Number(form.commission_percent || 0)) / 100;
+  const modalRef = useFocusTrap<HTMLElement>(true);
 
   function update<K extends keyof RoomFormState>(key: K, value: RoomFormState[K]) {
     onFormChange({ ...form, [key]: value });
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-primary/30 p-0 backdrop-blur-sm md:items-center md:p-6">
-      <section className="admin-modal-panel max-h-[94dvh] w-full max-w-5xl overflow-y-auto rounded-t-2xl bg-surface shadow-elevated md:rounded-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-primary/30 p-0 backdrop-blur-sm md:items-center md:p-6"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") onClose();
+      }}
+    >
+      <section
+        aria-label={editingRoom ? "Edit room" : "Create room"}
+        aria-modal="true"
+        className="admin-modal-panel max-h-[94dvh] w-full max-w-5xl overflow-y-auto rounded-t-2xl bg-surface shadow-elevated md:rounded-2xl"
+        ref={modalRef}
+        role="dialog"
+      >
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-primary/10 bg-surface/95 px-5 py-4 backdrop-blur">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-secondary">{editingRoom ? "Edit listing" : "New listing"}</p>

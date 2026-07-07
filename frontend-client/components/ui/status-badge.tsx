@@ -1,4 +1,4 @@
-type BadgeType = "room" | "blog";
+type BadgeType = "room" | "blog" | "lead";
 
 interface StatusBadgeProps {
   status: string;
@@ -17,9 +17,19 @@ const blogStatusConfig: Record<string, { label: string; className: string }> = {
   HIDDEN: { label: "Đã ẩn", className: "bg-warning text-on-warning" },
 };
 
+const leadStatusConfig: Record<string, { label: string; className: string }> = {
+  NEW: { label: "Mới gửi", className: "bg-primary text-on-primary" },
+  CONTACTED: { label: "Đã liên hệ", className: "bg-secondary text-on-secondary" },
+  VIEWED: { label: "Đã xem", className: "bg-warning text-on-warning" },
+  MOVED_IN: { label: "Đã chuyển vào", className: "bg-success text-on-success" },
+  NOT_MOVED_IN: { label: "Không chuyển vào", className: "bg-surface-variant text-on-surface" },
+  CANCELLED: { label: "Đã hủy", className: "bg-error text-on-error" },
+};
+
 const statusConfigs = {
   room: roomStatusConfig,
   blog: blogStatusConfig,
+  lead: leadStatusConfig,
 };
 
 export function StatusBadge({ status, type }: Readonly<StatusBadgeProps>) {

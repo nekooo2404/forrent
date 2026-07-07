@@ -34,7 +34,6 @@ function errorText(payload: ContactApiResponse) {
 
 export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | null; roomTitle?: string }>) {
   const [state, setState] = useState<FormState>("idle");
-  const [statusMessage, setStatusMessage] = useState("");
   const { toast } = useToast();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -43,7 +42,6 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
     if (!form.checkValidity()) {
       const message = "Vui lòng kiểm tra lại các trường bắt buộc.";
       setState("error");
-      setStatusMessage(message);
       toast({
         type: "error",
         title: "Lỗi xác thực",
@@ -63,7 +61,6 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
     };
 
     setState("submitting");
-    setStatusMessage("");
 
     try {
       const response = await fetch("/api/contact", {
@@ -78,7 +75,6 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
       if (!response.ok || !data.success) {
         const message = errorText(data);
         setState("error");
-        setStatusMessage(message);
         toast({
           type: "error",
           title: "Gửi thất bại",
@@ -90,7 +86,6 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
       const message = "Đã nhận yêu cầu. Saler sẽ liên hệ để xác nhận phòng, cọc và lịch xem.";
       form.reset();
       setState("success");
-      setStatusMessage(message);
       toast({
         type: "success",
         title: "Gửi thành công",
@@ -99,7 +94,6 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
     } catch {
       const message = "Không thể gửi yêu cầu lúc này. Vui lòng thử lại sau.";
       setState("error");
-      setStatusMessage(message);
       toast({
         type: "error",
         title: "Lỗi kết nối",
@@ -154,6 +148,7 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
             autoComplete="tel"
             id="phone"
             inputMode="tel"
+            minLength={10}
             name="phone"
             pattern="(0|\+84)[0-9\s\-()]{9,13}"
             placeholder="0900 000 000"
@@ -188,17 +183,6 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
         Sau khi gửi, saler sẽ gọi lại để xác nhận phòng còn trống, cọc, phí và lịch xem.
       </p>
 
-      {state === "success" ? (
-        <div className="rounded-md border border-success/30 bg-success-container/40 p-4 text-center text-success" role="status">
-          <p className="font-body-md text-body-md">{statusMessage}</p>
-        </div>
-      ) : null}
-
-      {state === "error" ? (
-        <div className="rounded-md border border-error bg-error-container/20 p-4 text-center text-error" role="alert">
-          <p className="font-body-md text-body-md">{statusMessage}</p>
-        </div>
-      ) : null}
     </form>
   );
 }

@@ -14,8 +14,9 @@ export function ThemeToggle({ compact = false }: Readonly<{ compact?: boolean }>
     return (
       <button
         aria-label={label}
-        className="inline-flex size-10 items-center justify-center rounded-md border border-outline-variant/60 bg-surface-container-lowest/90 text-primary shadow-sm transition hover:-translate-y-0.5 hover:bg-surface-container"
+        className="inline-flex size-11 items-center justify-center rounded-md border border-outline-variant/60 bg-surface-container-lowest/90 text-primary shadow-sm transition hover:-translate-y-0.5 hover:bg-surface-container"
         data-theme-toggle="compact"
+        data-testid="theme-compact-toggle"
         onClick={() => setTheme(isDark ? "light" : "dark")}
         title={label}
         type="button"
@@ -26,10 +27,11 @@ export function ThemeToggle({ compact = false }: Readonly<{ compact?: boolean }>
   }
 
   return (
-    <div className="genz-theme-toggle">
+    <div className="genz-theme-toggle" data-testid="theme-toggle">
       <button
         aria-label="Light mode"
         className={`genz-theme-button ${theme === "light" ? "genz-theme-button-active" : ""}`}
+        data-testid="theme-light"
         onClick={() => setTheme("light")}
         type="button"
       >
@@ -38,6 +40,7 @@ export function ThemeToggle({ compact = false }: Readonly<{ compact?: boolean }>
       <button
         aria-label="Dark mode"
         className={`genz-theme-button ${theme === "dark" ? "genz-theme-button-active" : ""}`}
+        data-testid="theme-dark"
         onClick={() => setTheme("dark")}
         type="button"
       >
@@ -46,6 +49,7 @@ export function ThemeToggle({ compact = false }: Readonly<{ compact?: boolean }>
       <button
         aria-label="System theme"
         className={`genz-theme-button ${theme === "system" ? "genz-theme-button-active" : ""}`}
+        data-testid="theme-system"
         onClick={() => setTheme("system")}
         type="button"
       >

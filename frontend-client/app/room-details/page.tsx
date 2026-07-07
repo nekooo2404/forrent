@@ -26,10 +26,10 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { LazyViewingRequestPanel } from "@/components/lazy-viewing-request-panel";
 import { RoomGallery } from "@/components/room-gallery";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
-import { ViewingRequestPanel } from "@/components/viewing-request-panel";
 import {
   formatDate,
   formatArea,
@@ -244,7 +244,7 @@ function ListingBody({ detail }: Readonly<{ detail: DetailView }>) {
       <aside className="space-y-4 lg:sticky lg:top-28 lg:self-start">
         <ContactCard detail={detail} />
         <div id="dat-lich-xem">
-          <ViewingRequestPanel disabled={!detail.isAvailable} roomId={detail.id} />
+          <LazyViewingRequestPanel disabled={!detail.isAvailable} roomId={detail.id} />
         </div>
         <SafetyNote />
       </aside>

@@ -21,6 +21,11 @@ const navItems: Array<{ key: NavKey; label: string; href: string }> = [
 export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Detect scroll for glass effect
   useEffect(() => {
@@ -58,7 +63,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
   }, [isMobileMenuOpen]);
 
   return (
-    <nav className={`fixed top-0 z-50 w-full transition-all duration-500 ${
+    <nav data-ready={mounted ? "true" : "false"} data-testid="site-nav" className={`fixed top-0 z-50 w-full transition-all duration-500 ${
       scrolled
         ? "genz-navbar-scrolled"
         : "genz-navbar"

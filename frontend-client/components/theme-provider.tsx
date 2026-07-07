@@ -25,6 +25,7 @@ const themeScript = `
       resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
 
+    document.documentElement.classList.remove('light', 'dark');
     document.documentElement.classList.add(resolved);
     document.documentElement.style.colorScheme = resolved;
   } catch (e) {}
@@ -40,7 +41,7 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   useEffect(() => {
     const stored = localStorage.getItem("theme") as Theme | null;
     if (stored && ["light", "dark", "system"].includes(stored)) {
-      setThemeState(stored);
+      setThemeState((current) => (current === "system" ? stored : current));
     }
     setMounted(true);
   }, []);
@@ -113,6 +114,11 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   }, [theme]);
 
   const setTheme = (newTheme: Theme) => {
+    try {
+      localStorage.setItem("theme", newTheme);
+    } catch {
+      // Ignore blocked storage; theme still applies for the active session.
+    }
     setThemeState(newTheme);
   };
 

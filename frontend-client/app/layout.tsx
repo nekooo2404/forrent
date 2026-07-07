@@ -51,7 +51,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html className="light" lang="vi">
+    <html className="light" lang="vi" suppressHydrationWarning>
       <head>
         <link href="https://lh3.googleusercontent.com" rel="preconnect" />
         <link href="https://images.unsplash.com" rel="preconnect" />

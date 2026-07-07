@@ -30,7 +30,7 @@ export function Toast({ type, title, message, onClose }: Readonly<ToastProps>) {
   return (
     <motion.div
       animate={{ opacity: 1, x: 0, scale: 1 }}
-      className={`pointer-events-auto flex w-[360px] items-start gap-3 rounded-lg border p-4 shadow-elevated ${colorMap[type]}`}
+      className={`pointer-events-auto flex w-[min(360px,calc(100vw-2rem))] items-start gap-3 rounded-lg border p-4 shadow-elevated ${colorMap[type]}`}
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.2}
@@ -42,12 +42,12 @@ export function Toast({ type, title, message, onClose }: Readonly<ToastProps>) {
       transition={{ duration: 0.3 }}
     >
       <Icon className="mt-0.5 shrink-0" size={20} strokeWidth={1.8} />
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         {title && <p className="font-semibold text-sm">{title}</p>}
         <p className="text-sm leading-snug">{message}</p>
       </div>
       <button
-        aria-label="Đóng"
+        aria-label="Đóng thông báo"
         className="shrink-0 transition-opacity hover:opacity-70"
         onClick={onClose}
         type="button"

@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle, CheckCircle, LoaderCircle } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
+import { useToast } from "@/hooks/use-toast";
+import { validators } from "@/lib/validation";
 
 type ApiResponse<T> = {
   success: boolean;
@@ -26,11 +30,18 @@ export function ForgotPasswordClient() {
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
-  const [state, setState] = useState({ loading: false, message: "", error: "" });
+  const [state, setState] = useState({ loading: false });
+  const { toast } = useToast();
 
   async function handleRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setState({ loading: true, message: "", error: "" });
+    const emailError = validators.email(email);
+    if (emailError) {
+      toast({ type: "error", title: "Email chưa hợp lệ", message: emailError });
+      return;
+    }
+
+    setState({ loading: true });
 
     try {
       const response = await fetch("/api/auth/password-reset", {
@@ -40,24 +51,34 @@ export function ForgotPasswordClient() {
       });
       const payload = (await response.json()) as ApiResponse<Record<string, never>>;
       if (!response.ok || !payload.success) {
-        setState({ loading: false, message: "", error: messageFrom(payload, "Không thể gửi OTP.") });
+        toast({ type: "error", title: "Không thể gửi OTP", message: messageFrom(payload, "Không thể gửi OTP.") });
+        setState({ loading: false });
         return;
       }
-      setState({ loading: false, message: "Nếu email tồn tại, mã OTP đã được gửi.", error: "" });
+      toast({ type: "success", title: "Đã gửi yêu cầu", message: "Nếu email tồn tại, mã OTP đã được gửi." });
+      setState({ loading: false });
     } catch {
-      setState({ loading: false, message: "", error: "Không thể kết nối hệ thống quên mật khẩu." });
+      toast({ type: "error", title: "Lỗi kết nối", message: "Không thể kết nối hệ thống quên mật khẩu." });
+      setState({ loading: false });
     }
   }
 
   async function handleConfirm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (newPassword !== confirmNewPassword) {
-      setState({ loading: false, message: "", error: "Mật khẩu xác nhận không khớp." });
+    const otpError = validators.otp(otp);
+    const passwordError = validators.password(newPassword);
+    if (otpError || passwordError) {
+      toast({ type: "error", title: "Thông tin chưa hợp lệ", message: otpError || passwordError });
       return;
     }
 
-    setState({ loading: true, message: "", error: "" });
+    if (newPassword !== confirmNewPassword) {
+      toast({ type: "error", title: "Mật khẩu chưa khớp", message: "Mật khẩu xác nhận không khớp." });
+      return;
+    }
+
+    setState({ loading: true });
 
     try {
       const response = await fetch("/api/auth/password-reset/confirm", {
@@ -72,15 +93,18 @@ export function ForgotPasswordClient() {
       });
       const payload = (await response.json()) as ApiResponse<Record<string, never>>;
       if (!response.ok || !payload.success) {
-        setState({ loading: false, message: "", error: messageFrom(payload, "Không thể đặt lại mật khẩu.") });
+        toast({ type: "error", title: "Không thể đặt lại mật khẩu", message: messageFrom(payload, "Không thể đặt lại mật khẩu.") });
+        setState({ loading: false });
         return;
       }
       setOtp("");
       setNewPassword("");
       setConfirmNewPassword("");
-      setState({ loading: false, message: "Mật khẩu đã được đặt lại. Bạn có thể đăng nhập bằng mật khẩu mới.", error: "" });
+      toast({ type: "success", title: "Đã đặt lại mật khẩu", message: "Bạn có thể đăng nhập bằng mật khẩu mới." });
+      setState({ loading: false });
     } catch {
-      setState({ loading: false, message: "", error: "Không thể kết nối hệ thống đặt lại mật khẩu." });
+      toast({ type: "error", title: "Lỗi kết nối", message: "Không thể kết nối hệ thống đặt lại mật khẩu." });
+      setState({ loading: false });
     }
   }
 
@@ -102,7 +126,6 @@ export function ForgotPasswordClient() {
         <AuthInput label="Mã OTP" maxLength={6} type="text" value={otp} onChange={setOtp} />
         <AuthInput label="Mật khẩu mới" value={newPassword} onChange={setNewPassword} />
         <AuthInput label="Xác nhận mật khẩu mới" value={confirmNewPassword} onChange={setConfirmNewPassword} />
-        <Status message={state.message} error={state.error} />
         <SubmitButton loading={state.loading}>Đặt lại mật khẩu</SubmitButton>
       </form>
 
@@ -123,8 +146,7 @@ function AuthInput({
   value,
 }: Readonly<{ label: string; maxLength?: number; onChange: (value: string) => void; type?: string; value: string }>) {
   return (
-    <label className="block">
-      <span className="mb-2 block font-label-caps text-label-caps uppercase tracking-widest text-primary">{label}</span>
+    <FormField label={label}>
       <input
         className="w-full border-0 border-b border-outline-variant bg-transparent px-0 py-3 font-body-md text-primary transition-colors focus:border-primary focus:ring-0"
         maxLength={maxLength}
@@ -134,30 +156,18 @@ function AuthInput({
         type={type}
         value={value}
       />
-    </label>
-  );
-}
-
-function Status({ error, message }: Readonly<{ error: string; message: string }>) {
-  if (!error && !message) return null;
-  const isError = Boolean(error);
-  return (
-    <div className={`flex gap-3 border p-4 ${isError ? "border-error bg-error-container/30 text-error" : "border-success/30 bg-success-container/40 text-success"}`}>
-      {isError ? <AlertCircle size={18} strokeWidth={1.8} /> : <CheckCircle size={18} strokeWidth={1.8} />}
-      <p className="font-body-md text-sm">{error || message}</p>
-    </div>
+    </FormField>
   );
 }
 
 function SubmitButton({ children, loading }: Readonly<{ children: string; loading: boolean }>) {
   return (
-    <button
-      className="flex w-full items-center justify-center gap-2 rounded bg-primary py-4 font-button text-button uppercase text-on-primary transition-colors hover:bg-surface-tint disabled:cursor-wait disabled:opacity-70"
-      disabled={loading}
+    <Button
+      className="w-full rounded bg-primary py-4 hover:bg-surface-tint"
+      loading={loading}
       type="submit"
     >
-      {loading ? <LoaderCircle className="animate-spin" size={18} strokeWidth={1.8} /> : null}
-      {loading ? "Đang xử lý..." : children}
-    </button>
+      {children}
+    </Button>
   );
 }

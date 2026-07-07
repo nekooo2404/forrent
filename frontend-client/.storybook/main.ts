@@ -17,6 +17,28 @@ const config: StorybookConfig = {
     autodocs: "tag",
   },
   webpackFinal: async (config) => {
+    config.resolve = config.resolve || {};
+    config.resolve.extensions = Array.from(new Set([...(config.resolve.extensions ?? []), ".ts", ".tsx"]));
+
+    if (config.module?.rules) {
+      config.module.rules = config.module.rules.filter((rule) => {
+        if (!rule || typeof rule !== "object" || !("test" in rule)) return true;
+        const test = rule.test;
+        return !(test instanceof RegExp && test.test("app.css"));
+      });
+    }
+
+    config.module?.rules?.push({
+      test: /\.[tj]sx?$/,
+      exclude: /node_modules/,
+      use: {
+        loader: "babel-loader",
+        options: {
+          presets: ["next/babel"],
+        },
+      },
+    });
+
     // Add Tailwind CSS support
     config.module?.rules?.push({
       test: /\.css$/,

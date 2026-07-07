@@ -9,6 +9,9 @@ out/
 dist/
 build/
 coverage/
+playwright-report/
+test-results/
+storybook-static/
 
 # Python local environment and generated files
 venv/

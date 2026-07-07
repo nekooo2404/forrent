@@ -1,13 +1,15 @@
 "use client";
 
-import { CalendarDays, CheckCircle, Clock, X, Info } from "lucide-react";
+import { CalendarDays, Clock, X, Info } from "lucide-react";
 import type { FormEvent } from "react";
 import { useMemo, useState, useSyncExternalStore } from "react";
 
 import { modalBackdrop, modalPanel, MotionDiv, MotionModal } from "@/components/motion";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { useToast } from "@/hooks/use-toast";
 import { authFetch } from "@/lib/auth-storage";
 
-type SubmitState = "idle" | "confirming" | "submitting" | "success" | "error";
+type SubmitState = "idle" | "confirming" | "submitting";
 type ViewingTimeSlot = "morning" | "afternoon" | "evening";
 
 type ViewingRequestPanelProps = {
@@ -57,17 +59,21 @@ function errorText(payload: ViewingRequestApiResponse) {
 
 export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequestPanelProps) {
   const [state, setState] = useState<SubmitState>("idle");
-  const [message, setMessage] = useState("");
   const [formSnapshot, setFormSnapshot] = useState<{ date: string; timeSlot: ViewingTimeSlot } | null>(null);
   const today = useSyncExternalStore(subscribeToDate, getTodaySnapshot, getServerTodaySnapshot);
+  const { toast } = useToast();
+  const confirmModalRef = useFocusTrap<HTMLDivElement>(state === "confirming" || state === "submitting");
 
   const isReady = useMemo(() => !disabled && Number.isInteger(roomId) && Number(roomId) > 0, [disabled, roomId]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (disabled) {
-      setState("error");
-      setMessage("Phòng này đã được thuê, chưa thể đặt lịch xem.");
+      toast({
+        type: "error",
+        title: "Không thể đặt lịch",
+        message: "Phòng này đã được thuê, chưa thể đặt lịch xem.",
+      });
       return;
     }
     const form = event.currentTarget;
@@ -86,13 +92,16 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
 
   async function confirmRequest() {
     if (!isReady || !roomId) {
-      setState("error");
-      setMessage("Phòng này chưa có dữ liệu backend để đặt lịch xem.");
+      toast({
+        type: "error",
+        title: "Thiếu dữ liệu phòng",
+        message: "Phòng này chưa có dữ liệu backend để đặt lịch xem.",
+      });
+      setState("idle");
       return;
     }
 
     setState("submitting");
-    setMessage("");
 
     try {
       const response = await authFetch("/api/viewing-requests", {
@@ -107,20 +116,32 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
       const payload = (await response.json()) as ViewingRequestApiResponse;
 
       if (!response.ok || !payload.success) {
-        setState("error");
-        setMessage(
+        const nextMessage =
           response.status === 401
             ? "Vui lòng đăng nhập tài khoản khách thuê trước khi yêu cầu xem phòng."
-            : errorText(payload),
-        );
+            : errorText(payload);
+        setState("idle");
+        toast({
+          type: "error",
+          title: "Gửi yêu cầu thất bại",
+          message: nextMessage,
+        });
         return;
       }
 
-      setState("success");
-      setMessage("Yêu cầu xem phòng của bạn đã được xác nhận. Nhân viên hỗ trợ sẽ sớm liên hệ.");
+      setState("idle");
+      toast({
+        type: "success",
+        title: "Đã gửi yêu cầu xem phòng",
+        message: "Yêu cầu xem phòng của bạn đã được xác nhận. Nhân viên hỗ trợ sẽ sớm liên hệ.",
+      });
     } catch {
-      setState("error");
-      setMessage("Không thể gửi yêu cầu xem phòng lúc này. Vui lòng thử lại sau.");
+      setState("idle");
+      toast({
+        type: "error",
+        title: "Lỗi kết nối",
+        message: "Không thể gửi yêu cầu xem phòng lúc này. Vui lòng thử lại sau.",
+      });
     }
   }
 
@@ -226,20 +247,6 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
           </div>
         </form>
 
-        {state === "error" ? (
-          <div className="mt-6 border border-error bg-error-container/20 p-4 text-error">
-            <p className="font-body-md text-body-md">{message}</p>
-          </div>
-        ) : null}
-
-        {state === "success" ? (
-          <div className="mt-6 border border-success/30 bg-success-container/40 p-4 text-success">
-            <div className="flex gap-3">
-              <CheckCircle className="mt-0.5 flex-shrink-0" size={20} strokeWidth={1.8} />
-              <p className="font-body-md text-body-md">{message}</p>
-            </div>
-          </div>
-        ) : null}
       </div>
 
       {state === "confirming" || state === "submitting" ? (
@@ -266,6 +273,7 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
             className="relative w-full max-w-md rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-8 shadow-elevated"
             exit="hidden"
             initial="hidden"
+            ref={confirmModalRef}
             role="dialog"
             variants={modalPanel}
           >

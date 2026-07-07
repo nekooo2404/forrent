@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, CheckCircle, LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import type { ChangeEvent, FormEvent, InputHTMLAttributes } from "react";
 import { useMemo, useState } from "react";
 
+import { useToast } from "@/hooks/use-toast";
 import { saveAuthSession } from "@/lib/auth-storage";
 import type { ApiUser, LoginResponse } from "@/lib/api";
+import { validators } from "@/lib/validation";
 
 type AuthApiResponse<T> = {
   success: boolean;
@@ -72,10 +74,9 @@ export function SignUpForm() {
   const router = useRouter();
   const [fields, setFields] = useState(initialFields);
   const [touched, setTouched] = useState<Partial<Record<keyof SignUpFields, boolean>>>({});
-  const [formError, setFormError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const { toast } = useToast();
   const strength = useMemo(() => passwordStrength(fields.password), [fields.password]);
 
   function updateField(field: keyof SignUpFields) {
@@ -90,13 +91,13 @@ export function SignUpForm() {
 
   function fieldErrors() {
     return {
-      otp: !/^\d{6}$/.test(fields.otp) ? "Vui lòng nhập mã OTP 6 số." : "",
-      fullName: !fields.fullName.trim() ? "Vui lòng nhập họ và tên của bạn." : "",
+      otp: validators.otp(fields.otp),
+      fullName: validators.required(fields.fullName, "họ và tên của bạn"),
       dateOfBirth: !fields.dateOfBirth ? "Vui lòng chọn ngày sinh." : "",
-      phone: !/^\d{10,11}$/.test(fields.phone) ? "Số điện thoại không hợp lệ." : "",
-      email: !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email) ? "Vui lòng nhập địa chỉ email hợp lệ." : "",
-      password: fields.password.length < 8 ? "Mật khẩu phải dài ít nhất 8 ký tự." : "",
-      confirmPassword: fields.password !== fields.confirmPassword ? "Mật khẩu xác nhận không khớp." : "",
+      phone: validators.phone(fields.phone),
+      email: validators.email(fields.email),
+      password: validators.password(fields.password),
+      confirmPassword: validators.confirmPassword(fields.password, fields.confirmPassword),
     };
   }
 
@@ -112,11 +113,12 @@ export function SignUpForm() {
       password: true,
       confirmPassword: true,
     });
-    setFormError("");
-    setSuccessMessage("");
-
     if (Object.values(errors).some(Boolean)) {
-      setFormError("Vui lòng kiểm tra lại thông tin đăng ký.");
+      toast({
+        type: "error",
+        title: "Thông tin chưa hợp lệ",
+        message: "Vui lòng kiểm tra lại thông tin đăng ký.",
+      });
       return;
     }
 
@@ -139,7 +141,11 @@ export function SignUpForm() {
       const registerPayload = (await registerResponse.json()) as AuthApiResponse<ApiUser>;
 
       if (!registerResponse.ok || !registerPayload.success) {
-        setFormError(firstErrorMessage(registerPayload));
+        toast({
+          type: "error",
+          title: "Đăng ký thất bại",
+          message: firstErrorMessage(registerPayload),
+        });
         return;
       }
 
@@ -159,9 +165,17 @@ export function SignUpForm() {
 
       setFields(initialFields);
       setTouched({});
-      setSuccessMessage("Tài khoản đã được tạo. Vui lòng đăng nhập bằng email và mật khẩu vừa đăng ký.");
+      toast({
+        type: "success",
+        title: "Tài khoản đã được tạo",
+        message: "Vui lòng đăng nhập bằng email và mật khẩu vừa đăng ký.",
+      });
     } catch {
-      setFormError("Không thể kết nối hệ thống đăng ký. Vui lòng thử lại sau.");
+      toast({
+        type: "error",
+        title: "Lỗi kết nối",
+        message: "Không thể kết nối hệ thống đăng ký. Vui lòng thử lại sau.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -172,10 +186,12 @@ export function SignUpForm() {
   async function handleSendOtp() {
     const emailError = fieldErrors().email;
     setTouched((current) => ({ ...current, email: true }));
-    setFormError("");
-    setSuccessMessage("");
     if (emailError) {
-      setFormError(emailError);
+      toast({
+        type: "error",
+        title: "Email chưa hợp lệ",
+        message: emailError,
+      });
       return;
     }
     setIsSendingOtp(true);
@@ -187,12 +203,24 @@ export function SignUpForm() {
       });
       const payload = (await response.json()) as AuthApiResponse<Record<string, never>>;
       if (!response.ok || !payload.success) {
-        setFormError(firstErrorMessage(payload));
+        toast({
+          type: "error",
+          title: "Không thể gửi OTP",
+          message: firstErrorMessage(payload),
+        });
         return;
       }
-      setSuccessMessage("Mã OTP đã được gửi tới email của bạn.");
+      toast({
+        type: "success",
+        title: "Đã gửi mã OTP",
+        message: "Mã OTP đã được gửi tới email của bạn.",
+      });
     } catch {
-      setFormError("Không thể gửi mã OTP lúc này.");
+      toast({
+        type: "error",
+        title: "Lỗi kết nối",
+        message: "Không thể gửi mã OTP lúc này.",
+      });
     } finally {
       setIsSendingOtp(false);
     }
@@ -313,20 +341,6 @@ export function SignUpForm() {
           type="password"
           value={fields.confirmPassword}
         />
-
-        {formError ? (
-          <div className="flex gap-3 border border-error bg-error-container/30 p-4 text-error">
-            <AlertCircle className="mt-0.5 flex-shrink-0" size={18} strokeWidth={1.8} />
-            <p className="font-body-md text-sm">{formError}</p>
-          </div>
-        ) : null}
-
-        {successMessage ? (
-          <div className="flex gap-3 border border-success/30 bg-success-container/40 p-4 text-success">
-            <CheckCircle className="mt-0.5 flex-shrink-0" size={18} strokeWidth={1.8} />
-            <p className="font-body-md text-sm">{successMessage}</p>
-          </div>
-        ) : null}
 
         <button
           className="premium-button mt-4 flex w-full items-center justify-center gap-2 rounded bg-primary py-4 font-button text-button uppercase text-on-primary shadow-lg hover:opacity-90 disabled:cursor-wait disabled:opacity-70"

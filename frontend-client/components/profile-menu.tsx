@@ -86,7 +86,7 @@ export function ProfileMenu() {
         aria-expanded={isProfileMenuOpen}
         aria-haspopup="menu"
         aria-label="Tài khoản"
-        className="premium-button inline-flex size-10 items-center justify-center rounded-full border border-outline-variant/30 bg-surface-container-lowest text-primary"
+        className="premium-button inline-flex size-11 items-center justify-center rounded-full border border-outline-variant/30 bg-surface-container-lowest text-primary"
         onClick={() => setIsProfileMenuOpen((current) => !current)}
         type="button"
       >

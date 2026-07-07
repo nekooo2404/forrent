@@ -4,6 +4,7 @@ import { ChevronDown, Send } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
 
+import { useToast } from "@/hooks/use-toast";
 import { authFetch } from "@/lib/auth-storage";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
@@ -24,19 +25,23 @@ function firstError(payload: BlogSubmitResponse) {
 
 export function BlogSubmitForm() {
   const [state, setState] = useState<SubmitState>("idle");
-  const [message, setMessage] = useState("");
+  const { toast } = useToast();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     if (!form.checkValidity()) {
+      toast({
+        type: "error",
+        title: "Thông tin chưa hợp lệ",
+        message: "Vui lòng kiểm tra lại tiêu đề và nội dung bài viết.",
+      });
       form.reportValidity();
       return;
     }
 
     const formData = new FormData(form);
     setState("submitting");
-    setMessage("");
 
     try {
       const response = await authFetch("/api/blogs", {
@@ -51,17 +56,30 @@ export function BlogSubmitForm() {
       const payload = (await response.json()) as BlogSubmitResponse;
 
       if (!response.ok || !payload.success) {
+        const nextMessage = response.status === 401 ? "Vui lòng đăng nhập để đăng bài viết." : firstError(payload);
         setState("error");
-        setMessage(response.status === 401 ? "Vui lòng đăng nhập để đăng bài viết." : firstError(payload));
+        toast({
+          type: "error",
+          title: "Gửi bài thất bại",
+          message: nextMessage,
+        });
         return;
       }
 
       form.reset();
       setState("success");
-      setMessage("Bài viết đã được gửi và đang chờ duyệt.");
+      toast({
+        type: "success",
+        title: "Đã gửi bài viết",
+        message: "Bài viết đã được gửi và đang chờ duyệt.",
+      });
     } catch {
       setState("error");
-      setMessage("Không thể gửi bài viết lúc này.");
+      toast({
+        type: "error",
+        title: "Lỗi kết nối",
+        message: "Không thể gửi bài viết lúc này.",
+      });
     }
   }
 
@@ -109,12 +127,6 @@ export function BlogSubmitForm() {
             />
           </label>
         </div>
-
-        {message ? (
-          <p className={`mt-5 rounded-md border p-4 text-sm ${state === "success" ? "border-success/30 bg-success-container/40 text-success" : "border-error/30 bg-error-container/30 text-error"}`} role="status">
-            {message}
-          </p>
-        ) : null}
 
         <button
           className="premium-button mt-6 inline-flex items-center gap-2 rounded bg-primary px-6 py-3 font-button text-button text-on-primary transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"

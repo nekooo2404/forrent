@@ -16,6 +16,7 @@ function getOrigin(value = productionApiOrigin) {
 const apiOrigin = getOrigin(process.env.NEXT_PUBLIC_API_BASE_URL);
 const localApiSources = ["http://localhost:8000", "http://127.0.0.1:8000", "http://backend:8000"];
 const runtimeApiSources = [apiOrigin, ...(!isProduction ? localApiSources : [])].join(" ");
+const scriptSources = ["'self'", "'unsafe-inline'", ...(!isProduction ? ["'unsafe-eval'"] : [])].join(" ");
 const imageSources = [
   "'self'",
   "data:",
@@ -60,7 +61,7 @@ const securityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'",
+      `script-src ${scriptSources}`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       `img-src ${imageSources}`,
