@@ -25,7 +25,7 @@ export function SiteFooter() {
         <FooterLinks title="KHÁM PHÁ" items={exploreLinks} />
 
         <div>
-          <p className="mb-4 font-label-caps text-label-caps tracking-widest text-primary">TƯ VẤN</p>
+          <p className="mb-4 font-label-caps text-label-caps tracking-widest text-on-surface">TƯ VẤN</p>
           <p className="mb-4 font-body-md text-body-md text-secondary">
             Cần tìm phòng theo khu vực, ngân sách hoặc diện tích? Gửi nhu cầu, saler sẽ xác nhận phòng còn trống, cọc và lịch xem.
           </p>
@@ -44,7 +44,7 @@ export function SiteFooter() {
 function FooterLinks({ title, items }: Readonly<{ title: string; items: string[] }>) {
   return (
     <div>
-      <p className="mb-4 font-label-caps text-label-caps tracking-widest text-primary">{title}</p>
+      <p className="mb-4 font-label-caps text-label-caps tracking-widest text-on-surface">{title}</p>
       <ul className="space-y-3 font-body-md text-body-md">
         {items.map((item) => {
           const href = footerHrefByLabel[item];
