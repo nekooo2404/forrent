@@ -91,8 +91,8 @@ export function RoomGallery({ images, title }: RoomGalleryProps) {
               priority
               quality={78}
               sizes="(min-width: 1280px) 1152px, 100vw"
-              src={activeImage}
-              {...fastImageProps(activeImage)}
+              src={fastImageUrl(activeImage, 1536, 78)}
+              {...fastImageProps()}
             />
           </div>
 
@@ -148,8 +148,8 @@ function GalleryTile({
             priority={priority}
             quality={priority ? 82 : 78}
             sizes="(min-width: 768px) 50vw, 100vw"
-            src={src}
-            {...fastImageProps(src)}
+            src={fastImageUrl(src, priority ? 1200 : 768, priority ? 82 : 78)}
+            {...fastImageProps()}
           />
           {badge ? (
             <span className="absolute bottom-3 right-3 rounded-md bg-black/70 px-3 py-1 text-sm font-semibold text-white">

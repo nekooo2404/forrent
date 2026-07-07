@@ -19,7 +19,7 @@ import type { ReactNode } from "react";
 
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
-import { fastImageProps } from "@/lib/image";
+import { fastImageProps, fastImageUrl } from "@/lib/image";
 import {
   formatArea,
   formatOptionalVnd,
@@ -573,8 +573,8 @@ function RoomCard({ priority = false, room }: Readonly<{ priority?: boolean; roo
               priority={priority}
               quality={78}
               sizes="(min-width: 1280px) 500px, (min-width: 768px) 50vw, 100vw"
-              src={room.image}
-              {...fastImageProps(room.image)}
+              src={fastImageUrl(room.image, priority ? 1200 : 768, priority ? 82 : 78)}
+              {...fastImageProps()}
             />
           ) : (
             <ImagePlaceholder />

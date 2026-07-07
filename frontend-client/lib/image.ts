@@ -1,4 +1,4 @@
-import type { ImageLoaderProps, ImageProps } from "next/image";
+import type { ImageProps } from "next/image";
 
 const cloudinaryUploadPath = "/image/upload/";
 
@@ -23,17 +23,12 @@ function cloudinaryUrl(src: string, width: number, quality?: number) {
   return url.toString();
 }
 
-function cloudinaryLoader({ src, width, quality }: ImageLoaderProps) {
-  return cloudinaryUrl(src, width, quality);
-}
-
 export function fastImageUrl(src: string, width = 1200, quality = 78) {
   return isCloudinaryImage(src) ? cloudinaryUrl(src, width, quality) : src;
 }
 
-export function fastImageProps(src: string): Pick<ImageProps, "loader" | "placeholder" | "blurDataURL"> {
+export function fastImageProps(): Pick<ImageProps, "placeholder" | "blurDataURL"> {
   return {
-    ...(isCloudinaryImage(src) ? { loader: cloudinaryLoader } : {}),
     placeholder: "blur",
     blurDataURL: warmImageBlurDataUrl,
   };
