@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   clearAuthSession,
-  getStoredAccessToken,
   hasStoredAuthSession,
   refreshStoredAuthSession,
 } from "@/lib/auth-storage";
@@ -17,11 +16,9 @@ export function ProfileMenu() {
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!getStoredAccessToken()) {
-      refreshStoredAuthSession()
-        .then((token) => setIsLoggedIn(Boolean(token)))
-        .catch(() => setIsLoggedIn(false));
-    }
+    refreshStoredAuthSession()
+      .then((token) => setIsLoggedIn(Boolean(token)))
+      .catch(() => setIsLoggedIn(false));
 
     function refreshAuthState() {
       setIsLoggedIn(hasStoredAuthSession());
@@ -63,12 +60,9 @@ export function ProfileMenu() {
   }, [isProfileMenuOpen]);
 
   async function handleLogout() {
-    const accessToken = getStoredAccessToken();
-
     await fetch("/api/auth/log-out", {
       body: JSON.stringify({}),
       headers: {
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         "Content-Type": "application/json",
       },
       method: "POST",

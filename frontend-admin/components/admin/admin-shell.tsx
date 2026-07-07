@@ -40,7 +40,6 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import {
   authFetch,
   clearAuthSession,
-  getStoredAccessToken,
   refreshStoredAuthSession,
   saveStoredUser,
 } from "@/lib/auth-storage";
@@ -86,11 +85,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   const [error, setError] = useState("");
 
   const refreshUser = useCallback(async () => {
-    let accessToken = getStoredAccessToken();
-    if (!accessToken) {
-      accessToken = await refreshStoredAuthSession();
-    }
-    if (!accessToken) {
+    if (!(await refreshStoredAuthSession())) {
       setToken(null);
       setUser(null);
       return;
@@ -105,7 +100,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
       throw new Error(payload.message || "Không thể xác thực phiên đăng nhập.");
     }
 
-    setToken(accessToken);
+    setToken("cookie-session");
     setUser(payload.data);
     saveStoredUser(payload.data);
   }, []);
@@ -128,12 +123,9 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
   }, [refreshUser, token, user]);
 
   async function handleLogout() {
-    const accessToken = getStoredAccessToken();
-
     await fetch("/api/auth/log-out", {
       body: JSON.stringify({}),
       headers: {
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         "Content-Type": "application/json",
       },
       method: "POST",

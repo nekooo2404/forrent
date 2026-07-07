@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Menu, Sparkles, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -70,14 +70,6 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
     }`}>
       <div className="genz-navbar-gradient" />
 
-      <div className="genz-particles">
-        <span className="genz-particle" style={{ left: "10%", animationDelay: "0s" }} />
-        <span className="genz-particle" style={{ left: "30%", animationDelay: "2s" }} />
-        <span className="genz-particle" style={{ left: "50%", animationDelay: "1s" }} />
-        <span className="genz-particle" style={{ left: "70%", animationDelay: "3s" }} />
-        <span className="genz-particle" style={{ left: "90%", animationDelay: "1.5s" }} />
-      </div>
-
       <div className="relative mx-auto flex h-20 max-w-container-max items-center justify-between px-margin-mobile md:h-24 md:px-margin-desktop">
         <Link
           aria-label="ForRent - Trang chủ"
@@ -88,7 +80,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
           <div className="relative">
             <Image
               alt="ForRent"
-              className="h-full w-full object-contain object-left transition-transform duration-300 group-hover:scale-110"
+              className="h-full w-full object-contain object-left transition-opacity duration-200 group-hover:opacity-90"
               height={241}
               priority
               sizes="(min-width: 768px) 158px, 142px"
@@ -96,7 +88,6 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
               width={760}
             />
           </div>
-          <Sparkles className="genz-logo-sparkle absolute -right-2 -top-2 text-gold" size={16} strokeWidth={2} />
         </Link>
 
         <div className="hidden items-center gap-2 md:flex">
@@ -209,15 +200,12 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
                     <span className="relative z-10 font-body-md text-lg font-semibold">
                       {item.label}
                     </span>
-                    {item.key === active && (
-                      <Sparkles className="ml-auto text-gold" size={18} strokeWidth={2} />
-                    )}
+                    {item.key === active ? <span className="ml-auto size-2 rounded-full bg-primary" /> : null}
                   </Link>
                 </motion.div>
               ))}
             </motion.nav>
 
-            {/* Bottom profile section */}
             <motion.div
               animate={{ opacity: 1 }}
               className="genz-mobile-profile"

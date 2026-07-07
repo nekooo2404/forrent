@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { ApiError, getCurrentUser } from "@/lib/api";
+import { getAccessAuthorization } from "@/lib/server-auth";
 
 export async function GET(request: Request) {
   try {
-    const data = await getCurrentUser(request.headers.get("authorization"));
+    const data = await getCurrentUser(getAccessAuthorization(request));
     return NextResponse.json({ success: true, message: "Success", data });
   } catch (error) {
     if (error instanceof ApiError) {

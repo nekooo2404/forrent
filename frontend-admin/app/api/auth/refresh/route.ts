@@ -1,33 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { ApiError, refreshTenant } from "@/lib/api";
-
-const refreshCookieName = "forrent_admin_refresh";
-
-function readRefreshCookie(request: Request) {
-  return request.headers
-    .get("cookie")
-    ?.split(";")
-    .map((item) => item.trim())
-    .find((item) => item.startsWith(`${refreshCookieName}=`))
-    ?.split("=")
-    .slice(1)
-    .join("=");
-}
-
-function setRefreshCookie(response: NextResponse, refresh: string) {
-  response.cookies.set(refreshCookieName, refresh, {
-    httpOnly: true,
-    maxAge: 60 * 60 * 24 * 30,
-    path: "/",
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-  });
-}
+import { readRefreshCookie, setSessionCookies } from "@/lib/server-auth";
 
 export async function POST(request: Request) {
-  const payload = (await request.json().catch(() => ({}))) as { refresh?: string };
-  const refresh = payload.refresh || readRefreshCookie(request);
+  const refresh = readRefreshCookie(request);
 
   if (!refresh) {
     return NextResponse.json(
@@ -45,11 +22,9 @@ export async function POST(request: Request) {
     const response = NextResponse.json({
       success: true,
       message: "Token refreshed.",
-      data: { access: data.access },
+      data: {},
     });
-    if (data.refresh) {
-      setRefreshCookie(response, data.refresh);
-    }
+    setSessionCookies(response, { access: data.access, refresh: data.refresh });
     return response;
   } catch (error) {
     if (error instanceof ApiError) {

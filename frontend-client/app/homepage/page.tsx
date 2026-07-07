@@ -163,12 +163,12 @@ export default async function Homepage() {
                 src={heroImage}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#061526]/82 via-transparent to-transparent" />
-              <div className="absolute bottom-5 left-5 right-5 rounded-xl border border-white/15 bg-white/12 p-4 text-white backdrop-blur">
-                <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-teal-100">
+              <div className="absolute bottom-5 left-5 right-5 rounded-xl border border-outline-variant/30 bg-surface-container-lowest/85 p-4 text-on-surface shadow-soft backdrop-blur">
+                <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-tertiary">
                   <Sparkles size={15} strokeWidth={1.8} />
                   Phòng mới cập nhật
                 </p>
-                <p className="text-sm leading-6 text-white/85">Ảnh, giá, cọc và trạng thái được lấy từ backend, không dùng dữ liệu fallback giả.</p>
+                <p className="text-sm leading-6 text-on-surface-variant">Ảnh, giá, cọc và trạng thái được lấy từ backend, không dùng dữ liệu fallback giả.</p>
               </div>
             </div>
           </MotionSection>
@@ -273,8 +273,8 @@ export default async function Homepage() {
                   <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/20 to-transparent" />
                   <div className="absolute inset-0 flex flex-col justify-end p-6">
                     <span className="mb-2 font-label-caps text-label-caps tracking-widest text-gold">{item.kicker}</span>
-                    <h3 className="mb-2 font-headline-sm text-headline-sm text-on-primary">{item.title}</h3>
-                    <p className="translate-y-4 font-body-md text-body-md text-on-primary/80 opacity-0 transition-[transform,opacity] duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                    <h3 className="mb-2 font-headline-sm text-headline-sm text-orange-50">{item.title}</h3>
+                    <p className="translate-y-4 font-body-md text-body-md text-orange-50/80 opacity-0 transition-[transform,opacity] duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                       {item.description}
                     </p>
                   </div>
@@ -324,7 +324,7 @@ export default async function Homepage() {
         </div>
       </section>
 
-      <section className="urban-band px-margin-mobile py-20 text-on-primary md:px-margin-desktop">
+      <section className="urban-band px-margin-mobile py-20 text-orange-50 md:px-margin-desktop">
         <div className="mx-auto grid max-w-container-max gap-gutter md:grid-cols-[1.2fr_2fr] md:items-center">
           <MotionSection>
             <span className="mb-4 block font-label-caps text-label-caps uppercase tracking-widest text-amber-100">Đi xem không mất thời gian</span>
@@ -454,10 +454,10 @@ function BackendSignals({ signals }: Readonly<{ signals: BackendSignal[] }>) {
 
 function UrbanStep({ children, icon, title }: Readonly<{ children: ReactNode; icon: ReactNode; title: string }>) {
   return (
-    <div className="h-full rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur">
-      <div className="mb-4 inline-flex rounded-xl bg-white/10 p-3 text-amber-100">{icon}</div>
-      <h3 className="mb-2 font-headline-sm text-xl text-white">{title}</h3>
-      <p className="font-body-md text-sm leading-6 text-white/75">{children}</p>
+    <div className="h-full rounded-2xl border border-primary/25 bg-primary/10 p-5 backdrop-blur-sm">
+      <div className="mb-4 inline-flex rounded-xl bg-primary/15 p-3 text-amber-100">{icon}</div>
+      <h3 className="mb-2 font-headline-sm text-xl text-orange-50">{title}</h3>
+      <p className="font-body-md text-sm leading-6 text-orange-50/75">{children}</p>
     </div>
   );
 }

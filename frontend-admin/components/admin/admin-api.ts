@@ -262,7 +262,7 @@ export function adminMessageFrom(error: unknown, fallback: string) {
 
 export async function adminRequest<T>(
   path: string,
-  token: string | null | undefined,
+  _token: string | null | undefined,
   init: RequestInit = {},
   params?: Record<string, string | number | undefined | null>,
 ): Promise<T> {
@@ -277,7 +277,6 @@ export async function adminRequest<T>(
     ...init,
     headers: {
       Accept: "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init.body && !(init.body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
       ...init.headers,
     },

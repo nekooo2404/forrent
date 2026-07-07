@@ -180,22 +180,22 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
     <main className="flex min-h-[100dvh] flex-col bg-surface text-on-surface">
       <SiteNav active="rooms" />
 
-      <header className="urban-band px-margin-mobile pb-10 pt-32 text-on-primary md:px-margin-desktop">
+      <header className="urban-band px-margin-mobile pb-10 pt-32 text-orange-50 md:px-margin-desktop">
         <div className="scroll-reveal mx-auto flex w-full max-w-container-max flex-col justify-between gap-8 md:flex-row md:items-end">
           <div className="max-w-3xl">
             <span className="mb-4 inline-flex rounded-full border border-teal-300/25 bg-teal-300/10 px-4 py-2 font-label-caps text-label-caps uppercase tracking-widest text-teal-100">
               Danh sách phòng Hà Nội
             </span>
-            <h1 className="mb-4 font-display-lg-mobile text-display-lg-mobile text-white md:font-display-lg md:text-6xl">
+            <h1 className="mb-4 font-display-lg-mobile text-display-lg-mobile text-orange-50 md:font-display-lg md:text-6xl">
               Chọn phòng đang trống, rõ giá trước khi đi xem
             </h1>
-            <p className="max-w-2xl font-body-lg text-body-lg text-white/80">
+            <p className="max-w-2xl font-body-lg text-body-lg text-orange-50/80">
               Hiển thị {rooms.length} trong {totalCount} phòng. Lọc theo khu vực, ngân sách, diện tích và tiện ích để chốt lịch xem nhanh hơn.
             </p>
             <div className="mt-6 flex flex-wrap gap-3 text-sm">
-              <span className="rounded-full bg-white/10 px-4 py-2 text-white/90">Còn trống được ưu tiên</span>
-              <span className="rounded-full bg-white/10 px-4 py-2 text-white/90">Cọc và phí hiện rõ</span>
-              <span className="rounded-full bg-white/10 px-4 py-2 text-white/90">Saler gọi xác nhận</span>
+              <span className="rounded-full border border-orange-200/20 bg-primary/10 px-4 py-2 text-orange-50/90">Còn trống được ưu tiên</span>
+              <span className="rounded-full border border-orange-200/20 bg-primary/10 px-4 py-2 text-orange-50/90">Cọc và phí hiện rõ</span>
+              <span className="rounded-full border border-orange-200/20 bg-primary/10 px-4 py-2 text-orange-50/90">Saler gọi xác nhận</span>
             </div>
           </div>
 
@@ -396,6 +396,7 @@ function FilterSidebar({
           {filters.wards.length ? (
             <FilterSection title="Phường" icon={<Minus size={18} strokeWidth={1.8} />}>
               <select
+                aria-label="Chọn phường"
                 className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
                 defaultValue={activeWard ?? ""}
                 disabled={!activeCity}
@@ -486,6 +487,7 @@ function FilterSidebar({
 
         <FilterSection title="Trạng thái" icon={<Minus size={18} strokeWidth={1.8} />}>
           <select
+            aria-label="Chọn trạng thái phòng"
             className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
             defaultValue={activeStatus ?? ""}
             name="status"
@@ -588,14 +590,14 @@ function RoomCard({ priority = false, room }: Readonly<{ priority?: boolean; roo
             {room.unavailable ? room.status : "Còn trống"}
           </span>
         </div>
-        <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4 text-white">
+        <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4 text-orange-50">
           <div>
-            <p className="mb-1 text-sm font-medium text-white/80">{room.primaryMeta} · {room.area}</p>
+            <p className="mb-1 text-sm font-medium text-orange-50/80">{room.primaryMeta} · {room.area}</p>
             <p className="line-clamp-1 font-headline-sm text-xl">{room.location}</p>
           </div>
-          <div className="rounded-xl bg-white/10 px-3 py-2 text-right backdrop-blur">
+          <div className="rounded-xl bg-primary/20 px-3 py-2 text-right backdrop-blur">
             <span className="block font-headline-sm text-xl">{room.price}</span>
-            <span className="text-xs text-white/75">{room.period}</span>
+            <span className="text-xs text-orange-50/75">{room.period}</span>
           </div>
         </div>
       </div>

@@ -17,7 +17,6 @@ import { useToast } from "@/hooks/use-toast";
 import {
   authFetch,
   clearAuthSession,
-  getStoredAccessToken,
   refreshStoredAuthSession,
   saveStoredUser,
 } from "@/lib/auth-storage";
@@ -82,9 +81,7 @@ export function ProfileClient() {
 
   useEffect(() => {
     async function loadProfile() {
-      const accessToken =
-        getStoredAccessToken() || (await refreshStoredAuthSession());
-      if (!accessToken) {
+      if (!(await refreshStoredAuthSession())) {
         setIsLoading(false);
         return;
       }
@@ -135,9 +132,7 @@ export function ProfileClient() {
 
   async function handleProfileSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const accessToken =
-      getStoredAccessToken() || (await refreshStoredAuthSession());
-    if (!accessToken) return;
+    if (!(await refreshStoredAuthSession())) return;
 
     setProfileState({ loading: true });
     try {

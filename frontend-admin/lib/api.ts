@@ -48,7 +48,7 @@ export type LoginPayload = {
 };
 
 export type LoginResponse = {
-  access: string;
+  access?: string;
   refresh?: string;
   user: ApiUser;
 };

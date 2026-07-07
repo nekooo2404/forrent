@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { ApiError, createTenantBlog, type TenantBlogPayload } from "@/lib/api";
+import { getAccessAuthorization } from "@/lib/server-auth";
 
 export async function POST(request: Request) {
   const payload = (await request.json()) as TenantBlogPayload;
 
   try {
-    const data = await createTenantBlog(payload, request.headers.get("authorization"));
+    const data = await createTenantBlog(payload, getAccessAuthorization(request));
     return NextResponse.json(
       { success: true, message: "Bài viết đã được gửi và đang chờ duyệt.", data },
       { status: 201 },

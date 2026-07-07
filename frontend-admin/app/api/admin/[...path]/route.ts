@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { API_BASE_URL } from "@/lib/api";
+import { getAccessAuthorization } from "@/lib/server-auth";
 
 type RouteContext = {
   params: Promise<{
@@ -18,7 +19,7 @@ async function proxyAdminRequest(request: Request, context: RouteContext) {
   });
 
   const headers = new Headers({ Accept: "application/json", "X-Forwarded-Proto": "https" });
-  const authorization = request.headers.get("authorization");
+  const authorization = getAccessAuthorization(request);
   const contentType = request.headers.get("content-type");
 
   if (authorization) {

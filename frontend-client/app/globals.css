@@ -217,10 +217,10 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 }
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(209, 213, 219, 0.3);
+  background: rgb(var(--surface-container-lowest) / 0.86);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgb(var(--outline-variant) / 0.28);
 }
 
 .dark .glass-panel {
@@ -247,12 +247,11 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
   position: relative;
   isolation: isolate;
   backface-visibility: hidden;
-  transform: translate3d(0, 0, 0);
-  transform-style: preserve-3d;
   transition:
-    transform var(--motion-base) var(--ease-smooth),
+    background-color var(--motion-base) ease,
+    border-color var(--motion-base) ease,
     box-shadow var(--motion-base) ease,
-    filter var(--motion-base) ease;
+    color var(--motion-base) ease;
 }
 
 .premium-button::before {
@@ -296,7 +295,7 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
     rgba(255, 255, 255, 0.24) 50%,
     transparent
   );
-  transform: translateX(-50%) rotate(-8deg) scaleX(0.8);
+  transform: translateX(-50%);
   transition:
     transform var(--motion-medium) var(--ease-smooth),
     opacity var(--motion-medium) ease;
@@ -312,7 +311,7 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 }
 
 .premium-button:hover {
-  transform: translate3d(0, -1px, 0);
+  box-shadow: 0 8px 18px rgba(146, 64, 14, 0.14);
 }
 
 .premium-button:hover::before {
@@ -320,12 +319,12 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 }
 
 .premium-button:hover::after {
-  opacity: 0.55;
-  transform: translateX(35%) rotate(12deg);
+  opacity: 0.2;
+  transform: translateX(0);
 }
 
 .premium-button:active {
-  transform: translate3d(0, 0, 0) scale(0.98);
+  transform: none;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
 }
 
@@ -342,8 +341,6 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
   backface-visibility: hidden;
   content-visibility: auto;
   contain-intrinsic-size: auto 420px;
-  transform: translate3d(0, 0, 0);
-  transform-style: preserve-3d;
   transition:
     transform var(--motion-base) var(--ease-smooth),
     box-shadow var(--motion-base) ease,
@@ -408,7 +405,7 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 }
 
 .motion-chip:hover {
-  transform: scale(1.04);
+  transform: none;
 }
 
 .motion-chip:hover::before {
@@ -452,7 +449,7 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 
 .urban-panel {
   border: 1px solid rgba(203, 213, 225, 0.72);
-  background: rgba(255, 255, 255, 0.94);
+  background: rgb(var(--surface-container-lowest) / 0.94);
   box-shadow: 0 20px 54px rgba(6, 21, 38, 0.12);
   backdrop-filter: blur(14px);
 }
@@ -465,7 +462,7 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 
 .urban-card {
   border: 1px solid rgba(203, 213, 225, 0.74);
-  background: #ffffff;
+  background: rgb(var(--surface-container-lowest));
   box-shadow: 0 18px 44px rgba(6, 21, 38, 0.1);
 }
 
@@ -523,116 +520,66 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 }
 
 /* ========================================
-   GenZ 3D Navbar Styles
+   Enterprise navbar styles
    ======================================== */
 
 /* Base navbar with glassmorphism */
 .genz-navbar {
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  background: rgba(255, 247, 237, 0.82);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  background: rgba(255, 251, 245, 0.94);
   border-bottom: 1px solid rgba(146, 64, 14, 0.16);
-  box-shadow: 0 8px 32px rgba(67, 36, 18, 0.08);
+  box-shadow: 0 1px 0 rgba(67, 36, 18, 0.08);
 }
 
 .dark .genz-navbar {
-  background: rgba(31, 20, 15, 0.84);
+  background: rgba(23, 16, 12, 0.94);
   border-bottom: 1px solid rgba(245, 158, 11, 0.12);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.34);
+  box-shadow: 0 1px 0 rgba(255, 237, 213, 0.06);
 }
 
 /* Scrolled state - more glass effect */
 .genz-navbar-scrolled {
-  backdrop-filter: blur(24px) saturate(200%);
-  -webkit-backdrop-filter: blur(24px) saturate(200%);
-  background: rgba(255, 247, 237, 0.94);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  background: rgba(255, 251, 245, 0.97);
   border-bottom: 1px solid rgba(146, 64, 14, 0.2);
-  box-shadow: 0 12px 40px rgba(67, 36, 18, 0.12);
+  box-shadow: 0 8px 24px rgba(67, 36, 18, 0.08);
 }
 
 .dark .genz-navbar-scrolled {
-  background: rgba(31, 20, 15, 0.94);
+  background: rgba(23, 16, 12, 0.97);
   border-bottom: 1px solid rgba(245, 158, 11, 0.18);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.44);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
 }
 
 /* Animated gradient background */
 .genz-navbar-gradient {
   position: absolute;
   inset: 0;
-  opacity: 0.1;
-  background: linear-gradient(
-    135deg,
-    #7c2d12 0%,
-    #b45309 25%,
-    #f59e0b 50%,
-    #0f766e 75%,
-    #78350f 100%
-  );
-  background-size: 400% 400%;
-  animation: gradient-shift 15s ease infinite;
+  opacity: 0.03;
+  background: linear-gradient(90deg, #92400e, #0f766e);
   pointer-events: none;
   z-index: 0;
 }
 
 .dark .genz-navbar-gradient {
-  opacity: 0.1;
-}
-
-@keyframes gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+  opacity: 0.06;
 }
 
 /* Floating particles */
 .genz-particles {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 1;
+  display: none;
 }
 
-.genz-particle {
-  position: absolute;
-  bottom: -10px;
-  width: 3px;
-  height: 3px;
-  background: radial-gradient(circle, rgba(249, 115, 22, 0.8), transparent);
-  border-radius: 50%;
-  animation: float-up 6s ease-in infinite;
-}
-
-.dark .genz-particle {
-  background: radial-gradient(circle, rgba(217, 119, 6, 0.58), transparent);
-}
-
-@keyframes float-up {
-  0% {
-    transform: translateY(0) scale(1);
-    opacity: 0;
-  }
-  20% {
-    opacity: 1;
-  }
-  80% {
-    opacity: 0.5;
-  }
-  100% {
-    transform: translateY(-120px) scale(1.5);
-    opacity: 0;
-  }
-}
-
-/* Logo with 3D effect */
+/* Logo */
 .genz-logo-container {
   position: relative;
-  transform-style: preserve-3d;
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: opacity var(--motion-fast) ease;
 }
 
 .genz-logo-container:hover {
-  transform: translateY(-2px) rotateX(5deg) rotateY(-5deg);
+  opacity: 0.92;
 }
 
 .genz-logo-glow {
@@ -655,26 +602,10 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 }
 
 .genz-logo-container:hover .genz-logo-glow {
-  opacity: 1;
+  opacity: 0.55;
 }
 
-.genz-logo-sparkle {
-  opacity: 0;
-  animation: sparkle 2s ease-in-out infinite;
-}
-
-@keyframes sparkle {
-  0%, 100% {
-    opacity: 0;
-    transform: scale(0.8) rotate(0deg);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.2) rotate(180deg);
-  }
-}
-
-/* Nav pills with 3D effect */
+/* Nav pills */
 .genz-nav-pill {
   position: relative;
   display: inline-flex;
@@ -683,8 +614,11 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
   padding: 0.625rem 1.25rem;
   border-radius: 9999px;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  transform-style: preserve-3d;
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
   color: rgb(var(--on-surface));
 }
 
@@ -709,20 +643,18 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 }
 
 .genz-nav-pill:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 8px 16px rgba(146, 64, 14, 0.16);
+  box-shadow: 0 4px 10px rgba(146, 64, 14, 0.08);
 }
 
 /* Active pill */
 .genz-nav-pill-active {
-  background: linear-gradient(135deg, rgba(254, 215, 170, 0.75), rgba(251, 191, 36, 0.28));
+  background: rgba(254, 215, 170, 0.82);
   border: 1px solid rgba(180, 83, 9, 0.32);
-  box-shadow: 0 4px 12px rgba(146, 64, 14, 0.16),
-              inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(146, 64, 14, 0.12);
 }
 
 .dark .genz-nav-pill-active {
-  background: linear-gradient(135deg, rgba(217, 119, 6, 0.14), rgba(146, 64, 14, 0.2));
+  background: rgba(217, 119, 6, 0.16);
   border: 1px solid rgba(217, 119, 6, 0.24);
 }
 
@@ -735,29 +667,16 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
   height: 3px;
   background: linear-gradient(90deg, transparent, #f97316, transparent);
   border-radius: 999px;
-  animation: pulse-glow 2s ease-in-out infinite;
+  opacity: 0.8;
 }
 
-@keyframes pulse-glow {
-  0%, 100% {
-    opacity: 0.6;
-    transform: translateX(-50%) scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: translateX(-50%) scale(1.2);
-  }
-}
-
-/* 3D Button wrapper */
+/* Button wrapper */
 .genz-button-3d {
   position: relative;
-  transform-style: preserve-3d;
-  transition: transform 0.2s ease;
 }
 
 .genz-button-3d:active {
-  transform: translateY(2px);
+  transform: none;
 }
 
 /* Menu button with glow */
@@ -772,7 +691,10 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
   background: rgba(255, 247, 237, 0.88);
   border: 1px solid rgba(180, 83, 9, 0.22);
   color: rgb(var(--primary));
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
   overflow: hidden;
 }
 
@@ -795,8 +717,7 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 }
 
 .genz-menu-button:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 8px 20px rgba(217, 119, 6, 0.22);
+  box-shadow: 0 6px 14px rgba(217, 119, 6, 0.16);
 }
 
 /* Mobile menu overlay */
@@ -820,7 +741,7 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 .genz-mobile-gradient {
   position: absolute;
   inset: 0;
-  opacity: 0.08;
+  opacity: 0.04;
   background: linear-gradient(
     180deg,
     #7c2d12 0%,
@@ -830,7 +751,6 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
     #78350f 100%
   );
   background-size: 100% 400%;
-  animation: gradient-slide 20s ease infinite;
   pointer-events: none;
 }
 
@@ -860,9 +780,8 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 }
 
 .genz-close-button:hover {
-  background: rgba(220, 38, 38, 0.2);
-  transform: rotate(90deg) scale(1.1);
-  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
+  background: rgba(220, 38, 38, 0.16);
+  box-shadow: 0 6px 14px rgba(220, 38, 38, 0.16);
 }
 
 /* Mobile nav links */
@@ -874,7 +793,10 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
   padding: 1rem 1.5rem;
   border-radius: 16px;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition:
+    background-color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    color var(--motion-fast) ease;
   color: rgb(var(--on-surface));
 }
 
@@ -899,19 +821,18 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 }
 
 .genz-mobile-link:active {
-  transform: scale(0.98);
+  transform: none;
 }
 
 /* Active mobile link */
 .genz-mobile-link-active {
-  background: linear-gradient(135deg, rgba(254, 215, 170, 0.72), rgba(251, 191, 36, 0.22));
+  background: rgba(254, 215, 170, 0.74);
   border: 1px solid rgba(180, 83, 9, 0.28);
-  box-shadow: 0 4px 12px rgba(146, 64, 14, 0.14),
-              inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(146, 64, 14, 0.1);
 }
 
 .dark .genz-mobile-link-active {
-  background: linear-gradient(135deg, rgba(217, 119, 6, 0.12), rgba(146, 64, 14, 0.18));
+  background: rgba(217, 119, 6, 0.16);
   border: 1px solid rgba(217, 119, 6, 0.2);
 }
 
@@ -955,7 +876,7 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 }
 
 /* ========================================
-   GenZ Theme Toggle - 3D Style
+   Theme toggle
    ======================================== */
 
 .genz-theme-toggle {
@@ -989,7 +910,10 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
   min-height: 44px;
   border-radius: 8px;
   color: rgb(var(--on-surface-variant));
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition:
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
   overflow: hidden;
   z-index: 1;
 }
@@ -1014,34 +938,23 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 }
 
 .genz-theme-button:hover {
-  transform: translateY(-2px) scale(1.1);
+  transform: none;
 }
 
 .genz-theme-button:active {
-  transform: translateY(0) scale(0.95);
+  transform: none;
 }
 
-/* Active state with gradient */
+/* Active state */
 .genz-theme-button-active {
-  background: linear-gradient(135deg, rgb(var(--primary)), rgb(var(--surface-tint)));
+  background: rgb(var(--primary));
   color: rgb(var(--on-primary));
   box-shadow: 0 4px 12px rgb(var(--primary) / 0.24),
               inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  animation: theme-pulse 3s ease-in-out infinite;
+  animation: none;
 }
 
 .dark .genz-theme-button-active {
   box-shadow: 0 4px 12px rgba(217, 119, 6, 0.2),
               inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-@keyframes theme-pulse {
-  0%, 100% {
-    box-shadow: 0 4px 12px rgb(var(--primary) / 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  }
-  50% {
-    box-shadow: 0 6px 16px rgb(var(--primary) / 0.48),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  }
 }

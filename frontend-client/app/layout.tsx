@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Open_Sans } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/toast-provider";
@@ -45,11 +46,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html className="light" lang="vi" suppressHydrationWarning>
       <head>
@@ -59,7 +62,7 @@ export default function RootLayout({
         <link href={process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"} rel="preconnect" />
       </head>
       <body className={`${openSans.variable} bg-surface font-body-md text-body-md text-on-surface antialiased`}>
-        <ThemeProvider>
+        <ThemeProvider nonce={nonce}>
           <ToastProvider>{children}</ToastProvider>
         </ThemeProvider>
       </body>

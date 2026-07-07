@@ -6,27 +6,23 @@ type ApiResponse<T> = {
   data?: T;
 };
 
-type RefreshResponse = {
-  access: string;
-  refresh?: string;
-};
+type RefreshResponse = Record<string, never>;
 
-export const accessTokenKey = "access";
-export const refreshTokenKey = "refresh";
-export const userStorageKey = "user";
+const accessTokenKey = "access";
+const refreshTokenKey = "refresh";
+const userStorageKey = "user";
 
-export const legacyAccessTokenKeys = ["accessToken", "aurelian_access_token"];
-export const legacyRefreshTokenKeys = ["refreshToken", "aurelian_refresh_token"];
-export const legacyUserStorageKeys = ["currentUser", "aurelian_user"];
+const legacyAccessTokenKeys = ["accessToken", "aurelian_access_token"];
+const legacyRefreshTokenKeys = ["refreshToken", "aurelian_refresh_token"];
+const legacyUserStorageKeys = ["currentUser", "aurelian_user"];
 
-export const authTokenKeys = [accessTokenKey, ...legacyAccessTokenKeys];
 const sensitiveStorageKeys = [
   accessTokenKey,
   refreshTokenKey,
   ...legacyAccessTokenKeys,
   ...legacyRefreshTokenKeys,
 ];
-export const authStorageKeys = [
+const authStorageKeys = [
   accessTokenKey,
   refreshTokenKey,
   userStorageKey,
@@ -35,8 +31,6 @@ export const authStorageKeys = [
   ...legacyUserStorageKeys,
 ];
 
-let memoryAccessToken: string | null = null;
-
 function clearStoredTokens() {
   if (typeof window === "undefined") {
     return;
@@ -44,18 +38,7 @@ function clearStoredTokens() {
   sensitiveStorageKeys.forEach((key) => window.localStorage.removeItem(key));
 }
 
-export function getStoredAccessToken() {
-  return memoryAccessToken;
-}
-
-export function getStoredRefreshToken() {
-  return null;
-}
-
 export function hasStoredAuthSession() {
-  if (getStoredAccessToken()) {
-    return true;
-  }
   if (typeof window === "undefined") {
     return false;
   }
@@ -67,7 +50,6 @@ export function saveAuthSession(session: LoginResponse) {
     return;
   }
 
-  memoryAccessToken = session.access;
   clearStoredTokens();
   window.localStorage.setItem(userStorageKey, JSON.stringify(session.user));
 }
@@ -85,38 +67,30 @@ export function clearAuthSession() {
     return;
   }
 
-  memoryAccessToken = null;
   authStorageKeys.forEach((key) => window.localStorage.removeItem(key));
 }
 
 export async function refreshStoredAuthSession() {
   const response = await fetch("/api/auth/refresh", {
-    body: JSON.stringify({}),
-    headers: { "Content-Type": "application/json" },
     method: "POST",
   });
   const payload = (await response.json().catch(() => null)) as ApiResponse<RefreshResponse> | null;
 
-  if (!response.ok || !payload?.success || !payload.data?.access) {
+  if (!response.ok || !payload?.success) {
     clearAuthSession();
     return null;
   }
 
-  memoryAccessToken = payload.data.access;
   clearStoredTokens();
-  return payload.data.access;
+  return "cookie-session";
 }
 
 export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}) {
-  async function request(accessToken: string | null) {
-    const headers = new Headers(init.headers);
-    if (accessToken) {
-      headers.set("Authorization", `Bearer ${accessToken}`);
-    }
-    return fetch(input, { ...init, headers });
+  async function request() {
+    return fetch(input, init);
   }
 
-  const firstResponse = await request(getStoredAccessToken());
+  const firstResponse = await request();
   if (firstResponse.status !== 401) {
     return firstResponse;
   }
@@ -125,5 +99,5 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
   if (!refreshedAccess) {
     return firstResponse;
   }
-  return request(refreshedAccess);
+  return request();
 }

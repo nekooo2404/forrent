@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Open_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 
@@ -22,15 +23,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html className="light" lang="vi" suppressHydrationWarning>
       <body className={`${openSans.variable} bg-surface font-body-md text-body-md text-on-surface antialiased`}>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider nonce={nonce}>{children}</ThemeProvider>
       </body>
     </html>
   );

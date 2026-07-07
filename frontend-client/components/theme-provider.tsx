@@ -32,7 +32,7 @@ const themeScript = `
 })();
 `;
 
-export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
+export function ThemeProvider({ children, nonce }: Readonly<{ children: ReactNode; nonce?: string }>) {
   const [theme, setThemeState] = useState<Theme>("system");
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
   const [mounted, setMounted] = useState(false);
@@ -125,7 +125,7 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <>
       {/* Inline script to prevent FOUC */}
-      <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      <script dangerouslySetInnerHTML={{ __html: themeScript }} nonce={nonce} />
       <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
         {children}
       </ThemeContext.Provider>

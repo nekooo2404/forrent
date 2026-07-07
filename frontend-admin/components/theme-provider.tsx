@@ -38,7 +38,7 @@ function isTheme(value: string | null): value is Theme {
   return value === "light" || value === "dark" || value === "system";
 }
 
-export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
+export function ThemeProvider({ children, nonce }: Readonly<{ children: ReactNode; nonce?: string }>) {
   const [theme, setTheme] = useState<Theme>("system");
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
   const [mounted, setMounted] = useState(false);
@@ -97,7 +97,7 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   return (
     <>
-      <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      <script dangerouslySetInnerHTML={{ __html: themeScript }} nonce={nonce} />
       <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
     </>
   );

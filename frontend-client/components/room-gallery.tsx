@@ -179,7 +179,7 @@ function nextIndex(current: number | null, total: number) {
 function preloadGalleryImage(src?: string) {
   if (!src || typeof window === "undefined") return;
 
-  for (const width of [1200, 1920]) {
+  for (const width of [768, 1200]) {
     const image = new window.Image();
     image.decoding = "async";
     image.src = fastImageUrl(src, width, 78);

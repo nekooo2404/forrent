@@ -19,7 +19,7 @@ function cloudinaryUrl(src: string, width: number, quality?: number) {
   const [prefix, imagePath] = url.pathname.split(cloudinaryUploadPath);
   const q = quality && quality >= 80 ? "q_auto:good" : "q_auto:eco";
 
-  url.pathname = `${prefix}${cloudinaryUploadPath}f_auto,${q},c_limit,w_${width}/${imagePath}`;
+  url.pathname = `${prefix}${cloudinaryUploadPath}f_auto,fl_progressive,${q},c_limit,w_${width}/${imagePath}`;
   return url.toString();
 }
 

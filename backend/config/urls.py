@@ -41,8 +41,6 @@ def health_check(_request):
 urlpatterns = [
     path("api/health/", health_check, name="health-check"),
     path("django-admin/", admin.site.urls),
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("api/auth/", include("apps.accounts.urls")),
     path("api/rooms/filters/", PublicRoomFiltersAPIView.as_view(), name="room-filters"),
     path("api/", include(public_router.urls)),
@@ -52,6 +50,12 @@ urlpatterns = [
     path("api/admin/commissions/", include("apps.commissions.urls")),
     path("api/admin/", include(admin_router.urls)),
 ]
+
+if settings.EXPOSE_API_DOCS:
+    urlpatterns += [
+        path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+        path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

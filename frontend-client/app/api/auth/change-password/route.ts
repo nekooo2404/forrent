@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { ApiError, changePassword, type ChangePasswordPayload } from "@/lib/api";
+import { getAccessAuthorization } from "@/lib/server-auth";
 
 export async function POST(request: Request) {
   const payload = (await request.json()) as ChangePasswordPayload;
 
   try {
-    const data = await changePassword(payload, request.headers.get("authorization"));
+    const data = await changePassword(payload, getAccessAuthorization(request));
     return NextResponse.json({ success: true, message: "Đổi mật khẩu thành công.", data });
   } catch (error) {
     if (error instanceof ApiError) {

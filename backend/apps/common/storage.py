@@ -173,6 +173,10 @@ class CloudinaryMediaStorage(Storage):
             public_id=self._public_id(name),
             resource_type="image",
             overwrite=False,
+            eager=[
+                {"width": 640, "crop": "limit", "fetch_format": "auto", "quality": "auto:eco"},
+                {"width": 1200, "crop": "limit", "fetch_format": "auto", "quality": "auto:good"},
+            ],
         )
         return name
 

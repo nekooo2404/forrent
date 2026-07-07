@@ -69,6 +69,7 @@ class CloudinaryMediaStorageTests(SimpleTestCase):
         assert upload.call_args.kwargs["public_id"] == "room-images/photo"
         assert upload.call_args.kwargs["resource_type"] == "image"
         assert upload.call_args.kwargs["overwrite"] is False
+        assert upload.call_args.kwargs["eager"][0]["width"] == 640
 
     def test_exists_returns_false_for_cloudinary_not_found(self):
         storage = CloudinaryMediaStorage()

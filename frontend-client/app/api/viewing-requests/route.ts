@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { ApiError, createViewingRequest } from "@/lib/api";
+import { getAccessAuthorization } from "@/lib/server-auth";
 
 export async function POST(request: Request) {
   const payload = (await request.json()) as {
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
         preferred_viewing_date: payload.preferred_viewing_date,
         preferred_viewing_time_slot: payload.preferred_viewing_time_slot,
       },
-      request.headers.get("authorization"),
+      getAccessAuthorization(request),
     );
     return NextResponse.json(
       {

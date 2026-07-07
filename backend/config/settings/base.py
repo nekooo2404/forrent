@@ -20,6 +20,7 @@ env = environ.Env(
     EMAIL_TIMEOUT=(int, 15),
     SUPABASE_STORAGE_TIMEOUT=(int, 30),
     SENTRY_TRACES_SAMPLE_RATE=(float, 0.0),
+    EXPOSE_API_DOCS=(bool, False),
 )
 
 env_file = BASE_DIR / ".env"
@@ -29,6 +30,7 @@ if env_file.exists():
 SECRET_KEY = env("DJANGO_SECRET_KEY", default="unsafe-local-development-key-for-rental-backend-please-change")
 DEBUG = env("DJANGO_DEBUG")
 ALLOWED_HOSTS = env("DJANGO_ALLOWED_HOSTS")
+EXPOSE_API_DOCS = env("EXPOSE_API_DOCS", default=DEBUG)
 
 DJANGO_APPS = [
     "django.contrib.admin",

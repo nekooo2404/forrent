@@ -1,18 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { ApiError, loginTenant, type LoginPayload } from "@/lib/api";
-
-const refreshCookieName = "forrent_refresh";
-
-function setRefreshCookie(response: NextResponse, refresh: string) {
-  response.cookies.set(refreshCookieName, refresh, {
-    httpOnly: true,
-    maxAge: 60 * 60 * 24 * 30,
-    path: "/",
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-  });
-}
+import { setSessionCookies } from "@/lib/server-auth";
 
 export async function POST(request: Request) {
   const payload = (await request.json()) as LoginPayload;
@@ -23,13 +12,10 @@ export async function POST(request: Request) {
       success: true,
       message: "Đăng nhập thành công.",
       data: {
-        access: data.access,
         user: data.user,
       },
     });
-    if (data.refresh) {
-      setRefreshCookie(response, data.refresh);
-    }
+    setSessionCookies(response, { access: data.access, refresh: data.refresh });
     return response;
   } catch (error) {
     if (error instanceof ApiError) {
