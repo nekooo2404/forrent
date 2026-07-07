@@ -156,7 +156,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
           >
             <div className="genz-mobile-gradient" />
 
-            <div className="relative z-10 flex h-20 items-center justify-between border-b border-white/10 px-margin-mobile backdrop-blur-xl">
+            <div className="relative z-10 flex h-20 items-center justify-between border-b border-outline-variant/20 px-margin-mobile backdrop-blur-xl">
               <Link
                 aria-label="ForRent - Trang chủ"
                 className="inline-flex h-11 w-[142px] shrink-0 items-center"
@@ -186,7 +186,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
 
             <motion.nav
               animate={{ opacity: 1, y: 0 }}
-              className="relative z-10 flex flex-col gap-2 p-6"
+              className="relative z-10 flex flex-col gap-2 p-6 pb-44"
               initial={{ opacity: 0, y: 20 }}
               transition={{ delay: 0.1, duration: 0.3 }}
             >

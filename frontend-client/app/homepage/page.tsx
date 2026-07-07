@@ -327,7 +327,7 @@ export default async function Homepage() {
       <section className="urban-band px-margin-mobile py-20 text-on-primary md:px-margin-desktop">
         <div className="mx-auto grid max-w-container-max gap-gutter md:grid-cols-[1.2fr_2fr] md:items-center">
           <MotionSection>
-            <span className="mb-4 block font-label-caps text-label-caps uppercase tracking-widest text-teal-200">Đi xem không mất thời gian</span>
+            <span className="mb-4 block font-label-caps text-label-caps uppercase tracking-widest text-amber-100">Đi xem không mất thời gian</span>
             <h2 className="font-headline-md text-headline-md">Trước khi đi, mọi thứ quan trọng đã được xác nhận.</h2>
           </MotionSection>
           <MotionList className="grid gap-4 md:grid-cols-3">
@@ -455,7 +455,7 @@ function BackendSignals({ signals }: Readonly<{ signals: BackendSignal[] }>) {
 function UrbanStep({ children, icon, title }: Readonly<{ children: ReactNode; icon: ReactNode; title: string }>) {
   return (
     <div className="h-full rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur">
-      <div className="mb-4 inline-flex rounded-xl bg-white/10 p-3 text-teal-200">{icon}</div>
+      <div className="mb-4 inline-flex rounded-xl bg-white/10 p-3 text-amber-100">{icon}</div>
       <h3 className="mb-2 font-headline-sm text-xl text-white">{title}</h3>
       <p className="font-body-md text-sm leading-6 text-white/75">{children}</p>
     </div>
