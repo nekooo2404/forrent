@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.core.cache import cache
+from django.db import connections
 from django.http import JsonResponse
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -15,7 +17,7 @@ from apps.locations.views import (
     AdminCityViewSet,
     AdminWardViewSet,
 )
-from apps.rooms.views import AdminRoomViewSet, PublicRoomFiltersAPIView, PublicRoomViewSet
+from apps.rooms.views import AdminDepositTypeViewSet, AdminRoomViewSet, PublicRoomFiltersAPIView, PublicRoomViewSet
 from apps.viewing_requests.views import AdminViewingRequestViewSet
 
 admin_router = DefaultRouter()
@@ -23,6 +25,7 @@ admin_router.register("cities", AdminCityViewSet, basename="admin-city")
 admin_router.register("wards", AdminWardViewSet, basename="admin-ward")
 admin_router.register("amenities", AdminAmenityViewSet, basename="admin-amenity")
 admin_router.register("area-ranges", AdminAreaRangeViewSet, basename="admin-area-range")
+admin_router.register("deposit-types", AdminDepositTypeViewSet, basename="admin-deposit-type")
 admin_router.register("rooms", AdminRoomViewSet, basename="admin-room")
 admin_router.register("viewing-requests", AdminViewingRequestViewSet, basename="admin-viewing-request")
 admin_router.register("blogs", AdminBlogViewSet, basename="admin-blog")
@@ -34,8 +37,40 @@ public_router.register("rooms", PublicRoomViewSet, basename="room")
 public_router.register("blogs", PublicBlogViewSet, basename="blog")
 
 
+def media_storage_configured():
+    backend = settings.STORAGES.get("default", {}).get("BACKEND", "")
+    if backend.endswith("CloudinaryMediaStorage"):
+        return bool(settings.CLOUDINARY_CLOUD_NAME and settings.CLOUDINARY_API_KEY and settings.CLOUDINARY_API_SECRET)
+    if backend.endswith("SupabaseMediaStorage"):
+        return bool(settings.SUPABASE_URL and settings.SUPABASE_SECRET_KEY and settings.SUPABASE_STORAGE_BUCKET)
+    return bool(settings.MEDIA_ROOT)
+
+
 def health_check(_request):
-    return JsonResponse({"status": "ok"})
+    checks = {
+        "database": False,
+        "cache": False,
+        "media_storage": media_storage_configured(),
+    }
+
+    try:
+        with connections["default"].cursor() as cursor:
+            cursor.execute("SELECT 1")
+        checks["database"] = True
+    except Exception:
+        pass
+
+    try:
+        cache.set("health-check", "ok", timeout=5)
+        checks["cache"] = cache.get("health-check") == "ok"
+    except Exception:
+        pass
+
+    healthy = all(checks.values())
+    return JsonResponse(
+        {"status": "ok" if healthy else "error", "checks": checks},
+        status=200 if healthy else 503,
+    )
 
 
 urlpatterns = [

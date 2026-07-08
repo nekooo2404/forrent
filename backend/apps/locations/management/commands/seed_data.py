@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 
 from apps.blogs.models import Blog
 from apps.locations.models import Amenity, AreaRange, City, Ward
-from apps.rooms.models import Room, RoomImage
+from apps.rooms.models import Room
 
 User = get_user_model()
 
@@ -21,14 +21,14 @@ class Command(BaseCommand):
                 "full_name": "Default Admin",
                 "role": User.Role.SALER,
                 "is_staff": True,
-                "is_superuser": True,
+                "is_superuser": False,
             },
         )
         admin.phone = "0900000000"
         admin.full_name = "Default Admin"
         admin.role = User.Role.SALER
         admin.is_staff = True
-        admin.is_superuser = True
+        admin.is_superuser = False
         admin.set_password("Admin@123")
         admin.save()
 
@@ -118,7 +118,6 @@ class Command(BaseCommand):
             )
             if created:
                 room.amenities.set(amenities[:3])
-                RoomImage.objects.create(room=room, image_url="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267", sort_order=0)
 
         Blog.objects.get_or_create(
             title="Kinh nghiem thue phong an toan",

@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 
 from apps.locations.models import Amenity, AreaRange, City, Ward
-from apps.rooms.models import Room
+from apps.rooms.models import DepositType, Room
 
 User = get_user_model()
 
@@ -17,7 +17,7 @@ def create_user(email="tenant@example.com", phone="0911111111", role=None, passw
         full_name="Test User",
         role=role,
         is_staff=role == User.Role.SALER,
-        is_superuser=role == User.Role.SALER,
+        is_superuser=False,
     )
 
 
@@ -42,6 +42,7 @@ def create_location_graph():
 def create_room(created_by=None, status=Room.Status.AVAILABLE):
     created_by = created_by or create_admin()
     city, ward, amenity, area_range = create_location_graph()
+    deposit_type, _ = DepositType.objects.get_or_create(name="Cọc 1 tháng")
     room = Room.objects.create(
         title="Phong dep Cau Giay",
         room_type=Room.RoomType.CCMN,
@@ -49,6 +50,7 @@ def create_room(created_by=None, status=Room.Status.AVAILABLE):
         ward=ward,
         address="So 1 Cau Giay",
         price=Decimal("5000000"),
+        deposit_type=deposit_type,
         deposit_amount=Decimal("5000000"),
         electricity_price_per_kwh=Decimal("4000"),
         water_price_per_person=Decimal("100000"),

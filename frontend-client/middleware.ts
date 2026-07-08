@@ -4,6 +4,7 @@ const supabaseHost = "rwblwugksbwnkzuakgcf.supabase.co";
 const cloudinaryHost = "res.cloudinary.com";
 const productionApiOrigin = "https://api.forrent.io.vn";
 const isProduction = process.env.NODE_ENV === "production";
+const unsafeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 function nonce() {
   const bytes = new Uint8Array(16);
@@ -19,20 +20,64 @@ function origin(value = productionApiOrigin) {
   }
 }
 
+function optionalOrigin(value?: string) {
+  if (!value) return "";
+  try {
+    return new URL(value).origin;
+  } catch {
+    return "";
+  }
+}
+
+function requestOrigin(request: NextRequest) {
+  const host = request.headers.get("host");
+  const proto = request.headers.get("x-forwarded-proto") || request.nextUrl.protocol.replace(":", "");
+  return host ? `${proto}://${host}` : request.nextUrl.origin;
+}
+
+function csrfFailure(request: NextRequest) {
+  if (!request.nextUrl.pathname.startsWith("/api/") || !unsafeMethods.has(request.method)) {
+    return null;
+  }
+
+  const originHeader = request.headers.get("origin");
+  if (!originHeader) {
+    return isProduction ? NextResponse.json({ success: false, message: "Invalid request origin.", errors: {} }, { status: 403 }) : null;
+  }
+
+  const allowedOrigins = new Set([
+    requestOrigin(request),
+    process.env.NEXT_PUBLIC_SITE_URL || "",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+  ]);
+
+  if (!allowedOrigins.has(origin(originHeader))) {
+    return NextResponse.json({ success: false, message: "Invalid request origin.", errors: {} }, { status: 403 });
+  }
+
+  return null;
+}
+
 export function middleware(request: NextRequest) {
+  const blocked = csrfFailure(request);
+  if (blocked) {
+    return blocked;
+  }
+
   const requestHeaders = new Headers(request.headers);
   const requestNonce = nonce();
   const apiOrigin = origin(process.env.NEXT_PUBLIC_API_BASE_URL);
+  const sentryOrigin = optionalOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN);
   const localApiSources = isProduction ? [] : ["http://localhost:8000", "http://127.0.0.1:8000", "http://backend:8000"];
   const scriptSources = [`'self'`, `'nonce-${requestNonce}'`, "'strict-dynamic'", ...(!isProduction ? ["'unsafe-eval'"] : [])].join(" ");
   const csp = [
     "default-src 'self'",
     `script-src ${scriptSources}`,
     `style-src 'self' 'nonce-${requestNonce}' https://fonts.googleapis.com`,
-    "style-src-attr 'unsafe-inline'",
     "font-src 'self' https://fonts.gstatic.com",
-    `img-src 'self' data: blob: https://lh3.googleusercontent.com https://images.unsplash.com https://${supabaseHost} https://${cloudinaryHost} ${apiOrigin} ${localApiSources.join(" ")}`,
-    `connect-src 'self' ${apiOrigin} ${localApiSources.join(" ")}`,
+    `img-src 'self' data: blob: https://${supabaseHost} https://${cloudinaryHost} ${apiOrigin} ${localApiSources.join(" ")}`,
+    `connect-src 'self' ${apiOrigin} ${sentryOrigin} ${localApiSources.join(" ")}`,
     "object-src 'none'",
     "base-uri 'self'",
     "frame-ancestors 'none'",
@@ -48,5 +93,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)"],
 };

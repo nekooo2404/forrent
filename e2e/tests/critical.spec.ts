@@ -22,21 +22,21 @@ test.describe('Public critical flows', () => {
     await expect(page.locator('html')).toHaveClass(/(light|dark)/);
 
     await page.evaluate(() => window.scrollTo(0, 120));
-    await expect(page.getByTestId('site-nav')).toHaveClass(/genz-navbar-scrolled/);
+    await expect(page.getByTestId('site-nav')).toHaveClass(/site-navbar-scrolled/);
   });
 
   test('mobile menu opens and closes', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/homepage');
     await expect(page.getByTestId('site-nav')).toHaveAttribute('data-ready', 'true');
-    await expect(page.locator('.genz-menu-button')).toBeVisible();
+    await expect(page.locator('.site-menu-button')).toBeVisible();
 
-    await page.locator('.genz-menu-button').click();
-    await expect(page.locator('.genz-mobile-menu')).toBeVisible();
-    await expect(page.locator('.genz-mobile-menu a[href="/rooms"]')).toBeVisible();
+    await page.locator('.site-menu-button').click();
+    await expect(page.locator('.site-mobile-menu')).toBeVisible();
+    await expect(page.locator('.site-mobile-menu a[href="/rooms"]')).toBeVisible();
 
-    await page.locator('.genz-close-button').click();
-    await expect(page.locator('.genz-mobile-menu')).toBeHidden();
+    await page.locator('.site-close-button').click();
+    await expect(page.locator('.site-mobile-menu')).toBeHidden();
   });
 
   test('rooms filters submit stable query params', async ({ page }) => {
@@ -83,13 +83,13 @@ test.describe('Public critical flows', () => {
   test('room detail booking panel is reachable when rooms exist', async ({ page }) => {
     await page.goto('/rooms');
 
-    const firstRoom = page.locator('a[href*="/room-details"]').first();
+    const firstRoom = page.locator('a[href^="/rooms/"]').first();
     if (!(await firstRoom.isVisible().catch(() => false))) {
       test.skip(true, 'No rooms are rendered from backend data.');
     }
 
     await firstRoom.click();
-    await expect(page).toHaveURL(/room-details/);
+    await expect(page).toHaveURL(/\/rooms\/[^/?#]+/);
     await expect(page.locator('#dat-lich-xem')).toBeVisible();
   });
 });

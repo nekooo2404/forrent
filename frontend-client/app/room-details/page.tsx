@@ -55,6 +55,7 @@ type DetailView = {
   collection: string;
   price: string;
   deposit: string;
+  depositLabel: string;
   electricity: string;
   water: string;
   serviceFee: string;
@@ -105,7 +106,7 @@ export async function generateMetadata({ searchParams }: RoomDetailsPageProps): 
     `${room.short_description || room.description || room.title}. Giá ${formatVnd(room.price)}/tháng, diện tích ${formatArea(room.actual_area)}${location ? ` tại ${location}` : ""}.`,
   );
   const image = galleryFor(room)[0];
-  const canonical = `/room-details?slug=${encodeURIComponent(room.slug)}`;
+  const canonical = `/rooms/${encodeURIComponent(room.slug)}`;
 
   return {
     title: `${room.title}${location ? ` - ${location}` : ""}`,
@@ -155,6 +156,7 @@ function mapDetail(room: ApiRoomDetail): DetailView {
     collection: roomTypeLabel(room.room_type),
     price: `${formatVnd(room.price)} / tháng`,
     deposit: formatOptionalVnd(room.deposit_amount),
+    depositLabel: room.deposit_type_name || "Cọc",
     electricity: formatOptionalVnd(room.electricity_price_per_kwh),
     water: formatOptionalVnd(room.water_price_per_person),
     serviceFee: formatOptionalVnd(room.service_fee),
@@ -268,7 +270,7 @@ function ListingHeader({ detail }: Readonly<{ detail: DetailView }>) {
       <div className="mt-5 grid divide-y divide-outline-variant/20 rounded-lg border border-outline-variant/20 bg-surface-container-low sm:grid-cols-4 sm:divide-x sm:divide-y-0">
         <ListingStat label="Giá thuê" value={detail.price} />
         <ListingStat label="Diện tích" value={detail.area} />
-        <ListingStat label="Tiền cọc" value={detail.deposit} />
+        <ListingStat label={detail.depositLabel} value={detail.deposit} />
         <ListingStat label="Trạng thái" value={detail.isAvailable ? "Còn trống" : detail.status} />
       </div>
     </header>
@@ -303,7 +305,7 @@ function FactsSection({ detail }: Readonly<{ detail: DetailView }>) {
       <div className="grid overflow-hidden rounded-lg border border-outline-variant/20 sm:grid-cols-2">
         <DetailRow icon={<ReceiptText size={18} />} label="Giá thuê" value={detail.price} />
         <DetailRow icon={<Ruler size={18} />} label="Diện tích" value={detail.area} />
-        <DetailRow icon={<ShieldCheck size={18} />} label="Cọc dự kiến" value={detail.deposit} />
+        <DetailRow icon={<ShieldCheck size={18} />} label={detail.depositLabel} value={detail.deposit} />
         <DetailRow icon={<CalendarCheck size={18} />} label="Cập nhật" value={detail.updatedAt} />
         <DetailRow icon={<Zap size={18} />} label="Tiền điện" value={detail.electricity} />
         <DetailRow icon={<Droplets size={18} />} label="Tiền nước" value={detail.water} />

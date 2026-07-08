@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Open_Sans } from "next/font/google";
+import Script from "next/script";
 import type { ReactNode } from "react";
 
 import { ThemeProvider } from "@/components/theme-provider";
@@ -32,8 +33,11 @@ export default async function RootLayout({
 
   return (
     <html className="light" lang="vi" suppressHydrationWarning>
+      <head>
+        <Script nonce={nonce} src="/theme-init.js" strategy="beforeInteractive" />
+      </head>
       <body className={`${openSans.variable} bg-surface font-body-md text-body-md text-on-surface antialiased`}>
-        <ThemeProvider nonce={nonce}>{children}</ThemeProvider>
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

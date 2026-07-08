@@ -1,9 +1,13 @@
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from rest_framework import serializers
 from rest_framework.test import APIClient
 
+from apps.common.image_validation import validate_uploaded_image_file
 from apps.rooms.tests.factories import create_admin, create_room, create_user
 from apps.locations.models import AreaRange
+from apps.rooms.serializers import validate_room_image_url
 
 User = get_user_model()
 
@@ -24,6 +28,7 @@ class TestRoomAPI:
         assert "commission_percent" not in data
         assert "commission_base_amount" not in data
         assert "estimated_commission_amount" not in data
+        assert data["deposit_type_name"] == "Cọc 1 tháng"
         assert data["deposit_amount"] == "5000000.00"
         assert data["electricity_price_per_kwh"] == "4000.00"
         assert data["water_price_per_person"] == "100000.00"
@@ -66,6 +71,7 @@ class TestRoomAPI:
             "/api/admin/rooms/",
             "/api/admin/blogs/",
             "/api/admin/cities/",
+            "/api/admin/deposit-types/",
             "/api/admin/commissions/summary/",
             "/api/admin/dashboard/summary/",
         ]
@@ -92,3 +98,13 @@ class TestRoomAPI:
         assert response.status_code == 400
         assert "actual_area" in response.data["errors"]
         assert "commission_percent" in response.data["errors"]
+
+    def test_room_image_validation_rejects_svg_upload(self):
+        image = SimpleUploadedFile("bad.svg", b"<svg></svg>", content_type="image/svg+xml")
+
+        with pytest.raises(serializers.ValidationError):
+            validate_uploaded_image_file(image, "uploaded_images")
+
+    def test_room_image_url_rejects_unapproved_host(self):
+        with pytest.raises(serializers.ValidationError):
+            validate_room_image_url("https://untrusted.example/photo.jpg")

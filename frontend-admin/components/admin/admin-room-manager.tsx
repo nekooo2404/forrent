@@ -14,6 +14,7 @@ import {
   type AdminAmenity,
   type AdminAreaRange,
   type AdminCity,
+  type AdminDepositType,
   type AdminRoom,
   type AdminWard,
 } from "./admin-api";
@@ -42,6 +43,7 @@ type RoomFormState = {
   commission_base_amount: string;
   commission_percent: string;
   deposit_amount: string;
+  deposit_type: string;
   description: string;
   electricity_price_per_kwh: string;
   image_urls: string;
@@ -63,6 +65,7 @@ type RoomLookups = {
   amenities: AdminAmenity[];
   areaRanges: AdminAreaRange[];
   cities: AdminCity[];
+  depositTypes: AdminDepositType[];
   wards: AdminWard[];
 };
 
@@ -75,6 +78,7 @@ const emptyForm: RoomFormState = {
   commission_base_amount: "",
   commission_percent: "0",
   deposit_amount: "",
+  deposit_type: "",
   description: "",
   electricity_price_per_kwh: "",
   image_urls: "",
@@ -111,7 +115,7 @@ export function AdminRoomManager() {
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
-  const [lookups, setLookups] = useState<RoomLookups>({ amenities: [], areaRanges: [], cities: [], wards: [] });
+  const [lookups, setLookups] = useState<RoomLookups>({ amenities: [], areaRanges: [], cities: [], depositTypes: [], wards: [] });
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -125,11 +129,12 @@ export function AdminRoomManager() {
 
   const cityById = useMemo(() => new Map(lookups.cities.map((city) => [city.id, city])), [lookups.cities]);
   const wardById = useMemo(() => new Map(lookups.wards.map((ward) => [ward.id, ward])), [lookups.wards]);
+  const depositLabel = (room: AdminRoom) => room.deposit_type_name || "Cọc";
   async function loadRooms(nextSearch = search, nextStatus = statusFilter, nextPage = page) {
     setIsLoading(true);
     setError("");
     try {
-      const [roomResponse, cities, wards, amenities, areaRanges] = await Promise.all([
+      const [roomResponse, cities, wards, amenities, areaRanges, depositTypes] = await Promise.all([
         adminList<AdminRoom>("rooms", token, {
           ordering: "-created_at",
           page: nextPage,
@@ -141,6 +146,7 @@ export function AdminRoomManager() {
         adminList<AdminWard>("wards", token, { page_size: 100, ordering: "name" }),
         adminList<AdminAmenity>("amenities", token, { page_size: 100, ordering: "name" }),
         adminList<AdminAreaRange>("area-ranges", token, { page_size: 100, ordering: "min_area" }),
+        adminList<AdminDepositType>("deposit-types", token, { page_size: 100, ordering: "name" }),
       ]);
 
       setRooms(roomResponse.results);
@@ -150,6 +156,7 @@ export function AdminRoomManager() {
         amenities: amenities.results,
         areaRanges: areaRanges.results,
         cities: cities.results,
+        depositTypes: depositTypes.results,
         wards: wards.results,
       });
     } catch (loadError) {
@@ -170,6 +177,7 @@ export function AdminRoomManager() {
       ...emptyForm,
       area_range: lookups.areaRanges[0]?.id ? String(lookups.areaRanges[0].id) : "",
       city: lookups.cities[0]?.id ? String(lookups.cities[0].id) : "",
+      deposit_type: lookups.depositTypes[0]?.id ? String(lookups.depositTypes[0].id) : "",
       ward: lookups.wards[0]?.id ? String(lookups.wards[0].id) : "",
     });
     setIsModalOpen(true);
@@ -188,6 +196,7 @@ export function AdminRoomManager() {
       commission_base_amount: room.commission_base_amount,
       commission_percent: room.commission_percent,
       deposit_amount: room.deposit_amount,
+      deposit_type: room.deposit_type ? String(room.deposit_type) : "",
       description: room.description,
       electricity_price_per_kwh: room.electricity_price_per_kwh,
       image_urls: "",
@@ -237,6 +246,7 @@ export function AdminRoomManager() {
       water_price_per_person: form.water_price_per_person || "0",
       ward: form.ward,
     }).forEach(([key, value]) => payload.append(key, value));
+    if (form.deposit_type) payload.append("deposit_type", form.deposit_type);
     form.amenities.forEach((amenity) => payload.append("amenities", String(amenity)));
     form.image_urls
       .split(/\r?\n/)
@@ -382,7 +392,7 @@ export function AdminRoomManager() {
                       </td>
                       <td className="py-4 pr-5">
                         <p className="tabular-nums text-primary">{formatAdminVnd(room.price)}</p>
-                        <p className="mt-1 text-xs text-secondary">Cọc {formatAdminVnd(room.deposit_amount)}</p>
+                        <p className="mt-1 text-xs text-secondary">{depositLabel(room)} {formatAdminVnd(room.deposit_amount)}</p>
                       </td>
                       <td className="py-4 pr-5">
                         <p className="tabular-nums text-primary">{formatAdminVnd(room.estimated_commission_amount)}</p>
@@ -444,7 +454,7 @@ export function AdminRoomManager() {
                     <div>
                       <span className="text-xs text-secondary">Giá thuê</span>
                       <p className="font-semibold tabular-nums text-primary">{formatAdminVnd(room.price)}</p>
-                      <p className="text-xs text-secondary">Cọc {formatAdminVnd(room.deposit_amount)}</p>
+                      <p className="text-xs text-secondary">{depositLabel(room)} {formatAdminVnd(room.deposit_amount)}</p>
                     </div>
                     <div>
                       <span className="text-xs text-secondary">Hoa hồng</span>
@@ -662,6 +672,14 @@ function RoomFormModal({
             <div className="grid gap-4 md:grid-cols-3">
               <Field label="Giá thuê">
                 <input className={adminInputClass} min="0" onChange={(event) => update("price", event.target.value)} required type="number" value={form.price} />
+              </Field>
+              <Field label="Loại cọc">
+                <select className={adminSelectClass} onChange={(event) => update("deposit_type", event.target.value)} value={form.deposit_type}>
+                  <option value="">Chọn loại cọc</option>
+                  {lookups.depositTypes.map((depositType) => (
+                    <option key={depositType.id} value={depositType.id}>{depositType.name}</option>
+                  ))}
+                </select>
               </Field>
               <Field label="Cọc dự kiến">
                 <input className={adminInputClass} min="0" onChange={(event) => update("deposit_amount", event.target.value)} type="number" value={form.deposit_amount} />

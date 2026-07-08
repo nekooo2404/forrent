@@ -15,6 +15,7 @@ import {
   type AdminAmenity,
   type AdminAreaRange,
   type AdminCity,
+  type AdminDepositType,
   type AdminWard,
 } from "./admin-api";
 import { useAdminAuth } from "./admin-shell";
@@ -30,12 +31,13 @@ import {
   adminSelectClass,
 } from "./admin-ui";
 
-type TabKey = "cities" | "wards" | "amenities" | "areas" | "account";
+type TabKey = "cities" | "wards" | "amenities" | "areas" | "depositTypes" | "account";
 
 type SettingsState = {
   amenities: AdminAmenity[];
   areas: AdminAreaRange[];
   cities: AdminCity[];
+  depositTypes: AdminDepositType[];
   wards: AdminWard[];
 };
 
@@ -43,13 +45,16 @@ type CityForm = { id?: number; is_active: boolean; name: string; slug: string };
 type WardForm = { city: string; id?: number; is_active: boolean; name: string; slug: string };
 type AmenityForm = { icon: string; id?: number; is_active: boolean; name: string };
 type AreaForm = { id?: number; is_active: boolean; max_area: string; min_area: string; name: string };
+type DepositTypeForm = { id?: number; is_active: boolean; name: string };
 
 const emptyCity: CityForm = { is_active: true, name: "", slug: "" };
 const emptyWard: WardForm = { city: "", is_active: true, name: "", slug: "" };
 const emptyAmenity: AmenityForm = { icon: "", is_active: true, name: "" };
 const emptyArea: AreaForm = { is_active: true, max_area: "", min_area: "", name: "" };
+const emptyDepositType: DepositTypeForm = { is_active: true, name: "" };
 
 const tabs: Array<{ key: TabKey; label: string }> = [
+  { key: "depositTypes", label: "Loại cọc" },
   { key: "cities", label: "Thành phố" },
   { key: "wards", label: "Phường" },
   { key: "amenities", label: "Tiện ích" },
@@ -60,11 +65,12 @@ const tabs: Array<{ key: TabKey; label: string }> = [
 export function AdminSettings() {
   const { refreshUser, token, user } = useAdminAuth();
   const [activeTab, setActiveTab] = useState<TabKey>("cities");
-  const [state, setState] = useState<SettingsState>({ amenities: [], areas: [], cities: [], wards: [] });
+  const [state, setState] = useState<SettingsState>({ amenities: [], areas: [], cities: [], depositTypes: [], wards: [] });
   const [cityForm, setCityForm] = useState<CityForm>(emptyCity);
   const [wardForm, setWardForm] = useState<WardForm>(emptyWard);
   const [amenityForm, setAmenityForm] = useState<AmenityForm>(emptyAmenity);
   const [areaForm, setAreaForm] = useState<AreaForm>(emptyArea);
+  const [depositTypeForm, setDepositTypeForm] = useState<DepositTypeForm>(emptyDepositType);
   const [pendingDelete, setPendingDelete] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -75,16 +81,18 @@ export function AdminSettings() {
     setIsLoading(true);
     setError("");
     try {
-      const [cities, wards, amenities, areas] = await Promise.all([
+      const [cities, wards, amenities, areas, depositTypes] = await Promise.all([
         adminList<AdminCity>("cities", token, { page_size: 100, ordering: "name" }),
         adminList<AdminWard>("wards", token, { page_size: 100, ordering: "name" }),
         adminList<AdminAmenity>("amenities", token, { page_size: 100, ordering: "name" }),
         adminList<AdminAreaRange>("area-ranges", token, { page_size: 100, ordering: "min_area" }),
+        adminList<AdminDepositType>("deposit-types", token, { page_size: 100, ordering: "name" }),
       ]);
       setState({
         amenities: amenities.results,
         areas: areas.results,
         cities: cities.results,
+        depositTypes: depositTypes.results,
         wards: wards.results,
       });
     } catch (loadError) {
@@ -275,6 +283,28 @@ export function AdminSettings() {
                 if (saved) setAreaForm(emptyArea);
               }}
               onToggleActive={(area) => toggleActive("area-ranges", area.id, area.is_active)}
+              pendingDelete={pendingDelete}
+            />
+          ) : null}
+
+          {activeTab === "depositTypes" ? (
+            <DepositTypePanel
+              form={depositTypeForm}
+              isSaving={isSaving}
+              items={state.depositTypes}
+              onDelete={(id) => deleteResource("deposit-types", id)}
+              onEdit={(depositType) => setDepositTypeForm({ id: depositType.id, is_active: depositType.is_active, name: depositType.name })}
+              onFormChange={setDepositTypeForm}
+              onReset={() => setDepositTypeForm(emptyDepositType)}
+              onSubmit={async (event) => {
+                event.preventDefault();
+                const saved = await saveResource("deposit-types", depositTypeForm.id, {
+                  is_active: depositTypeForm.is_active,
+                  name: depositTypeForm.name.trim(),
+                });
+                if (saved) setDepositTypeForm(emptyDepositType);
+              }}
+              onToggleActive={(depositType) => toggleActive("deposit-types", depositType.id, depositType.is_active)}
               pendingDelete={pendingDelete}
             />
           ) : null}
@@ -486,6 +516,52 @@ function AreaPanel(props: Readonly<{
         )
       }
       title="Khoảng diện tích"
+    />
+  );
+}
+
+function DepositTypePanel(props: Readonly<{
+  form: DepositTypeForm;
+  isSaving: boolean;
+  items: AdminDepositType[];
+  onDelete: (id: number) => void;
+  onEdit: (item: AdminDepositType) => void;
+  onFormChange: (value: DepositTypeForm) => void;
+  onReset: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onToggleActive: (item: AdminDepositType) => void;
+  pendingDelete: string;
+}>) {
+  return (
+    <ResourceLayout
+      form={
+        <form className="space-y-4" onSubmit={props.onSubmit}>
+          <FormTitle editing={Boolean(props.form.id)} title="Loại cọc" />
+          <TextField label="Tên loại cọc" onChange={(name) => props.onFormChange({ ...props.form, name })} required value={props.form.name} />
+          <ActiveCheckbox checked={props.form.is_active} onChange={(is_active) => props.onFormChange({ ...props.form, is_active })} />
+          <FormActions editing={Boolean(props.form.id)} isSaving={props.isSaving} onReset={props.onReset} />
+        </form>
+      }
+      list={
+        props.items.length ? (
+          <ResourceTable
+            columns={["Tên", "Trạng thái"]}
+            rows={props.items.map((item) => ({
+              cells: [item.name, <ActivePill active={item.is_active} key="active" />],
+              id: item.id,
+              item,
+            }))}
+            onDelete={(item) => props.onDelete(item.id)}
+            onEdit={props.onEdit}
+            onToggleActive={props.onToggleActive}
+            pendingDelete={props.pendingDelete}
+            path="deposit-types"
+          />
+        ) : (
+          <AdminEmptyState description="Thêm các cách tính cọc để chọn khi tạo phòng." title="Chưa có loại cọc" />
+        )
+      }
+      title="Loại cọc"
     />
   );
 }

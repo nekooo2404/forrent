@@ -18,9 +18,9 @@ test('mobile menu visual regression', async ({ page, browserName }) => {
   await page.setViewportSize({ width: 375, height: 667 });
   await page.addInitScript(() => localStorage.setItem('theme', 'dark'));
   await page.goto('/homepage');
-  await page.locator('.genz-menu-button').click();
-  await expect(page.locator('.genz-mobile-menu')).toBeVisible();
-  await expect(page.locator('.genz-mobile-menu')).toHaveScreenshot('mobile-menu-dark.png', {
+  await page.locator('.site-menu-button').click();
+  await expect(page.locator('.site-mobile-menu')).toBeVisible();
+  await expect(page.locator('.site-mobile-menu')).toHaveScreenshot('mobile-menu-dark.png', {
     maxDiffPixelRatio: 0.03,
     threshold: 0.2,
   });

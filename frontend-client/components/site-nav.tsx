@@ -65,18 +65,18 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
   return (
     <nav data-ready={mounted ? "true" : "false"} data-testid="site-nav" className={`fixed top-0 z-50 w-full transition-all duration-500 ${
       scrolled
-        ? "genz-navbar-scrolled"
-        : "genz-navbar"
+        ? "site-navbar-scrolled"
+        : "site-navbar"
     }`}>
-      <div className="genz-navbar-gradient" />
+      <div className="site-navbar-gradient" />
 
       <div className="relative mx-auto flex h-20 max-w-container-max items-center justify-between px-margin-mobile md:h-24 md:px-margin-desktop">
         <Link
           aria-label="ForRent - Trang chủ"
-          className="genz-logo-container group relative z-10"
+          className="site-logo-container group relative z-10"
           href="/homepage"
         >
-          <div className="genz-logo-glow" />
+          <div className="site-logo-glow" />
           <div className="relative">
             <Image
               alt="ForRent"
@@ -94,43 +94,43 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
           {navItems.map((item) => (
             <Link
               aria-current={item.key === active ? "page" : undefined}
-              className={`genz-nav-pill ${
-                item.key === active ? "genz-nav-pill-active" : ""
+              className={`site-nav-pill ${
+                item.key === active ? "site-nav-pill-active" : ""
               }`}
               href={item.href}
               key={item.key}
             >
-              <span className="genz-nav-pill-bg" />
+              <span className="site-nav-pill-bg" />
               <span className="relative z-10 font-body-md text-sm font-semibold tracking-wide">
                 {item.label}
               </span>
               {item.key === active && (
-                <span className="genz-nav-pill-indicator" />
+                <span className="site-nav-pill-indicator" />
               )}
             </Link>
           ))}
         </div>
 
         <div className="flex items-center gap-3 md:gap-4">
-          <div className="genz-button-3d hidden sm:block">
+          <div className="site-button-shell hidden sm:block">
             <ThemeToggle />
           </div>
-          <div className="genz-button-3d sm:hidden">
+          <div className="site-button-shell sm:hidden">
             <ThemeToggle compact />
           </div>
 
           <button
             aria-expanded={isMobileMenuOpen}
             aria-label="Menu"
-            className="genz-menu-button md:hidden"
+            className="site-menu-button md:hidden"
             onClick={() => setIsMobileMenuOpen(true)}
             type="button"
           >
-            <span className="genz-button-glow" />
+            <span className="site-button-glow" />
             <Menu size={24} strokeWidth={2} />
           </button>
 
-          <div className="genz-button-3d">
+          <div className="site-button-shell">
             <ProfileMenu />
           </div>
         </div>
@@ -140,12 +140,12 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
         {isMobileMenuOpen && (
           <motion.div
             animate={{ opacity: 1 }}
-            className="genz-mobile-menu"
+            className="site-mobile-menu"
             exit={{ opacity: 0 }}
             initial={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="genz-mobile-gradient" />
+            <div className="site-mobile-gradient" />
 
             <div className="relative z-10 flex h-20 items-center justify-between border-b border-outline-variant/20 px-margin-mobile backdrop-blur-xl">
               <Link
@@ -166,11 +166,11 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
               </Link>
               <button
                 aria-label="Đóng menu"
-                className="genz-close-button"
+                className="site-close-button"
                 onClick={() => setIsMobileMenuOpen(false)}
                 type="button"
               >
-                <span className="genz-button-glow" />
+                <span className="site-button-glow" />
                 <X size={24} strokeWidth={2} />
               </button>
             </div>
@@ -190,13 +190,13 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
                 >
                   <Link
                     aria-current={item.key === active ? "page" : undefined}
-                    className={`genz-mobile-link ${
-                      item.key === active ? "genz-mobile-link-active" : ""
+                    className={`site-mobile-link ${
+                      item.key === active ? "site-mobile-link-active" : ""
                     }`}
                     href={item.href}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <span className="genz-mobile-link-bg" />
+                    <span className="site-mobile-link-bg" />
                     <span className="relative z-10 font-body-md text-lg font-semibold">
                       {item.label}
                     </span>
@@ -208,12 +208,12 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
 
             <motion.div
               animate={{ opacity: 1 }}
-              className="genz-mobile-profile"
+              className="site-mobile-profile"
               initial={{ opacity: 0 }}
               transition={{ delay: 0.3, duration: 0.3 }}
             >
               <ThemeToggle />
-              <div className="genz-profile-card">
+              <div className="site-profile-card">
                 <ProfileMenu />
               </div>
             </motion.div>

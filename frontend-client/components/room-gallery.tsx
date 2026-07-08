@@ -63,10 +63,10 @@ export function RoomGallery({ images, title }: RoomGalleryProps) {
       </section>
 
       {activeImage ? (
-        <div aria-modal="true" className="fixed inset-0 z-[100] bg-black/90 p-4 text-white" ref={modalRef} role="dialog">
+        <div aria-modal="true" className="fixed inset-0 z-[100] bg-surface-dim/95 p-4 text-on-surface" ref={modalRef} role="dialog">
           <button
             aria-label="Đóng xem ảnh"
-            className="absolute right-4 top-4 z-10 min-h-[44px] min-w-[44px] rounded-full bg-white/10 p-3 transition hover:bg-white/20"
+            className="absolute right-4 top-4 z-10 min-h-[44px] min-w-[44px] rounded-full border border-outline-variant/30 bg-surface-container-high/80 p-3 transition hover:bg-surface-container-highest"
             onClick={() => setActiveIndex(null)}
             type="button"
           >
@@ -75,7 +75,7 @@ export function RoomGallery({ images, title }: RoomGalleryProps) {
 
           <button
             aria-label="Ảnh trước"
-            className="absolute left-4 top-1/2 z-10 min-h-[44px] min-w-[44px] -translate-y-1/2 rounded-full bg-white/10 p-3 transition hover:bg-white/20"
+            className="absolute left-4 top-1/2 z-10 min-h-[44px] min-w-[44px] -translate-y-1/2 rounded-full border border-outline-variant/30 bg-surface-container-high/80 p-3 transition hover:bg-surface-container-highest"
             onClick={() => setActiveIndex((current) => previousIndex(current, images.length))}
             type="button"
           >
@@ -98,14 +98,14 @@ export function RoomGallery({ images, title }: RoomGalleryProps) {
 
           <button
             aria-label="Ảnh tiếp theo"
-            className="absolute right-4 top-1/2 z-10 min-h-[44px] min-w-[44px] -translate-y-1/2 rounded-full bg-white/10 p-3 transition hover:bg-white/20"
+            className="absolute right-4 top-1/2 z-10 min-h-[44px] min-w-[44px] -translate-y-1/2 rounded-full border border-outline-variant/30 bg-surface-container-high/80 p-3 transition hover:bg-surface-container-highest"
             onClick={() => setActiveIndex((current) => nextIndex(current, images.length))}
             type="button"
           >
             <ChevronRight size={26} strokeWidth={1.8} />
           </button>
 
-          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-4 py-2 text-sm font-semibold">
+          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-outline-variant/30 bg-surface-container-high/80 px-4 py-2 text-sm font-semibold">
             {(activeIndex ?? 0) + 1} / {images.length}
           </p>
         </div>
@@ -152,7 +152,7 @@ function GalleryTile({
             {...fastImageProps()}
           />
           {badge ? (
-            <span className="absolute bottom-3 right-3 rounded-md bg-black/70 px-3 py-1 text-sm font-semibold text-white">
+            <span className="absolute bottom-3 right-3 rounded-md border border-outline-variant/30 bg-surface-container-high/90 px-3 py-1 text-sm font-semibold text-on-surface shadow-soft">
               {badge}
             </span>
           ) : null}

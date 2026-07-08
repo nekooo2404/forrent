@@ -37,6 +37,7 @@ media/
 *.pid
 *.tmp
 .npm-cache/
+.npm-cache-*/
 
 # Package-manager logs
 npm-debug.log*

@@ -13,6 +13,13 @@ on:
 jobs:
   zap-baseline:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - https://forrent.io.vn
+          - https://admin.forrent.io.vn/log-in
+          - https://api.forrent.io.vn/api/
     permissions:
       contents: read
       issues: write
@@ -21,6 +28,6 @@ jobs:
       - name: OWASP ZAP baseline scan
         uses: zaproxy/action-baseline@v0.14.0
         with:
-          target: ${{ github.event.inputs.target || 'https://forrent.io.vn' }}
+          target: ${{ github.event.inputs.target || matrix.target }}
           fail_action: true
           cmd_options: "-a"

@@ -49,6 +49,7 @@ type RoomCardView = {
   price: string;
   period: string;
   deposit: string;
+  depositLabel: string;
   electricity: string;
   water: string;
   serviceFee: string;
@@ -75,6 +76,7 @@ const fallbackFilters: RoomFilters = {
   wards: [],
   amenities: [],
   area_ranges: [],
+  deposit_types: [],
   room_types: [
     { value: "CCMN", label: "Chung cư mini" },
     { value: "CCDV", label: "Căn hộ dịch vụ" },
@@ -96,6 +98,7 @@ function mapRoom(room: ApiRoom): RoomCardView {
     price: formatVnd(room.price),
     period: "/ tháng",
     deposit: formatOptionalVnd(room.deposit_amount),
+    depositLabel: room.deposit_type_name || "Cọc",
     electricity: formatOptionalVnd(room.electricity_price_per_kwh),
     water: formatOptionalVnd(room.water_price_per_person),
     serviceFee: formatOptionalVnd(room.service_fee),
@@ -553,7 +556,7 @@ function FilterSection({
 }
 
 function RoomCard({ priority = false, room }: Readonly<{ priority?: boolean; room: RoomCardView }>) {
-  const detailHref = room.slug ? `/room-details?slug=${encodeURIComponent(room.slug)}` : "/room-details";
+  const detailHref = room.slug ? `/rooms/${encodeURIComponent(room.slug)}` : "/rooms";
 
   return (
     <article
@@ -580,7 +583,7 @@ function RoomCard({ priority = false, room }: Readonly<{ priority?: boolean; roo
             <ImagePlaceholder />
           )}
         </Link>
-        <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#061526]/70 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-inverse-surface/70 to-transparent" />
         <div className="absolute left-4 top-4">
           <span
             className={`rounded-full px-3 py-1.5 font-label-caps text-label-caps uppercase tracking-wider shadow-sm backdrop-blur ${
@@ -616,7 +619,7 @@ function RoomCard({ priority = false, room }: Readonly<{ priority?: boolean; roo
           </div>
         </div>
         <div className="mb-5 grid grid-cols-2 gap-3 text-sm text-on-surface-variant">
-          <CostPill icon={<ShieldCheck size={17} strokeWidth={1.8} />} label="Cọc" value={room.deposit} />
+          <CostPill icon={<ShieldCheck size={17} strokeWidth={1.8} />} label={room.depositLabel} value={room.deposit} />
           <CostPill icon={<ReceiptText size={17} strokeWidth={1.8} />} label="Phí DV" value={room.serviceFee} />
           <CostPill icon={<Zap size={17} strokeWidth={1.8} />} label="Điện" value={room.electricity} />
           <CostPill icon={<Droplets size={17} strokeWidth={1.8} />} label="Nước" value={room.water} />

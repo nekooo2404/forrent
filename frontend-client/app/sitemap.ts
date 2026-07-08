@@ -21,7 +21,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const roomRoutes: MetadataRoute.Sitemap =
     rooms?.results.map((room) => ({
-      url: absoluteUrl(`/room-details?slug=${encodeURIComponent(room.slug)}`),
+      url: absoluteUrl(`/rooms/${encodeURIComponent(room.slug)}`),
       lastModified: new Date(room.updated_at),
       changeFrequency: "daily",
       priority: 0.8,

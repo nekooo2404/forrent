@@ -417,7 +417,7 @@ function ViewingRequestsSummary({
           {recentRequests.map((request) => (
             <Link
               className="group block rounded-md border border-outline-variant/20 bg-surface-container-low/70 p-4 transition hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-soft"
-              href={`/room-details?slug=${encodeURIComponent(request.room.slug)}`}
+              href={`/rooms/${encodeURIComponent(request.room.slug)}`}
               key={request.id}
             >
               <div className="mb-3 flex items-start justify-between gap-3">

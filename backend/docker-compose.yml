@@ -31,12 +31,18 @@ services:
       args:
         NEXT_PUBLIC_API_BASE_URL: https://api.forrent.io.vn
         NEXT_PUBLIC_SITE_URL: https://forrent.io.vn
+        NEXT_PUBLIC_SENTRY_DSN: ${FRONTEND_SENTRY_DSN:-}
+        NEXT_PUBLIC_SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+        NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: ${FRONTEND_SENTRY_TRACES_SAMPLE_RATE:-0.0}
     restart: unless-stopped
     environment:
       NODE_ENV: production
       API_BASE_URL: http://backend:8000
       NEXT_PUBLIC_API_BASE_URL: https://api.forrent.io.vn
       NEXT_PUBLIC_SITE_URL: https://forrent.io.vn
+      NEXT_PUBLIC_SENTRY_DSN: ${FRONTEND_SENTRY_DSN:-}
+      NEXT_PUBLIC_SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+      NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: ${FRONTEND_SENTRY_TRACES_SAMPLE_RATE:-0.0}
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
@@ -50,12 +56,18 @@ services:
       args:
         NEXT_PUBLIC_API_BASE_URL: https://api.forrent.io.vn
         NEXT_PUBLIC_CLIENT_URL: https://forrent.io.vn
+        NEXT_PUBLIC_SENTRY_DSN: ${ADMIN_SENTRY_DSN:-}
+        NEXT_PUBLIC_SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+        NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: ${FRONTEND_SENTRY_TRACES_SAMPLE_RATE:-0.0}
     restart: unless-stopped
     environment:
       NODE_ENV: production
       API_BASE_URL: http://backend:8000
       NEXT_PUBLIC_API_BASE_URL: https://api.forrent.io.vn
       NEXT_PUBLIC_CLIENT_URL: https://forrent.io.vn
+      NEXT_PUBLIC_SENTRY_DSN: ${ADMIN_SENTRY_DSN:-}
+      NEXT_PUBLIC_SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+      NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: ${FRONTEND_SENTRY_TRACES_SAMPLE_RATE:-0.0}
     ports:
       - "127.0.0.1:3001:3001"
     depends_on:
@@ -98,9 +110,9 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-rental_db}
-      POSTGRES_USER: ${POSTGRES_USER:-rental_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rental_password}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

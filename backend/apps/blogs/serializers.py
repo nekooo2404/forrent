@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.blogs.models import Blog
+from apps.common.image_validation import validate_uploaded_image_file
 
 
 class PublicBlogSerializer(serializers.ModelSerializer):
@@ -72,6 +73,9 @@ class AdminBlogSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "author", "author_name", "created_at", "updated_at")
 
     def validate_thumbnail(self, value):
-        if value and value.size > 5 * 1024 * 1024:
-            raise serializers.ValidationError("Thumbnail must be 5MB or smaller.")
+        if value:
+            try:
+                validate_uploaded_image_file(value, "thumbnail")
+            except serializers.ValidationError as exc:
+                raise serializers.ValidationError(exc.detail["thumbnail"]) from exc
         return value

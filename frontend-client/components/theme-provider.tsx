@@ -12,27 +12,7 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-// Script to prevent flash of unstyled content (FOUC)
-const themeScript = `
-(function() {
-  try {
-    const theme = localStorage.getItem('theme') || 'system';
-    let resolved = 'light';
-
-    if (theme === 'dark') {
-      resolved = 'dark';
-    } else if (theme === 'system') {
-      resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-
-    document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(resolved);
-    document.documentElement.style.colorScheme = resolved;
-  } catch (e) {}
-})();
-`;
-
-export function ThemeProvider({ children, nonce }: Readonly<{ children: ReactNode; nonce?: string }>) {
+export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [theme, setThemeState] = useState<Theme>("system");
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
   const [mounted, setMounted] = useState(false);
@@ -64,10 +44,7 @@ export function ThemeProvider({ children, nonce }: Readonly<{ children: ReactNod
       resolved = theme;
     }
 
-    // Apply theme with transition
-    root.style.transition = "background-color 0.25s ease, color 0.25s ease";
     root.classList.add(resolved);
-    root.style.colorScheme = resolved;
     setResolvedTheme(resolved);
 
     // Save to localStorage
@@ -78,12 +55,7 @@ export function ThemeProvider({ children, nonce }: Readonly<{ children: ReactNod
       console.warn("Failed to save theme preference:", e);
     }
 
-    // Clean up transition after it completes
-    const timer = setTimeout(() => {
-      root.style.transition = "";
-    }, 300);
-
-    return () => clearTimeout(timer);
+    return undefined;
   }, [theme, mounted]);
 
   // Listen for system theme changes
@@ -97,7 +69,6 @@ export function ThemeProvider({ children, nonce }: Readonly<{ children: ReactNod
       root.classList.remove("light", "dark");
       const resolved = e.matches ? "dark" : "light";
       root.classList.add(resolved);
-      root.style.colorScheme = resolved;
       setResolvedTheme(resolved);
     };
 
@@ -122,15 +93,7 @@ export function ThemeProvider({ children, nonce }: Readonly<{ children: ReactNod
     setThemeState(newTheme);
   };
 
-  return (
-    <>
-      {/* Inline script to prevent FOUC */}
-      <script dangerouslySetInnerHTML={{ __html: themeScript }} nonce={nonce} />
-      <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
-        {children}
-      </ThemeContext.Provider>
-    </>
-  );
+  return <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {

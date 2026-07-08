@@ -21,6 +21,12 @@ cp deploy/staging/backend.env.example backend/.env
 ```
 
 Edit `backend/.env` with staging-only secrets. Do not reuse production DB/passwords.
+Because containers run as UID/GID `10001`, prepare writable mounted directories before starting:
+
+```bash
+mkdir -p backend/media backend/staticfiles
+sudo chown -R 10001:10001 backend/media backend/staticfiles
+```
 
 ## Run
 

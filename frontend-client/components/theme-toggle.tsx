@@ -27,10 +27,10 @@ export function ThemeToggle({ compact = false }: Readonly<{ compact?: boolean }>
   }
 
   return (
-    <div className="genz-theme-toggle" data-testid="theme-toggle">
+    <div className="site-theme-toggle" data-testid="theme-toggle">
       <button
         aria-label="Light mode"
-        className={`genz-theme-button ${theme === "light" ? "genz-theme-button-active" : ""}`}
+        className={`site-theme-button ${theme === "light" ? "site-theme-button-active" : ""}`}
         data-testid="theme-light"
         onClick={() => setTheme("light")}
         type="button"
@@ -39,7 +39,7 @@ export function ThemeToggle({ compact = false }: Readonly<{ compact?: boolean }>
       </button>
       <button
         aria-label="Dark mode"
-        className={`genz-theme-button ${theme === "dark" ? "genz-theme-button-active" : ""}`}
+        className={`site-theme-button ${theme === "dark" ? "site-theme-button-active" : ""}`}
         data-testid="theme-dark"
         onClick={() => setTheme("dark")}
         type="button"
@@ -48,7 +48,7 @@ export function ThemeToggle({ compact = false }: Readonly<{ compact?: boolean }>
       </button>
       <button
         aria-label="System theme"
-        className={`genz-theme-button ${theme === "system" ? "genz-theme-button-active" : ""}`}
+        className={`site-theme-button ${theme === "system" ? "site-theme-button-active" : ""}`}
         data-testid="theme-system"
         onClick={() => setTheme("system")}
         type="button"

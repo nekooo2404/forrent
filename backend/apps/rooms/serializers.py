@@ -1,9 +1,40 @@
+from urllib.parse import urlparse
+
+from django.conf import settings
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from apps.common.image_validation import validate_uploaded_image_file
 from apps.locations.serializers import AmenitySerializer, AreaRangeSerializer, CitySerializer, WardSerializer
-from apps.rooms.models import Room, RoomImage
+from apps.rooms.models import DepositType, Room, RoomImage
+
+
+def allowed_room_image_url_hosts():
+    hosts = {"res.cloudinary.com", "api.forrent.io.vn"}
+    supabase_url = getattr(settings, "SUPABASE_URL", "")
+    if supabase_url:
+        parsed = urlparse(supabase_url)
+        if parsed.hostname:
+            hosts.add(parsed.hostname)
+    if settings.DEBUG:
+        hosts.update({"localhost", "127.0.0.1", "backend"})
+    return hosts
+
+
+def validate_room_image_url(image_url):
+    parsed = urlparse(image_url)
+    if parsed.scheme != "https" and not (settings.DEBUG and parsed.scheme == "http"):
+        raise serializers.ValidationError("Image URL must use HTTPS.")
+    if parsed.hostname not in allowed_room_image_url_hosts():
+        raise serializers.ValidationError("Image URL host is not allowed.")
+
+
+class DepositTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DepositType
+        fields = ("id", "name", "is_active", "created_at", "updated_at")
+        read_only_fields = ("id", "created_at", "updated_at")
 
 
 class RoomImageSerializer(serializers.ModelSerializer):
@@ -18,6 +49,7 @@ class PublicRoomListSerializer(serializers.ModelSerializer):
     ward = WardSerializer(read_only=True)
     area_range = AreaRangeSerializer(read_only=True)
     amenities = AmenitySerializer(many=True, read_only=True)
+    deposit_type_name = serializers.SerializerMethodField()
     thumbnail_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -31,6 +63,8 @@ class PublicRoomListSerializer(serializers.ModelSerializer):
             "ward",
             "address",
             "price",
+            "deposit_type",
+            "deposit_type_name",
             "deposit_amount",
             "electricity_price_per_kwh",
             "water_price_per_person",
@@ -54,6 +88,9 @@ class PublicRoomListSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.thumbnail.url)
         return None
 
+    def get_deposit_type_name(self, obj):
+        return obj.deposit_type.name if obj.deposit_type_id else ""
+
 
 class PublicRoomDetailSerializer(PublicRoomListSerializer):
     images = RoomImageSerializer(many=True, read_only=True)
@@ -75,6 +112,7 @@ class AdminRoomImageWriteSerializer(serializers.ModelSerializer):
 
 class AdminRoomSerializer(serializers.ModelSerializer):
     images = RoomImageSerializer(many=True, read_only=True)
+    deposit_type_name = serializers.SerializerMethodField()
     uploaded_images = serializers.ListField(
         child=serializers.ImageField(),
         write_only=True,
@@ -98,6 +136,8 @@ class AdminRoomSerializer(serializers.ModelSerializer):
             "ward",
             "address",
             "price",
+            "deposit_type",
+            "deposit_type_name",
             "deposit_amount",
             "electricity_price_per_kwh",
             "water_price_per_person",
@@ -143,15 +183,29 @@ class AdminRoomSerializer(serializers.ModelSerializer):
         if existing_count + len(uploaded_images) + len(image_urls) > 12:
             errors["uploaded_images"] = "A room can have at most 12 gallery images."
         for image in uploaded_images:
-            if image.size > 5 * 1024 * 1024:
-                errors["uploaded_images"] = "Each room image must be 5MB or smaller."
+            try:
+                validate_uploaded_image_file(image, "uploaded_images")
+            except serializers.ValidationError as exc:
+                errors.update(exc.detail)
+                break
+        for image_url in image_urls:
+            try:
+                validate_room_image_url(image_url)
+            except serializers.ValidationError as exc:
+                errors["image_urls"] = exc.detail
                 break
         thumbnail = attrs.get("thumbnail")
-        if thumbnail and thumbnail.size > 5 * 1024 * 1024:
-            errors["thumbnail"] = "Thumbnail must be 5MB or smaller."
+        if thumbnail:
+            try:
+                validate_uploaded_image_file(thumbnail, "thumbnail")
+            except serializers.ValidationError as exc:
+                errors.update(exc.detail)
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
+
+    def get_deposit_type_name(self, obj):
+        return obj.deposit_type.name if obj.deposit_type_id else ""
 
     def create(self, validated_data):
         uploaded_images = validated_data.pop("uploaded_images", [])
@@ -188,5 +242,6 @@ class RoomFiltersSerializer(serializers.Serializer):
     wards = WardSerializer(many=True)
     amenities = AmenitySerializer(many=True)
     area_ranges = AreaRangeSerializer(many=True)
+    deposit_types = DepositTypeSerializer(many=True)
     room_types = serializers.ListField()
     statuses = serializers.ListField()

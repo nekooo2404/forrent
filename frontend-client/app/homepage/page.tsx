@@ -34,17 +34,13 @@ export const metadata: Metadata = {
   },
 };
 
-const heroImage =
-  "https://lh3.googleusercontent.com/aida-public/AB6AXuAPSq4B_hUK8gIy1VoWxO8icvb7rDIz281RK1JtAGr5UG_p9uUg5C5jUAHiq-j5gMhbAZQrkdG4TAoXvu3BdSNRxO9ZnHH3eOlTZ44a12OOmjgsMxgeXklRCRQWPH2UJC6Z9ykaKGOIvde5JLRbbMMboUij9Gho-kCl0irx9HVjqFT_SuVkEsuj40-k2w4AhsQKnHZkpKP1Hd6gBCYNzGg7Sk2lGNcr6BxNUQx7mYlIqx09zQavwK4n0VCFGaCT4Coe8S94NdPiJP7a";
-
 const collections = [
   {
     kicker: "TRUNG TÂM ĐÔ THỊ",
     title: "Chung cư mini",
     description: "Phòng gọn, giá rõ, phù hợp người đi làm và sinh viên.",
     href: "/rooms?room_type=CCMN",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuD5Am2suMEijOuqvLJiSFkhUUQbRiM_tB-tfX-gVAH-vslNtoSbcmgy-qnc3yQf3IvXEK2-Sl9s2Z5QqpDG3L7rKGeb1W4v6vD2SUnYOxvcWXMvwqzwyaDxttQvfQ2NL4D4HiR4Qiv0mSXrDyfe5D0Rcqf0gMVhTifEf6917d8ctMK1vQzaWezIVuWWY6uX6HxOcIgZgw-Hhhbf-IT_SN2VPH2OpchFIoBAq9hqZu_0-_JpyXM2pLDd6XX9F5PyzKQc5P3ER9lCiIlk",
+    icon: <BedDouble aria-hidden="true" size={34} strokeWidth={1.7} />,
     className: "md:col-span-2 md:row-span-1",
   },
   {
@@ -52,8 +48,7 @@ const collections = [
     title: "Căn hộ dịch vụ",
     description: "Có nội thất, dịch vụ cơ bản và lịch xem linh hoạt.",
     href: "/rooms?room_type=CCDV",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuB5QGbdQRxv0uDrbSMcv6prZn9CZalxROyGzciQxXVlLWI6wsRL_oz_Mpr5u42h4rMbl2jqxM4Qs-2ePz2n692wz6R2XFWupv5BbfAEOClj0al0enBDZTmYIxmMKTVNt8Ce1rOW6NpMNl8djyHKPyWaDbXVoXBdv-GWpz0zTpO4pPsDsNuChKpns8rWGCEiDGmB9EGORoqLyp8PfQM0l1oEKeLWW6DdfU2cqfrd_Et-r1BLsOrrWOiE1uQK-tB4UYboCAhCZWFJpmBA",
+    icon: <ReceiptText aria-hidden="true" size={34} strokeWidth={1.7} />,
     className: "md:col-span-1 md:row-span-2",
   },
   {
@@ -61,11 +56,17 @@ const collections = [
     title: "Nhà nguyên căn",
     description: "Phù hợp gia đình hoặc nhóm thuê dài hạn.",
     href: "/rooms?room_type=HOUSE",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBVE43kBn-xl2vaC5ejX6GvnURv9PDn7iC7RUas9mJjiQz9Qa9-yWnmK8vv5TBN9-qG8-dcBLnxmH2qjj3k5IO3CzPvl4AsCkK0F1BcZhzfFR05xAbowrHgHo0Mr6GIXqDUyyEo3ldEV3kMhI_yWOY2gTCES4OsnqTTS8CGxE29xCcVb9tt2orQI8294K3mA-pTljNmbKyfcm0AhTPxXc0bQ6oNdvsdvYoiMpHVreR_h6EJIOmCQqVn5vhIA2KMZcvfI6iSo4t7uCM6",
+    icon: <ShowerHead aria-hidden="true" size={34} strokeWidth={1.7} />,
     className: "md:col-span-2 md:row-span-1",
   },
-];
+] satisfies Array<{
+  kicker: string;
+  title: string;
+  description: string;
+  href: string;
+  icon: ReactNode;
+  className: string;
+}>;
 
 type PropertyCardView = {
   id: number | string;
@@ -73,6 +74,7 @@ type PropertyCardView = {
   title: string;
   price: string;
   deposit: string;
+  depositLabel: string;
   serviceFee: string;
   location: string;
   descriptor: string;
@@ -98,6 +100,7 @@ function mapProperty(room: ApiRoom, index: number): PropertyCardView {
     title: room.title,
     price: `${formatVnd(room.price)}/tháng`,
     deposit: formatOptionalVnd(room.deposit_amount),
+    depositLabel: room.deposit_type_name || "Cọc",
     serviceFee: formatOptionalVnd(room.service_fee),
     location: [room.ward?.name, room.city?.name].filter(Boolean).join(", ") || room.address,
     descriptor: roomTypeLabel(room.room_type),
@@ -118,6 +121,7 @@ export default async function Homepage() {
     getBlogs({ page_size: 1, ordering: "-published_at" }).catch(() => null),
   ]);
   const properties = roomsResponse?.results.map(mapProperty) ?? [];
+  const heroRoomImage = properties[0]?.image;
   const signals: BackendSignal[] = [
     { label: "Phòng trống", value: String(roomsResponse?.count ?? properties.length), note: "đồng bộ từ backend" },
     { label: "Khu vực", value: String(filtersResponse?.wards.length ?? 0), note: "có thể lọc ngay" },
@@ -153,16 +157,30 @@ export default async function Homepage() {
 
           <MotionSection className="relative">
             <div className="premium-card relative aspect-[4/5] overflow-hidden rounded-[1.25rem] bg-primary shadow-high">
-              <Image
-                alt="Không gian phòng thuê sáng, gọn, có nội thất cơ bản và ánh sáng tự nhiên"
-                className="object-cover"
-                fill
-                priority
-                quality={82}
-                sizes="(min-width: 1024px) 520px, 100vw"
-                src={heroImage}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#061526]/82 via-transparent to-transparent" />
+              {heroRoomImage ? (
+                <Image
+                  alt="Không gian phòng thuê sáng, gọn, có nội thất cơ bản và ánh sáng tự nhiên"
+                  className="object-cover"
+                  fill
+                  priority
+                  quality={82}
+                  sizes="(min-width: 1024px) 520px, 100vw"
+                  src={fastImageUrl(heroRoomImage, 1200, 82)}
+                  {...fastImageProps()}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_28%_20%,rgb(var(--primary)_/_0.28),transparent_22rem),linear-gradient(135deg,rgb(var(--surface-container)),rgb(var(--surface-container-high)))] p-10">
+                  <Image
+                    alt="ForRent"
+                    className="h-auto w-56 dark:drop-shadow-[0_0_18px_rgba(217,119,6,0.28)]"
+                    height={96}
+                    priority
+                    src="/brand/forrent-logo.png"
+                    width={240}
+                  />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-inverse-surface/82 via-transparent to-transparent" />
               <div className="absolute bottom-5 left-5 right-5 rounded-xl border border-outline-variant/30 bg-surface-container-lowest/85 p-4 text-on-surface shadow-soft backdrop-blur">
                 <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-tertiary">
                   <Sparkles size={15} strokeWidth={1.8} />
@@ -259,22 +277,17 @@ export default async function Homepage() {
               <MotionItem className={item.className} key={item.title}>
                 <Link
                   aria-label={`Xem ${item.title}`}
-                  className="group relative block h-64 overflow-hidden rounded-xl bg-primary shadow-soft transition hover:-translate-y-1 md:h-full"
+                  className="group relative block h-64 overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-container-lowest shadow-soft transition hover:-translate-y-1 md:h-full"
                   href={item.href}
                 >
-                  <Image
-                    alt={item.title}
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    fill
-                    quality={78}
-                    sizes="(min-width: 768px) 66vw, 100vw"
-                    src={item.image}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-primary/80 via-primary/20 to-transparent" />
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgb(var(--primary)_/_0.18),transparent_18rem),linear-gradient(135deg,rgb(var(--surface-container-lowest)),rgb(var(--surface-container)))]" />
                   <div className="absolute inset-0 flex flex-col justify-end p-6">
+                    <span className="mb-auto flex size-14 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-on-primary">
+                      {item.icon}
+                    </span>
                     <span className="mb-2 font-label-caps text-label-caps tracking-widest text-gold">{item.kicker}</span>
-                    <h3 className="mb-2 font-headline-sm text-headline-sm text-orange-50">{item.title}</h3>
-                    <p className="translate-y-4 font-body-md text-body-md text-orange-50/80 opacity-0 transition-[transform,opacity] duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                    <h3 className="mb-2 font-headline-sm text-headline-sm text-primary">{item.title}</h3>
+                    <p className="translate-y-4 font-body-md text-body-md text-on-surface-variant opacity-0 transition-[transform,opacity] duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                       {item.description}
                     </p>
                   </div>
@@ -356,7 +369,7 @@ export default async function Homepage() {
 }
 
 function PropertyCard({ property }: Readonly<{ property: PropertyCardView }>) {
-  const detailHref = property.slug ? `/room-details?slug=${encodeURIComponent(property.slug)}` : "/room-details";
+  const detailHref = property.slug ? `/rooms/${encodeURIComponent(property.slug)}` : "/rooms";
 
   return (
     <article className="premium-card urban-card spotlight-card group cursor-pointer overflow-hidden rounded-2xl">
@@ -401,7 +414,7 @@ function PropertyCard({ property }: Readonly<{ property: PropertyCardView }>) {
           <div className="rounded-md bg-surface-container-low p-3">
             <div className="mb-1 flex items-center gap-1 font-semibold uppercase text-secondary">
               <ShieldCheck size={15} strokeWidth={1.8} />
-              Cọc
+              {property.depositLabel}
             </div>
             <p className="line-clamp-1 text-primary">{property.deposit}</p>
           </div>

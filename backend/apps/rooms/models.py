@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from apps.common.models import TimeStampedModel
+from apps.common.models import ActiveQuerySet, TimeStampedModel
 from apps.common.utils import calculate_percent_amount, unique_slugify
 from apps.locations.models import Amenity, AreaRange, City, Ward
 
@@ -15,6 +15,26 @@ class RoomQuerySet(models.QuerySet):
 
     def available(self):
         return self.filter(status=Room.Status.AVAILABLE)
+
+
+class DepositType(TimeStampedModel):
+    name = models.CharField(max_length=255, unique=True)
+    is_active = models.BooleanField(default=True)
+
+    objects = ActiveQuerySet.as_manager()
+
+    class Meta:
+        ordering = ("name",)
+
+    def delete(self, using=None, keep_parents=False):
+        if self.rooms.exists():
+            self.is_active = False
+            self.save(update_fields=["is_active", "updated_at"])
+            return 1, {self._meta.label: 1}
+        return super().delete(using=using, keep_parents=keep_parents)
+
+    def __str__(self):
+        return self.name
 
 
 class Room(TimeStampedModel):
@@ -35,6 +55,7 @@ class Room(TimeStampedModel):
     ward = models.ForeignKey(Ward, on_delete=models.PROTECT, related_name="rooms")
     address = models.CharField(max_length=500)
     price = models.DecimalField(max_digits=14, decimal_places=2, validators=[MinValueValidator(Decimal("0"))])
+    deposit_type = models.ForeignKey(DepositType, on_delete=models.PROTECT, related_name="rooms", null=True, blank=True)
     deposit_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
     electricity_price_per_kwh = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
     water_price_per_person = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])

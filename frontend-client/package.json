@@ -12,6 +12,7 @@
     "test:e2e": "npm --prefix ../e2e test"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.64.0",
     "framer-motion": "^12.42.0",
     "lucide-react": "^0.468.0",
     "next": "^15.0.0",

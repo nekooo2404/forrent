@@ -69,7 +69,7 @@ class AdminUserSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(
             password=password,
             is_staff=role == User.Role.SALER,
-            is_superuser=role == User.Role.SALER,
+            is_superuser=False,
             **validated_data,
         )
         return user
@@ -84,7 +84,7 @@ class AdminUserSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.is_staff = instance.role == User.Role.SALER
-        instance.is_superuser = instance.role == User.Role.SALER
+        instance.is_superuser = False
         instance.admin_updated_by = actor
         if password:
             password_validation.validate_password(password, user=instance)

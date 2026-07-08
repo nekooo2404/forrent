@@ -8,16 +8,43 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: rental_db
+          POSTGRES_USER: rental_user
+          POSTGRES_PASSWORD: rental_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rental_user -d rental_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
     defaults:
       run:
         working-directory: backend
     env:
-      DATABASE_URL: sqlite:///ci.sqlite3
+      DATABASE_URL: postgres://rental_user:rental_password@127.0.0.1:5432/rental_db
+      REDIS_URL: redis://127.0.0.1:6379/0
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
       DJANGO_SECRET_KEY: ci-secret-key-at-least-32-bytes-long
       CORS_ALLOWED_ORIGINS: http://localhost:3000
       CSRF_TRUSTED_ORIGINS: http://localhost:3000
       CELERY_TASK_ALWAYS_EAGER: "True"
+      CLOUDINARY_CLOUD_NAME: ci-cloud
+      CLOUDINARY_API_KEY: ci-key
+      CLOUDINARY_API_SECRET: ci-secret
     steps:
       - uses: actions/checkout@v6
       - run: python scripts/check-mojibake.py
@@ -29,7 +56,8 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: pip install -r requirements.txt pip-audit
       - run: python manage.py check --settings=config.settings.local
-      - run: pytest apps/accounts apps/blogs apps/contacts apps/commissions apps/rooms apps/viewing_requests
+      - run: python manage.py makemigrations --check --dry-run
+      - run: pytest apps/accounts apps/blogs apps/common apps/contacts apps/commissions apps/rooms apps/viewing_requests
       - run: pip-audit -r requirements.txt --strict
 
   frontend:

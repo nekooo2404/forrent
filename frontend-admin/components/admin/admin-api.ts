@@ -51,6 +51,14 @@ export type AdminAreaRange = ApiAreaRange & {
   updated_at?: string;
 };
 
+export type AdminDepositType = {
+  id: number;
+  name: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type AdminRoomImage = {
   id: number;
   image: string | null;
@@ -68,6 +76,8 @@ export type AdminRoom = {
   ward: number;
   address: string;
   price: string;
+  deposit_type: number | null;
+  deposit_type_name: string;
   deposit_amount: string;
   electricity_price_per_kwh: string;
   water_price_per_person: string;

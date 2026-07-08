@@ -14,10 +14,18 @@ from apps.common.responses import success_response
 from apps.common.viewsets import StandardResponseModelViewSetMixin, StandardResponseReadOnlyMixin
 from apps.locations.models import Amenity, AreaRange, City, Ward
 from apps.locations.serializers import AmenitySerializer, AreaRangeSerializer, CitySerializer, WardSerializer
+from apps.locations.services import ActiveFlagDeleteMixin
 from apps.rooms.filters import RoomFilter
-from apps.rooms.models import Room
+from apps.rooms.models import DepositType, Room
 from apps.rooms.selectors import admin_rooms_queryset, public_room_details_queryset, public_rooms_queryset
-from apps.rooms.serializers import AdminRoomSerializer, PublicRoomDetailSerializer, PublicRoomListSerializer, RoomFiltersSerializer, RoomImageSerializer
+from apps.rooms.serializers import (
+    AdminRoomSerializer,
+    DepositTypeSerializer,
+    PublicRoomDetailSerializer,
+    PublicRoomListSerializer,
+    RoomFiltersSerializer,
+    RoomImageSerializer,
+)
 from apps.rooms.services import RoomService
 
 
@@ -56,6 +64,7 @@ class PublicRoomFiltersAPIView(APIView):
                 "wards": WardSerializer(Ward.objects.active().select_related("city"), many=True).data,
                 "amenities": AmenitySerializer(Amenity.objects.active(), many=True).data,
                 "area_ranges": AreaRangeSerializer(AreaRange.objects.active(), many=True).data,
+                "deposit_types": DepositTypeSerializer(DepositType.objects.active(), many=True).data,
                 "room_types": [{"value": value, "label": label} for value, label in Room.RoomType.choices],
                 "statuses": [
                     {"value": Room.Status.AVAILABLE, "label": "Còn trống"},
@@ -97,3 +106,12 @@ class AdminRoomViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
             return success_response(data=RoomImageSerializer(image, context=self.get_serializer_context()).data)
         image.delete()
         return success_response(message="Image deleted successfully.")
+
+
+class AdminDepositTypeViewSet(StandardResponseModelViewSetMixin, ActiveFlagDeleteMixin, ModelViewSet):
+    queryset = DepositType.objects.all()
+    serializer_class = DepositTypeSerializer
+    permission_classes = [IsAdmin]
+    filterset_fields = ("is_active",)
+    search_fields = ("name",)
+    ordering_fields = ("name", "created_at")

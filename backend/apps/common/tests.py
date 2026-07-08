@@ -1,17 +1,23 @@
 from unittest import mock
 
 import cloudinary.exceptions
+import pytest
 from django.core.files.base import ContentFile
 from django.test import SimpleTestCase, override_settings
 
 from apps.common.storage import CloudinaryMediaStorage, SupabaseMediaStorage
 
 
+@pytest.mark.django_db
 def test_health_check(client):
     response = client.get("/api/health/")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["checks"]["database"] is True
+    assert payload["checks"]["cache"] is True
+    assert payload["checks"]["media_storage"] is True
 
 
 @override_settings(

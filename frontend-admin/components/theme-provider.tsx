@@ -14,19 +14,6 @@ interface ThemeContextValue {
 const STORAGE_KEY = "forrent-admin-theme";
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-const themeScript = `
-(function() {
-  try {
-    var stored = localStorage.getItem("${STORAGE_KEY}") || "system";
-    var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    var resolved = stored === "dark" || (stored === "system" && prefersDark) ? "dark" : "light";
-    document.documentElement.classList.remove("light", "dark");
-    document.documentElement.classList.add(resolved);
-    document.documentElement.style.colorScheme = resolved;
-  } catch (error) {}
-})();
-`;
-
 function resolveTheme(theme: Theme): ResolvedTheme {
   if (theme === "system") {
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
@@ -38,7 +25,7 @@ function isTheme(value: string | null): value is Theme {
   return value === "light" || value === "dark" || value === "system";
 }
 
-export function ThemeProvider({ children, nonce }: Readonly<{ children: ReactNode; nonce?: string }>) {
+export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [theme, setTheme] = useState<Theme>("system");
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
   const [mounted, setMounted] = useState(false);
@@ -63,7 +50,6 @@ export function ThemeProvider({ children, nonce }: Readonly<{ children: ReactNod
 
     root.classList.remove("light", "dark");
     root.classList.add(resolved);
-    root.style.colorScheme = resolved;
     setResolvedTheme(resolved);
     try {
       localStorage.setItem(STORAGE_KEY, theme);
@@ -80,7 +66,6 @@ export function ThemeProvider({ children, nonce }: Readonly<{ children: ReactNod
       const resolved = resolveTheme("system");
       document.documentElement.classList.remove("light", "dark");
       document.documentElement.classList.add(resolved);
-      document.documentElement.style.colorScheme = resolved;
       setResolvedTheme(resolved);
     };
 
@@ -95,12 +80,7 @@ export function ThemeProvider({ children, nonce }: Readonly<{ children: ReactNod
 
   const value = useMemo(() => ({ resolvedTheme, setTheme, theme }), [resolvedTheme, theme]);
 
-  return (
-    <>
-      <script dangerouslySetInnerHTML={{ __html: themeScript }} nonce={nonce} />
-      <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
-    </>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {

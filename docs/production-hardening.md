@@ -9,9 +9,12 @@ Backend is wired through `SENTRY_DSN`.
 Set on the production host:
 
 ```bash
-SENTRY_DSN=https://examplePublicKey@o0.ingest.sentry.io/0
+SENTRY_DSN=<backend-sentry-dsn>
 SENTRY_ENVIRONMENT=production
-SENTRY_TRACES_SAMPLE_RATE=0.05
+SENTRY_TRACES_SAMPLE_RATE=0.0
+FRONTEND_SENTRY_DSN=<client-sentry-dsn>
+ADMIN_SENTRY_DSN=<admin-sentry-dsn>
+FRONTEND_SENTRY_TRACES_SAMPLE_RATE=0.0
 ```
 
 Then redeploy:
@@ -22,15 +25,7 @@ docker compose up -d --build
 docker compose exec backend python manage.py check --settings=config.settings.production
 ```
 
-Frontend Sentry needs the real Sentry project DSNs. After creating client/admin projects in Sentry, run the official Next.js wizard in each app and commit the generated config:
-
-```bash
-cd frontend-client
-npx @sentry/wizard@latest -i nextjs
-
-cd ../frontend-admin
-npx @sentry/wizard@latest -i nextjs
-```
+Frontend Sentry is wired through `@sentry/nextjs`; set separate client/admin DSNs in `backend/.env` before rebuilding Docker images.
 
 ## Uptime and Alerting
 

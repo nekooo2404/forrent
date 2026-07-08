@@ -70,6 +70,17 @@ function passwordStrength(password: string) {
   return { width: "100%", label: "Mạnh", className: "bg-primary", textClassName: "text-primary" };
 }
 
+function strengthWidthClass(width: string) {
+  return (
+    {
+      "0%": "w-0",
+      "25%": "w-1/4",
+      "50%": "w-1/2",
+      "100%": "w-full",
+    }[width] ?? "w-0"
+  );
+}
+
 export function SignUpForm() {
   const router = useRouter();
   const [fields, setFields] = useState(initialFields);
@@ -322,7 +333,7 @@ export function SignUpForm() {
           />
           <div className="mt-2 flex items-center gap-2">
             <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-variant">
-              <div className={`h-full transition-all duration-300 ${strength.className}`} style={{ width: strength.width }} />
+              <div className={`h-full transition-all duration-300 ${strength.className} ${strengthWidthClass(strength.width)}`} />
             </div>
             <span className={`min-w-16 text-right text-[10px] uppercase tracking-wider ${strength.textClassName}`}>
               {strength.label}

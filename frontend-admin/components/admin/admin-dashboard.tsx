@@ -205,9 +205,12 @@ export function AdminDashboard() {
                       <span className="font-medium text-primary">{label}</span>
                       <span className="tabular-nums text-secondary">{count}</span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-surface-container">
-                      <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (count / totalLeadStatusCount) * 100)}%` }} />
-                    </div>
+                    <progress
+                      aria-label={`${label}: ${count}`}
+                      className="h-2 w-full overflow-hidden rounded-full accent-primary"
+                      max={totalLeadStatusCount}
+                      value={count}
+                    />
                   </div>
                 );
               })}

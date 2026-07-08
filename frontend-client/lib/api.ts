@@ -70,6 +70,12 @@ export type ApiAreaRange = {
   is_active: boolean;
 };
 
+export type ApiDepositType = {
+  id: number;
+  name: string;
+  is_active: boolean;
+};
+
 export type ApiRoom = {
   id: number;
   title: string;
@@ -79,6 +85,8 @@ export type ApiRoom = {
   ward: ApiWard;
   address: string;
   price: string;
+  deposit_type: number | null;
+  deposit_type_name: string;
   deposit_amount: string;
   electricity_price_per_kwh: string;
   water_price_per_person: string;
@@ -112,6 +120,7 @@ export type RoomFilters = {
   wards: ApiWard[];
   amenities: ApiAmenity[];
   area_ranges: ApiAreaRange[];
+  deposit_types: ApiDepositType[];
   room_types: Array<{ value: string; label: string }>;
   statuses: Array<{ value: string; label: string }>;
 };

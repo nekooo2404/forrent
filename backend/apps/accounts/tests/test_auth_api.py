@@ -43,6 +43,18 @@ class TestAuthAPI:
         assert response.data["success"] is False
         assert "email" in response.data["errors"]
 
+    def test_create_superuser_does_not_assign_saler_role(self):
+        user = User.objects.create_superuser(
+            email="root@example.com",
+            phone="0933333333",
+            password="Password@123",
+            full_name="Root User",
+        )
+
+        assert user.role == User.Role.TENANT
+        assert user.is_staff is True
+        assert user.is_superuser is True
+
     def test_register_rejects_duplicate_email_case_insensitive(self):
         User.objects.create_user(
             email="tenant@example.com",
@@ -395,6 +407,9 @@ class TestAuthAPI:
         assert "current_password" in missing_password.data["errors"]
         assert valid_response.status_code == 201
         assert valid_response.data["data"]["role"] == User.Role.SALER
+        created_saler = User.objects.get(email="new-saler@example.com")
+        assert created_saler.is_staff is True
+        assert created_saler.is_superuser is False
 
     def test_changing_user_role_or_password_requires_current_admin_password(self):
         saler = create_admin()
@@ -417,6 +432,8 @@ class TestAuthAPI:
         assert "current_password" in missing_password.data["errors"]
         assert valid_response.status_code == 200
         assert tenant.role == User.Role.SALER
+        assert tenant.is_staff is True
+        assert tenant.is_superuser is False
         assert tenant.admin_updated_by == saler
         log = AuditLog.objects.get(event="admin.resource_updated", target_id=str(tenant.id))
         assert log.actor == saler
