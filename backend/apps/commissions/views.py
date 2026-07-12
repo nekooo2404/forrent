@@ -1,5 +1,4 @@
 from drf_spectacular.utils import extend_schema
-from django.db import transaction
 from django.utils import timezone
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
@@ -38,20 +37,13 @@ class CommissionPayoutViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
     http_method_names = ["get", "patch", "head", "options"]
 
     def get_queryset(self):
-        queryset = CommissionPayout.objects.select_related(
+        return CommissionPayout.objects.select_related(
             "approved_by",
             "paid_by",
             "cancelled_by",
             "viewing_request",
             "viewing_request__room",
         )
-        if self.action in {"update", "partial_update"}:
-            queryset = queryset.select_for_update()
-        return queryset
-
-    @transaction.atomic
-    def update(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
 
     def perform_update(self, serializer):
         previous_status = serializer.instance.status

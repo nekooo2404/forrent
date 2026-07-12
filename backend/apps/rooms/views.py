@@ -1,7 +1,6 @@
 from urllib.parse import urlparse
 
 from django.core.cache import cache
-from django.db import transaction
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_control
 from drf_spectacular.types import OpenApiTypes
@@ -89,18 +88,7 @@ class AdminRoomViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
     ordering_fields = ("price", "actual_area", "created_at", "estimated_commission_amount")
 
     def get_queryset(self):
-        queryset = admin_rooms_queryset()
-        if self.action in {"update", "partial_update", "destroy"}:
-            queryset = queryset.select_for_update()
-        return queryset
-
-    @transaction.atomic
-    def update(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
-
-    @transaction.atomic
-    def destroy(self, request, *args, **kwargs):
-        return super().destroy(request, *args, **kwargs)
+        return admin_rooms_queryset()
 
     def handle_exception(self, exc):
         if isinstance(exc, ValidationError) and self.action in {"create", "update", "partial_update"}:

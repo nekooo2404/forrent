@@ -1,6 +1,5 @@
 from drf_spectacular.utils import extend_schema
 from django.contrib.auth import get_user_model
-from django.db import transaction
 from rest_framework import status
 from rest_framework.exceptions import APIException
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -202,16 +201,6 @@ class AdminUserViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
     search_fields = ("full_name", "email", "phone")
     ordering_fields = ("created_at", "full_name", "email", "role")
     http_method_names = ["get", "post", "patch", "head", "options"]
-
-    def get_queryset(self):
-        queryset = User.objects.all()
-        if self.action in {"update", "partial_update"}:
-            queryset = queryset.select_for_update()
-        return queryset
-
-    @transaction.atomic
-    def update(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         user = serializer.save()

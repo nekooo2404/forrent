@@ -71,14 +71,7 @@ class AdminViewingRequestViewSet(
     http_method_names = ["get", "patch", "post", "head", "options"]
 
     def get_queryset(self):
-        queryset = admin_viewing_requests_queryset()
-        if self.action in {"update", "partial_update"}:
-            queryset = queryset.select_for_update()
-        return queryset
-
-    @transaction.atomic
-    def update(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
+        return admin_viewing_requests_queryset()
 
     @extend_schema(responses=ConfirmMovedInResponseSerializer)
     @action(detail=True, methods=["post"], url_path="confirm-moved-in")

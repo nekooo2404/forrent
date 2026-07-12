@@ -47,7 +47,8 @@ class AdminContactMessageViewSet(StandardResponseModelViewSetMixin, ModelViewSet
     @action(detail=True, methods=["post"], url_path="convert-to-lead")
     @transaction.atomic
     def convert_to_lead(self, request, pk=None):
-        contact = ContactMessage.objects.select_for_update().select_related("room").get(pk=pk)
+        ContactMessage.objects.select_for_update().only("pk").filter(pk=pk).first()
+        contact = self.get_object()
         if contact.converted_viewing_request_id:
             return success_response(
                 data={

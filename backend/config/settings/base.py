@@ -18,6 +18,8 @@ env = environ.Env(
     EMAIL_USE_TLS=(bool, False),
     EMAIL_USE_SSL=(bool, True),
     EMAIL_TIMEOUT=(int, 15),
+    CELERY_TASK_ALWAYS_EAGER=(bool, False),
+    CELERY_TASK_EAGER_PROPAGATES=(bool, False),
     SENTRY_TRACES_SAMPLE_RATE=(float, 0.0),
     EXPOSE_API_DOCS=(bool, False),
 )
@@ -226,6 +228,11 @@ REDIS_URL = env("REDIS_URL", default="redis://redis:6379/0")
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_ALWAYS_EAGER = env("CELERY_TASK_ALWAYS_EAGER")
+CELERY_TASK_EAGER_PROPAGATES = env(
+    "CELERY_TASK_EAGER_PROPAGATES",
+    default=CELERY_TASK_ALWAYS_EAGER,
+)
 
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:3000")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@forrent.io.vn")

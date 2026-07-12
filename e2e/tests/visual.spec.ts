@@ -78,10 +78,13 @@ test('admin dashboard visual regression', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Screenshot baseline is tracked for the desktop Chromium project only.');
 
   await mockAdminDashboard(page);
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.addInitScript(() => localStorage.setItem('forrent-admin-theme', 'dark'));
   await page.goto(new URL('/admin', adminBaseURL).toString());
   await expect(page.locator('#admin-main')).toContainText('Dashboard');
-  await expect(page.locator('#admin-main')).toHaveScreenshot('admin-dashboard-dark.png', {
+  await expect(page.locator('#admin-main')).toContainText('Lead');
+  await expect(page.locator('#admin-main')).toContainText('Hoa');
+  await expect(page).toHaveScreenshot('admin-dashboard-dark.png', {
     maxDiffPixelRatio: 0.04,
     threshold: 0.2,
   });
