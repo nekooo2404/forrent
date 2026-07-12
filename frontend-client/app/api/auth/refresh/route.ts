@@ -7,14 +7,7 @@ export async function POST(request: Request) {
   const refresh = readRefreshCookie(request);
 
   if (!refresh) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Refresh token không hợp lệ.",
-        errors: { refresh: ["Refresh token không hợp lệ."] },
-      },
-      { status: 400 },
-    );
+    return new NextResponse(null, { status: 204 });
   }
 
   try {

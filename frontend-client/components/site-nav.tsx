@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 
 import { ProfileMenu } from "@/components/profile-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -39,12 +38,12 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
   // Body scroll lock when mobile menu is open
   useEffect(() => {
     if (isMobileMenuOpen) {
-      document.body.style.overflow = "hidden";
+      document.body.classList.add("mobile-menu-open");
     } else {
-      document.body.style.overflow = "";
+      document.body.classList.remove("mobile-menu-open");
     }
     return () => {
-      document.body.style.overflow = "";
+      document.body.classList.remove("mobile-menu-open");
     };
   }, [isMobileMenuOpen]);
 
@@ -63,7 +62,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
   }, [isMobileMenuOpen]);
 
   return (
-    <nav data-ready={mounted ? "true" : "false"} data-testid="site-nav" className={`fixed top-0 z-50 w-full transition-all duration-500 ${
+    <nav aria-label="Điều hướng chính" data-ready={mounted ? "true" : "false"} data-testid="site-nav" className={`fixed top-0 z-50 w-full transition-all duration-500 ${
       scrolled
         ? "site-navbar-scrolled"
         : "site-navbar"
@@ -134,21 +133,14 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
         </div>
       </div>
 
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            animate={{ opacity: 1 }}
-            className="site-mobile-menu"
-            exit={{ opacity: 0 }}
-            initial={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
+      {isMobileMenuOpen ? (
+          <div className="site-mobile-menu scroll-reveal">
             <div className="site-mobile-gradient" />
 
             <div className="relative z-10 flex h-20 items-center justify-between border-b border-outline-variant/20 px-margin-mobile backdrop-blur-xl">
               <Link
                 aria-label="ForRent - Trang chủ"
-                className="inline-flex h-11 w-[142px] shrink-0 items-center"
+                className="site-logo-container inline-flex h-11 w-[142px] shrink-0 items-center"
                 href="/homepage"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
@@ -172,19 +164,12 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
               </button>
             </div>
 
-            <motion.nav
-              animate={{ opacity: 1, y: 0 }}
+            <nav
+              aria-label="Điều hướng trên thiết bị di động"
               className="relative z-10 flex flex-col gap-2 p-6 pb-44"
-              initial={{ opacity: 0, y: 20 }}
-              transition={{ delay: 0.1, duration: 0.3 }}
             >
-              {navItems.map((item, index) => (
-                <motion.div
-                  animate={{ opacity: 1, x: 0 }}
-                  initial={{ opacity: 0, x: -20 }}
-                  key={item.key}
-                  transition={{ delay: 0.15 + index * 0.05, duration: 0.3 }}
-                >
+              {navItems.map((item) => (
+                <div key={item.key}>
                   <Link
                     aria-current={item.key === active ? "page" : undefined}
                     className={`site-mobile-link ${
@@ -199,24 +184,18 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
                     </span>
                     {item.key === active ? <span className="ml-auto size-2 rounded-full bg-primary" /> : null}
                   </Link>
-                </motion.div>
+                </div>
               ))}
-            </motion.nav>
+            </nav>
 
-            <motion.div
-              animate={{ opacity: 1 }}
-              className="site-mobile-profile"
-              initial={{ opacity: 0 }}
-              transition={{ delay: 0.3, duration: 0.3 }}
-            >
+            <div className="site-mobile-profile">
               <ThemeToggle />
               <div className="site-profile-card">
                 <ProfileMenu />
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          </div>
+      ) : null}
     </nav>
   );
 }

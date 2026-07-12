@@ -1,4 +1,4 @@
-import RoomDetailsPage, { generateMetadata as roomDetailsMetadata } from "@/app/room-details/page";
+import { RoomDetailsContent, generateMetadata as roomDetailsMetadata } from "@/app/room-details/page";
 
 type RoomSlugPageProps = {
   params: Promise<{ slug: string }>;
@@ -11,5 +11,5 @@ export async function generateMetadata({ params }: RoomSlugPageProps) {
 
 export default async function RoomSlugPage({ params }: RoomSlugPageProps) {
   const { slug } = await params;
-  return <RoomDetailsPage searchParams={Promise.resolve({ slug })} />;
+  return <RoomDetailsContent searchParams={Promise.resolve({ slug })} />;
 }

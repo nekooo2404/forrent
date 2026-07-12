@@ -140,7 +140,7 @@ export function LoginForm() {
           </label>
           <button
             aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-            className="absolute right-0 top-6 text-on-surface-variant transition-colors hover:text-primary"
+            className="absolute right-0 top-2 flex size-11 items-center justify-center text-on-surface-variant transition-colors hover:text-primary"
             onClick={() => setShowPassword((current) => !current)}
             type="button"
           >
@@ -186,7 +186,7 @@ export function LoginForm() {
       </form>
 
       <p className="mt-8 text-center font-body-md text-sm text-on-surface-variant">
-        Cổng này dành cho tài khoản saler/admin đã được cấp trong backend.
+        Cổng này dành cho tài khoản nhân viên tư vấn hoặc quản trị viên đã được cấp quyền.
       </p>
     </div>
   );

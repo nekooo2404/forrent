@@ -1,11 +1,15 @@
 import Link from "next/link";
 
-const companyLinks = ["Liên hệ"];
+import { BUSINESS_REGISTRATION, LEGAL_ADDRESS, LEGAL_NAME } from "@/lib/site-config";
+
+const companyLinks = ["Liên hệ", "Chính sách bảo mật", "Điều khoản sử dụng"];
 const exploreLinks = ["Danh sách phòng", "Blog"];
 const footerHrefByLabel: Record<string, string> = {
   "Danh sách phòng": "/rooms",
   Blog: "/blogs",
   "Liên hệ": "/contact",
+  "Chính sách bảo mật": "/privacy",
+  "Điều khoản sử dụng": "/terms",
 };
 
 export function SiteFooter() {
@@ -17,7 +21,7 @@ export function SiteFooter() {
             FORRENT
           </Link>
           <p className="mb-6 max-w-xs font-body-md text-body-md text-secondary">
-            ForRent giúp người thuê lọc phòng theo khu vực, giá tháng, cọc dự kiến và đặt lịch xem với saler phụ trách.
+            ForRent giúp người thuê lọc phòng theo khu vực, giá tháng, cọc dự kiến và đặt lịch xem với nhân viên tư vấn.
           </p>
         </div>
 
@@ -27,15 +31,17 @@ export function SiteFooter() {
         <div>
           <p className="mb-4 font-label-caps text-label-caps tracking-widest text-on-surface">TƯ VẤN</p>
           <p className="mb-4 font-body-md text-body-md text-secondary">
-            Cần tìm phòng theo khu vực, ngân sách hoặc diện tích? Gửi nhu cầu, saler sẽ xác nhận phòng còn trống, cọc và lịch xem.
+            Cần tìm phòng theo khu vực, ngân sách hoặc diện tích? Gửi nhu cầu, nhân viên tư vấn sẽ xác nhận phòng còn trống, cọc và lịch xem.
           </p>
-          <Link className="premium-button inline-flex rounded border border-primary px-5 py-3 font-button text-button text-primary transition hover:bg-primary hover:text-on-primary" href="/contact">
+          <Link className="premium-button inline-flex min-h-11 items-center rounded border border-primary px-5 py-3 font-button text-button text-primary transition hover:bg-primary hover:text-on-primary" href="/contact">
             Liên hệ tư vấn
           </Link>
         </div>
       </div>
-      <div className="mx-auto mt-16 flex max-w-container-max flex-col items-center justify-between border-t border-outline-variant/10 px-margin-mobile pt-8 font-body-md text-sm text-secondary md:flex-row md:px-margin-desktop">
+      <div className="mx-auto mt-16 flex max-w-container-max flex-col gap-2 border-t border-outline-variant/10 px-margin-mobile pt-8 font-body-md text-sm text-secondary md:px-margin-desktop">
         <p>© 2026 FORRENT. ĐÃ ĐĂNG KÝ BẢN QUYỀN.</p>
+        <p>Đơn vị vận hành: {LEGAL_NAME} · {LEGAL_ADDRESS}</p>
+        {BUSINESS_REGISTRATION ? <p>Mã số đăng ký kinh doanh: {BUSINESS_REGISTRATION}</p> : null}
       </div>
     </footer>
   );
@@ -53,7 +59,7 @@ function FooterLinks({ title, items }: Readonly<{ title: string; items: string[]
           }
           return (
             <li key={item}>
-              <Link className="text-secondary transition-colors duration-300 hover:text-primary" href={href}>
+              <Link className="inline-flex min-h-11 items-center text-secondary transition-colors duration-300 hover:text-primary" href={href}>
                 {item}
               </Link>
             </li>

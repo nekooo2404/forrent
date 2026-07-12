@@ -26,7 +26,7 @@ export default function LogInPage() {
             <div className="max-w-md rounded-2xl border border-primary/20 bg-surface-container-lowest/80 p-8 shadow-high backdrop-blur">
               <Image
                 alt="ForRent"
-                className="h-auto w-44 dark:drop-shadow-[0_0_16px_rgba(217,119,6,0.28)]"
+                className="h-auto w-44 rounded-lg bg-surface-container-lowest p-3 dark:bg-inverse-surface"
                 height={96}
                 priority
                 src="/brand/forrent-logo.png"

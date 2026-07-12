@@ -4,7 +4,7 @@ import { CalendarDays, Clock, X, Info } from "lucide-react";
 import type { FormEvent } from "react";
 import { useMemo, useState, useSyncExternalStore } from "react";
 
-import { modalBackdrop, modalPanel, MotionDiv, MotionModal } from "@/components/motion";
+import { MotionModal } from "@/components/motion";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useToast } from "@/hooks/use-toast";
 import { authFetch } from "@/lib/auth-storage";
@@ -163,7 +163,7 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
                 </li>
                 <li className="flex gap-2">
                   <span className="font-semibold">2.</span>
-                  <span>Saler gọi lại xác nhận trong 24h</span>
+                  <span>Nhân viên tư vấn gọi lại xác nhận trong 24h</span>
                 </li>
                 <li className="flex gap-2">
                   <span className="font-semibold">3.</span>
@@ -251,35 +251,23 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
 
       {state === "confirming" || state === "submitting" ? (
         <MotionModal>
-          <MotionDiv
-            animate="show"
+          <button
             aria-label="Đóng xác nhận"
             className="absolute inset-0 bg-primary/40"
-            exit="hidden"
-            initial="hidden"
             onClick={() => setState("idle")}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") setState("idle");
-            }}
-            role="button"
-            tabIndex={0}
-            variants={modalBackdrop}
+            type="button"
           />
-          <MotionDiv
-            animate="show"
+          <div
             aria-describedby="confirm-modal-description"
             aria-labelledby="confirm-modal-title"
             aria-modal="true"
-            className="relative w-full max-w-md rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-8 shadow-elevated"
-            exit="hidden"
-            initial="hidden"
+            className="scroll-reveal relative w-full max-w-md rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-8 shadow-elevated"
             ref={confirmModalRef}
             role="dialog"
-            variants={modalPanel}
           >
             <button
               aria-label="Đóng"
-              className="absolute right-4 top-4 text-secondary transition-colors hover:text-primary"
+              className="absolute right-2 top-2 flex size-11 items-center justify-center text-secondary transition-colors hover:text-primary"
               onClick={() => setState("idle")}
               type="button"
             >
@@ -289,7 +277,7 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
               Xác nhận yêu cầu xem
             </h3>
             <p className="mb-4 font-body-md text-body-md text-on-surface-variant" id="confirm-modal-description">
-              ForRent sẽ gửi yêu cầu này cho saler phụ trách. Saler gọi lại để xác nhận phòng còn trống, cọc, phí và giờ xem thực tế.
+              ForRent sẽ gửi yêu cầu này cho nhân viên phụ trách. Nhân viên tư vấn gọi lại để xác nhận phòng còn trống, cọc, phí và giờ xem thực tế.
             </p>
             {formSnapshot ? (
               <p className="mb-8 font-body-md text-sm text-secondary">
@@ -314,7 +302,7 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
                 {state === "submitting" ? "Đang gửi..." : "Xác nhận"}
               </button>
             </div>
-          </MotionDiv>
+          </div>
         </MotionModal>
       ) : null}
     </>

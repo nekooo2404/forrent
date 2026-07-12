@@ -123,8 +123,21 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
           </article>
         </section>
       ) : (
-        <section className="mx-auto mb-24 max-w-container-max px-margin-mobile text-center md:px-margin-desktop">
-          <p className="font-headline-sm text-headline-sm text-primary">Chưa có bài viết</p>
+        <section className="mx-auto mb-24 max-w-3xl px-margin-mobile text-center md:px-margin-desktop">
+          <div className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-8 shadow-soft md:p-10">
+            <h2 className="font-headline-sm text-headline-sm text-primary">Thư viện kinh nghiệm đang được biên tập</h2>
+            <p className="mx-auto mt-3 max-w-xl font-body-md text-body-md leading-7 text-on-surface-variant">
+              Trong lúc chờ bài mới, bạn có thể xem phòng đang trống hoặc gửi nhu cầu để được tư vấn theo khu vực và ngân sách.
+            </p>
+            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link className="premium-button urban-cta inline-flex min-h-11 items-center justify-center rounded px-5 py-3 font-button text-button" href="/rooms">
+                Xem phòng đang trống
+              </Link>
+              <Link className="premium-button inline-flex min-h-11 items-center justify-center rounded border border-primary px-5 py-3 font-button text-button text-primary" href="/contact">
+                Gửi nhu cầu
+              </Link>
+            </div>
+          </div>
         </section>
       )}
 
@@ -144,7 +157,7 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="mb-6 font-headline-md text-headline-md text-primary">Cần tư vấn phòng phù hợp?</h2>
           <p className="mb-10 font-body-md text-body-md text-secondary">
-            Gửi nhu cầu thuê phòng, saler sẽ lọc phòng theo khu vực, giá và lịch xem.
+            Gửi nhu cầu thuê phòng, nhân viên tư vấn sẽ lọc phòng theo khu vực, giá và lịch xem.
           </p>
           <Link className="premium-button inline-flex rounded bg-primary px-10 py-4 font-button text-button uppercase tracking-widest text-on-primary" href="/contact">
             Liên hệ tư vấn

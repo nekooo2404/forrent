@@ -238,7 +238,7 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
                 <Info label="Xác nhận lịch lúc" value={formatAdminDate(lead.appointment_confirmed_at)} />
                 <Info label="Ngày đã chốt" value={formatAdminDateOnly(lead.appointment_date)} />
                 <Info label="Khung giờ đã chốt" value={timeSlotLabel(lead.appointment_time_slot)} />
-                <Info label="Saler phụ trách" value={lead.assigned_to_name || "Chưa gán"} />
+                <Info label="Nhân viên phụ trách" value={lead.assigned_to_name || "Chưa gán"} />
                 <Info label="Follow-up" value={formatAdminDate(lead.next_follow_up_at)} />
               </div>
             </div>
@@ -266,7 +266,7 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Saler phụ trách</span>
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Nhân viên phụ trách</span>
                   <select className={adminSelectClass} onChange={(event) => setAssignedTo(event.target.value)} value={assignedTo}>
                     <option value="">Chưa gán</option>
                     {salers.map((saler) => (
@@ -302,7 +302,7 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
               </div>
 
               <label className="block">
-                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Ghi chú saler</span>
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Ghi chú tư vấn</span>
                 <textarea className={`${adminInputClass} min-h-40`} onChange={(event) => setNote(event.target.value)} value={note} />
               </label>
 

@@ -25,11 +25,11 @@ export function RoomGallery({ images, title }: RoomGalleryProps) {
       if (event.key === "ArrowRight") setActiveIndex((current) => nextIndex(current, images.length));
     };
 
-    document.body.style.overflow = "hidden";
+    document.body.classList.add("gallery-modal-open");
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      document.body.style.overflow = "";
+      document.body.classList.remove("gallery-modal-open");
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [activeIndex, images.length]);

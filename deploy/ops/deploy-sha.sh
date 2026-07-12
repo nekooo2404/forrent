@@ -20,6 +20,31 @@ check_public_urls() {
   done
 }
 
+check_production_hardening() {
+  health="$(curl --fail --silent --show-error --max-time 20 https://api.forrent.io.vn/api/health/)"
+  for expected in '"status": "ok"' '"database": true' '"cache": true' '"media_storage": true'; do
+    if ! printf '%s' "$health" | grep -Fq "$expected"; then
+      echo "Production health response is missing $expected." >&2
+      exit 1
+    fi
+  done
+
+  headers="$(curl --fail --silent --show-error --head --max-time 20 https://forrent.io.vn/homepage | tr -d '\r')"
+  server="$(printf '%s\n' "$headers" | awk -F': ' 'tolower($1) == "server" { print $2; exit }')"
+  case "$server" in
+    */*)
+      echo "Production Server header exposes a version: $server" >&2
+      exit 1
+      ;;
+  esac
+
+  csp="$(printf '%s\n' "$headers" | awk -F': ' 'tolower($1) == "content-security-policy" { print $2; exit }')"
+  if [ -z "$csp" ] || printf '%s' "$csp" | grep -Eq "unsafe-inline|supabase|googleusercontent"; then
+    echo "Production CSP is missing or contains a forbidden source." >&2
+    exit 1
+  fi
+}
+
 check_workflow_green() {
   workflow="$1"
   if ! command -v gh >/dev/null 2>&1; then
@@ -89,5 +114,6 @@ run_step docker compose -f "$COMPOSE_FILE" up -d
 run_step docker compose -f "$COMPOSE_FILE" exec backend python manage.py migrate --noinput
 run_step docker compose -f "$COMPOSE_FILE" exec backend python manage.py check --settings=config.settings.production
 check_public_urls
+check_production_hardening
 
 echo "Deployed commit: $(git rev-parse --short HEAD)"

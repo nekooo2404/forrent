@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   clearAuthSession,
-  refreshStoredAuthSession,
+  getAuthSession,
 } from "@/lib/auth-storage";
 
 export function ProfileMenu() {
@@ -19,8 +19,8 @@ export function ProfileMenu() {
 
     async function refreshAuthState() {
       try {
-        const token = await refreshStoredAuthSession();
-        if (isMounted) setIsLoggedIn(Boolean(token));
+        const authenticated = await getAuthSession();
+        if (isMounted) setIsLoggedIn(authenticated);
       } catch {
         if (isMounted) setIsLoggedIn(false);
       }

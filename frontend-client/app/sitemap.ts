@@ -6,12 +6,13 @@ import { absoluteUrl } from "@/lib/seo";
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: absoluteUrl("/homepage"), lastModified: now, changeFrequency: "daily", priority: 1 },
-    { url: absoluteUrl("/rooms"), lastModified: now, changeFrequency: "hourly", priority: 0.9 },
-    { url: absoluteUrl("/blogs"), lastModified: now, changeFrequency: "daily", priority: 0.7 },
-    { url: absoluteUrl("/contact"), lastModified: now, changeFrequency: "monthly", priority: 0.6 },
+    { url: absoluteUrl("/homepage"), changeFrequency: "daily", priority: 1 },
+    { url: absoluteUrl("/rooms"), changeFrequency: "hourly", priority: 0.9 },
+    { url: absoluteUrl("/blogs"), changeFrequency: "daily", priority: 0.7 },
+    { url: absoluteUrl("/contact"), changeFrequency: "monthly", priority: 0.6 },
+    { url: absoluteUrl("/privacy"), changeFrequency: "yearly", priority: 0.3 },
+    { url: absoluteUrl("/terms"), changeFrequency: "yearly", priority: 0.3 },
   ];
 
   const [rooms, blogs] = await Promise.all([

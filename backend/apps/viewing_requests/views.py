@@ -40,7 +40,7 @@ class ViewingRequestCreateAPIView(APIView):
         viewing_request = serializer.save()
         return success_response(
             data=ViewingRequestCreateResponseSerializer(viewing_request).data,
-            message="Ban da xac nhan xem phong thanh cong. Saler se lien he voi ban som.",
+            message="Ban da xac nhan xem phong thanh cong. Nhan vien tu van se lien he voi ban som.",
             status_code=status.HTTP_201_CREATED,
         )
 
