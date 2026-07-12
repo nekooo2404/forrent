@@ -116,7 +116,7 @@ function mapProperty(room: ApiRoom, index: number): PropertyCardView {
 
 export default async function Homepage() {
   const [roomsResponse, filtersResponse, blogsResponse] = await Promise.all([
-    getRooms({ page_size: 3, status: "AVAILABLE", ordering: "-created_at" }).catch(() => null),
+    getRooms({ page_size: 3, status: "PUBLISHED", ordering: "-created_at" }).catch(() => null),
     getCachedRoomFilters().catch(() => null),
     getBlogs({ page_size: 1, ordering: "-published_at" }).catch(() => null),
   ]);
@@ -146,7 +146,7 @@ export default async function Homepage() {
               Lọc phòng còn trống theo khu vực, giá tháng, cọc, phí và tiện ích. Chọn phòng xong, ForRent gọi lại xác nhận trước khi bạn đi xem.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link className="premium-button urban-cta inline-flex rounded-xl px-6 py-4 font-button text-button" href="/rooms?status=AVAILABLE">
+              <Link className="premium-button urban-cta inline-flex rounded-xl px-6 py-4 font-button text-button" href="/rooms?status=PUBLISHED">
                 Xem phòng trống
               </Link>
               <Link className="premium-button inline-flex rounded-xl border border-primary/20 bg-surface-container-lowest px-6 py-4 font-button text-button text-primary" href="/contact">

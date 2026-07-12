@@ -97,7 +97,7 @@ export type ApiRoom = {
   short_description: string;
   thumbnail: string | null;
   thumbnail_url: string | null;
-  status: "AVAILABLE" | "UNAVAILABLE" | "HIDDEN" | string;
+  status: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED" | "RENTED" | "HIDDEN" | "ARCHIVED" | string;
   created_at: string;
   updated_at: string;
 };
@@ -499,9 +499,12 @@ export function roomTypeLabel(value: string) {
 export function roomStatusLabel(value: string) {
   return (
     {
-      AVAILABLE: "Trống",
-      UNAVAILABLE: "Đã cho thuê",
+      DRAFT: "Bản nháp",
+      PENDING_REVIEW: "Chờ duyệt",
+      PUBLISHED: "Còn trống",
+      RENTED: "Đã cho thuê",
       HIDDEN: "Đã ẩn",
+      ARCHIVED: "Lưu trữ",
     }[value] ?? value
   );
 }

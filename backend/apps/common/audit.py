@@ -42,6 +42,7 @@ def audit_event(event, *, request=None, actor=None, target=None, status=AuditLog
         target_id = str(target.pk)
 
     try:
+        safe = safe_metadata(metadata)
         AuditLog.objects.create(
             event=event,
             status=status,
@@ -52,15 +53,22 @@ def audit_event(event, *, request=None, actor=None, target=None, status=AuditLog
             path=getattr(request, "path", "")[:255] if request else "",
             ip_address=client_ip(request),
             user_agent=(request.META.get("HTTP_USER_AGENT", "")[:1000] if request else ""),
-            metadata=safe_metadata(metadata),
+            metadata=safe,
         )
         logger.info(
-            "audit_event event=%s status=%s actor_id=%s target=%s:%s",
-            event,
-            status,
-            getattr(actor, "id", None),
-            target_model,
-            target_id,
+            "audit_event",
+            extra={
+                "request_id": getattr(request, "id", "") if request else "",
+                "event": event,
+                "status": status,
+                "actor_id": getattr(actor, "id", None),
+                "target_model": target_model,
+                "target_id": target_id,
+                "method": getattr(request, "method", "") if request else "",
+                "path": getattr(request, "path", "")[:255] if request else "",
+                "ip_address": client_ip(request),
+                "metadata_fields": sorted(safe.keys()),
+            },
         )
     except Exception:
         logger.exception("audit_event_failed event=%s", event)

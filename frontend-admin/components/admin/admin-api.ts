@@ -88,7 +88,7 @@ export type AdminRoom = {
   short_description: string;
   description: string;
   thumbnail: string | null;
-  status: "AVAILABLE" | "UNAVAILABLE" | "HIDDEN" | string;
+  status: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED" | "RENTED" | "HIDDEN" | "ARCHIVED" | string;
   commission_percent: string;
   commission_base_amount: string;
   estimated_commission_amount: string;
@@ -118,7 +118,7 @@ export type AdminViewingRequest = {
   next_follow_up_at: string | null;
   appointment_date: string | null;
   appointment_time_slot: "morning" | "afternoon" | "evening" | "";
-  status: "NEW" | "CONTACTED" | "VIEWED" | "MOVED_IN" | "NOT_MOVED_IN" | "CANCELLED" | string;
+  status: "NEW" | "CONTACTED" | "SCHEDULED" | "VIEWED" | "CONVERTED" | "NO_SHOW" | "CANCELLED" | string;
   saler_note: string;
   appointment_confirmed_at: string | null;
   moved_in_at: string | null;
@@ -342,26 +342,52 @@ export function leadStatusLabel(status: string) {
     {
       NEW: "Lead mới",
       CONTACTED: "Đã liên hệ",
+      SCHEDULED: "Đã lên lịch",
       VIEWED: "Đã xem phòng",
-      MOVED_IN: "Đã chuyển vào",
-      NOT_MOVED_IN: "Không chuyển vào",
+      CONVERTED: "Đã chốt thuê",
+      NO_SHOW: "Không đến xem",
       CANCELLED: "Đã hủy",
     }[status] ?? status
   );
 }
 
 export function leadStatusTone(status: string) {
-  if (status === "MOVED_IN") return "bg-success-container text-success ring-success/20";
-  if (status === "NEW") return "bg-warning-container text-on-warning ring-warning/30";
-  if (status === "CANCELLED" || status === "NOT_MOVED_IN") return "bg-error-container text-error ring-error/20";
+  if (status === "CONVERTED") return "bg-success-container text-success ring-success/20";
+  if (status === "NEW") return "bg-warning-container text-on-warning-container ring-warning/30";
+  if (status === "CANCELLED" || status === "NO_SHOW") return "bg-error-container text-error ring-error/20";
+  if (status === "SCHEDULED") return "bg-primary/10 text-primary ring-primary/10";
   if (status === "VIEWED") return "bg-primary/10 text-primary ring-primary/10";
   return "bg-surface-container-high text-secondary ring-outline-variant/30";
 }
 
+export function canManuallyTransitionLead(currentStatus: string, nextStatus: string) {
+  if (currentStatus === nextStatus) return true;
+  const allowed: Record<string, string[]> = {
+    NEW: ["CONTACTED", "CANCELLED"],
+    CONTACTED: ["CANCELLED"],
+    SCHEDULED: ["VIEWED", "NO_SHOW", "CANCELLED"],
+    VIEWED: ["CANCELLED"],
+  };
+  return allowed[currentStatus]?.includes(nextStatus) ?? false;
+}
+
 export function roomStatusTone(status: string) {
-  if (status === "AVAILABLE") return "bg-success-container text-success ring-success/20";
-  if (status === "UNAVAILABLE") return "bg-warning-container text-on-warning ring-warning/30";
+  if (status === "PUBLISHED") return "bg-success-container text-success ring-success/20";
+  if (status === "RENTED") return "bg-warning-container text-on-warning-container ring-warning/30";
+  if (status === "PENDING_REVIEW") return "bg-primary/10 text-primary ring-primary/10";
   return "bg-surface-container-high text-secondary ring-outline-variant/30";
+}
+
+export function canManuallyTransitionRoom(currentStatus: string, nextStatus: string) {
+  if (currentStatus === nextStatus) return true;
+  const allowed: Record<string, string[]> = {
+    DRAFT: ["PENDING_REVIEW", "PUBLISHED", "HIDDEN", "ARCHIVED"],
+    PENDING_REVIEW: ["DRAFT", "PUBLISHED", "HIDDEN", "ARCHIVED"],
+    PUBLISHED: ["HIDDEN", "ARCHIVED"],
+    HIDDEN: ["DRAFT", "PENDING_REVIEW", "PUBLISHED", "ARCHIVED"],
+    ARCHIVED: ["DRAFT"],
+  };
+  return allowed[currentStatus]?.includes(nextStatus) ?? false;
 }
 
 export function blogStatusLabel(status: string) {
@@ -376,7 +402,7 @@ export function blogStatusLabel(status: string) {
 
 export function blogStatusTone(status: string) {
   if (status === "PUBLISHED") return "bg-success-container text-success ring-success/20";
-  if (status === "DRAFT") return "bg-warning-container text-on-warning ring-warning/30";
+  if (status === "DRAFT") return "bg-warning-container text-on-warning-container ring-warning/30";
   return "bg-surface-container-high text-secondary ring-outline-variant/30";
 }
 
@@ -392,7 +418,7 @@ export function contactStatusLabel(status: string) {
 
 export function contactStatusTone(status: string) {
   if (status === "HANDLED") return "bg-success-container text-success ring-success/20";
-  if (status === "NEW") return "bg-warning-container text-on-warning ring-warning/30";
+  if (status === "NEW") return "bg-warning-container text-on-warning-container ring-warning/30";
   return "bg-primary/10 text-primary ring-primary/10";
 }
 
@@ -411,5 +437,5 @@ export function payoutStatusTone(status: string) {
   if (status === "PAID") return "bg-success-container text-success ring-success/20";
   if (status === "APPROVED") return "bg-primary/10 text-primary ring-primary/10";
   if (status === "CANCELLED") return "bg-error-container text-error ring-error/20";
-  return "bg-warning-container text-on-warning ring-warning/30";
+  return "bg-warning-container text-on-warning-container ring-warning/30";
 }

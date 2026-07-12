@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from django.utils import timezone
 
+from apps.accounts.models import User
+from apps.common.audit import audit_event
 from apps.rooms.serializers import PublicRoomListSerializer
 from apps.viewing_requests.models import ViewingRequest
 from apps.viewing_requests.services import ViewingRequestService
@@ -128,13 +130,25 @@ class AdminViewingRequestSerializer(serializers.ModelSerializer):
         )
 
     def validate_status(self, value):
-        if self.instance and value == ViewingRequest.Status.MOVED_IN and self.instance.status != ViewingRequest.Status.MOVED_IN:
-            raise serializers.ValidationError("Use confirm moved-in action to record commission.")
-        if self.instance and self.instance.status == ViewingRequest.Status.MOVED_IN and value != ViewingRequest.Status.MOVED_IN:
-            raise serializers.ValidationError("Moved-in leads cannot be changed to another status.")
+        if not self.instance:
+            return value
+        if value == ViewingRequest.Status.CONVERTED and self.instance.status != ViewingRequest.Status.CONVERTED:
+            raise serializers.ValidationError("Use confirm converted action to record commission.")
+        if value == ViewingRequest.Status.SCHEDULED and self.instance.status != ViewingRequest.Status.SCHEDULED:
+            raise serializers.ValidationError("Use confirm appointment action to record schedule details.")
+        if self.instance.status == ViewingRequest.Status.CONVERTED and value != ViewingRequest.Status.CONVERTED:
+            raise serializers.ValidationError("Converted leads cannot be changed to another status.")
+        if not ViewingRequest.can_transition(self.instance.status, value):
+            raise serializers.ValidationError(f"Cannot change lead from {self.instance.status} to {value}.")
+        return value
+
+    def validate_assigned_to(self, value):
+        if value and (value.role != User.Role.SALER or not value.is_active):
+            raise serializers.ValidationError("Lead can only be assigned to an active SALER account.")
         return value
 
     def update(self, instance, validated_data):
+        previous_status = instance.status
         updated = super().update(instance, validated_data)
         if validated_data:
             from apps.viewing_requests.models import ViewingRequestActivity
@@ -145,6 +159,13 @@ class AdminViewingRequestSerializer(serializers.ModelSerializer):
                 action="UPDATE",
                 note=validated_data.get("saler_note", ""),
             )
+            if "status" in validated_data and updated.status != previous_status:
+                audit_event(
+                    "viewing_request.status_changed",
+                    request=self.context.get("request"),
+                    target=updated,
+                    metadata={"from": previous_status, "to": updated.status},
+                )
         return updated
 
 
@@ -170,8 +191,24 @@ class MoveOutSerializer(serializers.Serializer):
 
 
 class BulkViewingRequestUpdateSerializer(serializers.Serializer):
-    ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False)
-    status = serializers.ChoiceField(choices=[choice for choice in ViewingRequest.Status.choices if choice[0] != ViewingRequest.Status.MOVED_IN], required=False)
-    assigned_to = serializers.IntegerField(required=False, allow_null=True)
+    ids = serializers.ListField(child=serializers.IntegerField(), allow_empty=False, max_length=100)
+    status = serializers.ChoiceField(
+        choices=[
+            choice
+            for choice in ViewingRequest.Status.choices
+            if choice[0] not in {ViewingRequest.Status.SCHEDULED, ViewingRequest.Status.CONVERTED}
+        ],
+        required=False,
+    )
+    assigned_to = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.filter(role=User.Role.SALER, is_active=True),
+        required=False,
+        allow_null=True,
+    )
     next_follow_up_at = serializers.DateTimeField(required=False, allow_null=True)
     saler_note = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_ids(self, value):
+        if len(value) != len(set(value)):
+            raise serializers.ValidationError("Lead IDs must be unique.")
+        return value

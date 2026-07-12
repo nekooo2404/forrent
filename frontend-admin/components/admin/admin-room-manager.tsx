@@ -9,6 +9,7 @@ import {
   adminList,
   adminMessageFrom,
   adminRequest,
+  canManuallyTransitionRoom,
   formatAdminDate,
   formatAdminVnd,
   type AdminAmenity,
@@ -89,7 +90,7 @@ const emptyForm: RoomFormState = {
   room_type: "CCMN",
   short_description: "",
   slug: "",
-  status: "AVAILABLE",
+  status: "DRAFT",
   service_fee: "",
   title: "",
   water_price_per_person: "",
@@ -103,9 +104,12 @@ const roomTypes = [
 ];
 
 const roomStatuses = [
-  { label: "Đang trống", value: "AVAILABLE" },
-  { label: "Đã thuê", value: "UNAVAILABLE" },
+  { label: "Bản nháp", value: "DRAFT" },
+  { label: "Chờ duyệt", value: "PENDING_REVIEW" },
+  { label: "Đang hiển thị", value: "PUBLISHED" },
+  { label: "Đã thuê", value: "RENTED" },
   { label: "Ẩn khỏi public", value: "HIDDEN" },
+  { label: "Lưu trữ", value: "ARCHIVED" },
 ];
 
 const pageSize = 20;
@@ -609,7 +613,7 @@ function RoomFormModal({
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-secondary">{editingRoom ? "Edit listing" : "New listing"}</p>
             <h2 className="font-headline-sm text-2xl text-primary">{editingRoom ? "Cập nhật phòng" : "Tạo phòng mới"}</h2>
           </div>
-          <button className="rounded-md p-2 text-secondary transition hover:bg-surface-container hover:text-primary" onClick={onClose} type="button">
+          <button aria-label="Đóng cửa sổ phòng" className="rounded-md p-2 text-secondary transition hover:bg-surface-container hover:text-primary" onClick={onClose} type="button">
             <X size={22} strokeWidth={1.8} />
           </button>
         </div>
@@ -702,7 +706,11 @@ function RoomFormModal({
             <div className="grid gap-4 md:grid-cols-3">
               <Field label="Trạng thái">
                 <select className={adminSelectClass} onChange={(event) => update("status", event.target.value)} value={form.status}>
-                  {roomStatuses.map((item) => (
+                  {roomStatuses.filter((item) => (
+                    editingRoom
+                      ? canManuallyTransitionRoom(editingRoom.status, item.value)
+                      : item.value !== "RENTED"
+                  )).map((item) => (
                     <option key={item.value} value={item.value}>{item.label}</option>
                   ))}
                 </select>

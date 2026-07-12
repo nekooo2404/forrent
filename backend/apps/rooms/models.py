@@ -11,10 +11,10 @@ from apps.locations.models import Amenity, AreaRange, City, Ward
 
 class RoomQuerySet(models.QuerySet):
     def public(self):
-        return self.filter(status=Room.Status.AVAILABLE)
+        return self.filter(status=Room.Status.PUBLISHED)
 
     def available(self):
-        return self.filter(status=Room.Status.AVAILABLE)
+        return self.filter(status=Room.Status.PUBLISHED)
 
 
 class DepositType(TimeStampedModel):
@@ -44,9 +44,26 @@ class Room(TimeStampedModel):
         HOUSE = "HOUSE", "Nha nguyen can"
 
     class Status(models.TextChoices):
-        AVAILABLE = "AVAILABLE", "Available"
-        UNAVAILABLE = "UNAVAILABLE", "Unavailable"
+        DRAFT = "DRAFT", "Draft"
+        PENDING_REVIEW = "PENDING_REVIEW", "Pending review"
+        PUBLISHED = "PUBLISHED", "Published"
+        RENTED = "RENTED", "Rented"
         HIDDEN = "HIDDEN", "Hidden"
+        ARCHIVED = "ARCHIVED", "Archived"
+
+    @classmethod
+    def can_transition(cls, current_status, next_status):
+        if current_status == next_status:
+            return True
+        allowed = {
+            cls.Status.DRAFT: {cls.Status.PENDING_REVIEW, cls.Status.PUBLISHED, cls.Status.HIDDEN, cls.Status.ARCHIVED},
+            cls.Status.PENDING_REVIEW: {cls.Status.DRAFT, cls.Status.PUBLISHED, cls.Status.HIDDEN, cls.Status.ARCHIVED},
+            cls.Status.PUBLISHED: {cls.Status.HIDDEN, cls.Status.ARCHIVED},
+            cls.Status.RENTED: set(),
+            cls.Status.HIDDEN: {cls.Status.DRAFT, cls.Status.PENDING_REVIEW, cls.Status.PUBLISHED, cls.Status.ARCHIVED},
+            cls.Status.ARCHIVED: {cls.Status.DRAFT},
+        }
+        return next_status in allowed.get(current_status, set())
 
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True, allow_unicode=True, blank=True)
@@ -56,6 +73,7 @@ class Room(TimeStampedModel):
     address = models.CharField(max_length=500)
     price = models.DecimalField(max_digits=14, decimal_places=2, validators=[MinValueValidator(Decimal("0"))])
     deposit_type = models.ForeignKey(DepositType, on_delete=models.PROTECT, related_name="rooms", null=True, blank=True)
+    deposit_type_name_snapshot = models.CharField(max_length=255, blank=True)
     deposit_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
     electricity_price_per_kwh = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
     water_price_per_person = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
@@ -66,7 +84,7 @@ class Room(TimeStampedModel):
     short_description = models.TextField(blank=True)
     description = models.TextField()
     thumbnail = models.ImageField(upload_to="room-thumbnails/", null=True, blank=True)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.AVAILABLE)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
     commission_base_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
     estimated_commission_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
@@ -86,6 +104,17 @@ class Room(TimeStampedModel):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = unique_slugify(self, self.title)
+        if self.deposit_type_id:
+            should_snapshot = not self.pk or not self.deposit_type_name_snapshot
+            if self.pk and not should_snapshot:
+                previous_deposit_type_id = (
+                    type(self).objects.filter(pk=self.pk).values_list("deposit_type_id", flat=True).first()
+                )
+                should_snapshot = previous_deposit_type_id != self.deposit_type_id
+            if should_snapshot:
+                self.deposit_type_name_snapshot = self.deposit_type.name
+        else:
+            self.deposit_type_name_snapshot = ""
         self.estimated_commission_amount = calculate_percent_amount(
             self.commission_base_amount,
             self.commission_percent,

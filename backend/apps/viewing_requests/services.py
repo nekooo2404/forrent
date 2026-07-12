@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from apps.rooms.models import Room
+from apps.common.audit import audit_event
 from apps.viewing_requests.models import RoomLease, ViewingRequest, ViewingRequestActivity
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ class ViewingRequestService:
     @staticmethod
     @transaction.atomic
     def create_viewing_request(*, user, room_id, preferred_viewing_date=None, preferred_viewing_time_slot=""):
-        room = Room.objects.select_for_update().filter(pk=room_id, status=Room.Status.AVAILABLE).first()
+        room = Room.objects.select_for_update().filter(pk=room_id, status=Room.Status.PUBLISHED).first()
         if room is None:
             raise ValidationError({"room_id": "Room does not exist or is not available for viewing."})
 
@@ -64,7 +65,7 @@ class ViewingRequestService:
     @staticmethod
     @transaction.atomic
     def create_contact_viewing_request(*, user, room, full_name, phone, email):
-        room = Room.objects.select_for_update().filter(pk=room.pk, status=Room.Status.AVAILABLE).first()
+        room = Room.objects.select_for_update().filter(pk=room.pk, status=Room.Status.PUBLISHED).first()
         if room is None:
             raise ValidationError({"room": "Room does not exist or is not available for viewing."})
 
@@ -94,12 +95,48 @@ class ViewingRequestService:
             .get(pk=viewing_request_id)
         )
 
-        if viewing_request.status == ViewingRequest.Status.MOVED_IN:
-            raise ValidationError({"status": "This lead has already been confirmed as moved in."})
+        if viewing_request.status == ViewingRequest.Status.CONVERTED or not ViewingRequest.can_transition(
+            viewing_request.status,
+            ViewingRequest.Status.CONVERTED,
+        ):
+            raise ValidationError({"status": f"Lead in {viewing_request.status} status cannot be converted."})
         if viewing_request.is_commission_counted:
             raise ValidationError({"is_commission_counted": "Commission has already been counted for this lead."})
 
-        viewing_request.status = ViewingRequest.Status.MOVED_IN
+        room = Room.objects.select_for_update().get(pk=viewing_request.room_id)
+        if room.status != Room.Status.PUBLISHED or RoomLease.objects.filter(
+            room=room,
+            status=RoomLease.Status.ACTIVE,
+        ).exists():
+            raise ValidationError({"room": "Room is no longer available for move-in."})
+
+        competing_leads = list(
+            ViewingRequest.objects.select_for_update()
+            .filter(room=room, status__in=ViewingRequest.ACTIVE_STATUSES)
+            .exclude(pk=viewing_request.pk)
+        )
+        if competing_leads:
+            competing_ids = [lead.id for lead in competing_leads]
+            ViewingRequest.objects.filter(id__in=competing_ids).update(status=ViewingRequest.Status.CANCELLED)
+            ViewingRequestActivity.objects.bulk_create(
+                [
+                    ViewingRequestActivity(
+                        viewing_request=lead,
+                        actor=actor,
+                        action="AUTO_CANCELLED",
+                        note="Room was rented by another lead.",
+                    )
+                    for lead in competing_leads
+                ]
+            )
+            audit_event(
+                "viewing_request.competing_leads_cancelled",
+                actor=actor,
+                target=viewing_request,
+                metadata={"room_id": room.id, "lead_ids": competing_ids},
+            )
+
+        viewing_request.status = ViewingRequest.Status.CONVERTED
         viewing_request.moved_in_at = timezone.now()
         viewing_request.actual_commission_amount = viewing_request.estimated_commission_amount
         viewing_request.is_commission_counted = True
@@ -112,12 +149,12 @@ class ViewingRequestService:
                 "updated_at",
             ]
         )
-        viewing_request.room.status = Room.Status.UNAVAILABLE
-        viewing_request.room.save(update_fields=["status", "updated_at"])
+        room.status = Room.Status.RENTED
+        room.save(update_fields=["status", "updated_at"])
         RoomLease.objects.get_or_create(
             viewing_request=viewing_request,
             defaults={
-                "room": viewing_request.room,
+                "room": room,
                 "tenant": viewing_request.user,
                 "move_in_at": viewing_request.moved_in_at,
             },
@@ -132,11 +169,17 @@ class ViewingRequestService:
         ViewingRequestActivity.objects.create(
             viewing_request=viewing_request,
             actor=actor,
-            action="CONFIRM_MOVED_IN",
-            note="Lead confirmed moved in.",
+            action="CONVERTED",
+            note="Lead converted to tenant.",
+        )
+        audit_event(
+            "viewing_request.converted",
+            actor=actor,
+            target=viewing_request,
+            metadata={"room_id": viewing_request.room_id, "commission": str(viewing_request.actual_commission_amount)},
         )
         logger.info(
-            "Lead moved in confirmed: viewing_request_id=%s actor_id=%s commission=%s",
+            "Lead converted: viewing_request_id=%s actor_id=%s commission=%s",
             viewing_request.id,
             actor.id,
             viewing_request.actual_commission_amount,
@@ -147,19 +190,27 @@ class ViewingRequestService:
     @transaction.atomic
     def confirm_appointment(*, viewing_request_id, actor, appointment_date, appointment_time_slot, note=""):
         viewing_request = ViewingRequest.objects.select_for_update().get(pk=viewing_request_id)
-        if viewing_request.status == ViewingRequest.Status.MOVED_IN:
-            raise ValidationError({"status": "Moved-in leads cannot change appointment details."})
+        if viewing_request.status != ViewingRequest.Status.SCHEDULED and not ViewingRequest.can_transition(
+            viewing_request.status,
+            ViewingRequest.Status.SCHEDULED,
+        ):
+            raise ValidationError({"status": f"Lead in {viewing_request.status} status cannot be scheduled."})
         viewing_request.confirmed_at = timezone.now()
         viewing_request.appointment_date = appointment_date
         viewing_request.appointment_time_slot = appointment_time_slot
-        if viewing_request.status == ViewingRequest.Status.NEW:
-            viewing_request.status = ViewingRequest.Status.CONTACTED
+        viewing_request.status = ViewingRequest.Status.SCHEDULED
         viewing_request.save(update_fields=["confirmed_at", "appointment_date", "appointment_time_slot", "status", "updated_at"])
         ViewingRequestActivity.objects.create(
             viewing_request=viewing_request,
             actor=actor,
-            action="CONFIRM_APPOINTMENT",
+            action="SCHEDULE_APPOINTMENT",
             note=note,
+        )
+        audit_event(
+            "viewing_request.scheduled",
+            actor=actor,
+            target=viewing_request,
+            metadata={"appointment_date": appointment_date.isoformat(), "appointment_time_slot": appointment_time_slot},
         )
         return viewing_request
 
@@ -178,12 +229,18 @@ class ViewingRequestService:
         lease.move_out_at = now
         lease.note = note
         lease.save(update_fields=["status", "move_out_at", "note", "updated_at"])
-        viewing_request.room.status = Room.Status.AVAILABLE
+        viewing_request.room.status = Room.Status.PUBLISHED
         viewing_request.room.save(update_fields=["status", "updated_at"])
         ViewingRequestActivity.objects.create(
             viewing_request=viewing_request,
             actor=actor,
             action="MOVE_OUT",
             note=note,
+        )
+        audit_event(
+            "viewing_request.move_out",
+            actor=actor,
+            target=viewing_request,
+            metadata={"room_id": viewing_request.room_id},
         )
         return lease

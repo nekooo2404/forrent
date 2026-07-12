@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
@@ -145,9 +145,12 @@ function AuthInput({
   type = "password",
   value,
 }: Readonly<{ label: string; maxLength?: number; onChange: (value: string) => void; type?: string; value: string }>) {
+  const inputId = useId();
+
   return (
-    <FormField label={label}>
+    <FormField htmlFor={inputId} label={label}>
       <input
+        id={inputId}
         className="w-full border-0 border-b border-outline-variant bg-transparent px-0 py-3 font-body-md text-primary transition-colors focus:border-primary focus:ring-0"
         maxLength={maxLength}
         minLength={type === "password" ? 8 : undefined}

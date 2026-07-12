@@ -8,11 +8,13 @@ on:
 jobs:
   create-reminder:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       issues: write
       contents: read
     steps:
       - uses: actions/github-script@v8
+        timeout-minutes: 3
         with:
           script: |
             const title = `Quarterly security ops: rotate secrets, restore drill, pentest review`;

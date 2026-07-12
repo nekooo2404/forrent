@@ -12,11 +12,6 @@ from apps.rooms.models import DepositType, Room, RoomImage
 
 def allowed_room_image_url_hosts():
     hosts = {"res.cloudinary.com", "api.forrent.io.vn"}
-    supabase_url = getattr(settings, "SUPABASE_URL", "")
-    if supabase_url:
-        parsed = urlparse(supabase_url)
-        if parsed.hostname:
-            hosts.add(parsed.hostname)
     if settings.DEBUG:
         hosts.update({"localhost", "127.0.0.1", "backend"})
     return hosts
@@ -89,7 +84,7 @@ class PublicRoomListSerializer(serializers.ModelSerializer):
         return None
 
     def get_deposit_type_name(self, obj):
-        return obj.deposit_type.name if obj.deposit_type_id else ""
+        return obj.deposit_type_name_snapshot or (obj.deposit_type.name if obj.deposit_type_id else "")
 
 
 class PublicRoomDetailSerializer(PublicRoomListSerializer):
@@ -204,8 +199,15 @@ class AdminRoomSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(errors)
         return attrs
 
+    def validate_status(self, value):
+        if value == Room.Status.RENTED and (not self.instance or self.instance.status != Room.Status.RENTED):
+            raise serializers.ValidationError("Room can only become rented through lead conversion.")
+        if self.instance and not Room.can_transition(self.instance.status, value):
+            raise serializers.ValidationError(f"Cannot change room from {self.instance.status} to {value}.")
+        return value
+
     def get_deposit_type_name(self, obj):
-        return obj.deposit_type.name if obj.deposit_type_id else ""
+        return obj.deposit_type_name_snapshot or (obj.deposit_type.name if obj.deposit_type_id else "")
 
     def create(self, validated_data):
         uploaded_images = validated_data.pop("uploaded_images", [])

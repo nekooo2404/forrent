@@ -9,6 +9,7 @@ import {
   adminList,
   adminMessageFrom,
   adminRequest,
+  canManuallyTransitionLead,
   formatAdminDate,
   formatAdminDateOnly,
   formatAdminVnd,
@@ -36,13 +37,14 @@ const leadStatuses = [
   { label: "Tất cả", value: "" },
   { label: "Lead mới", value: "NEW" },
   { label: "Đã liên hệ", value: "CONTACTED" },
+  { label: "Đã lên lịch", value: "SCHEDULED" },
   { label: "Đã xem phòng", value: "VIEWED" },
-  { label: "Đã chuyển vào", value: "MOVED_IN" },
-  { label: "Không chuyển vào", value: "NOT_MOVED_IN" },
+  { label: "Đã chốt thuê", value: "CONVERTED" },
+  { label: "Không đến xem", value: "NO_SHOW" },
   { label: "Đã hủy", value: "CANCELLED" },
 ];
 
-const editableLeadStatuses = leadStatuses.filter((item) => item.value && item.value !== "MOVED_IN");
+const editableLeadStatuses = leadStatuses.filter((item) => item.value && item.value !== "CONVERTED");
 const pageSize = 20;
 
 export function AdminLeadManager() {
@@ -126,6 +128,22 @@ export function AdminLeadManager() {
     }, {});
   }, [leads]);
   const filteredWards = useMemo(() => (city ? wards.filter((item) => String(item.city) === city) : wards), [city, wards]);
+  const selectedLeads = useMemo(
+    () => leads.filter((lead) => selectedIds.includes(lead.id)),
+    [leads, selectedIds],
+  );
+  const bulkStatusOptions = useMemo(
+    () => editableLeadStatuses.filter(
+      (item) => item.value !== "SCHEDULED" && selectedLeads.every((lead) => canManuallyTransitionLead(lead.status, item.value)),
+    ),
+    [selectedLeads],
+  );
+
+  useEffect(() => {
+    if (!bulkStatusOptions.some((item) => item.value === bulkStatus)) {
+      setBulkStatus(bulkStatusOptions[0]?.value ?? "");
+    }
+  }, [bulkStatus, bulkStatusOptions]);
 
   function selectLead(lead: AdminViewingRequest) {
     setSelectedLead(lead);
@@ -259,8 +277,9 @@ export function AdminLeadManager() {
         {[
           ["NEW", "Lead mới"],
           ["CONTACTED", "Đã liên hệ"],
+          ["SCHEDULED", "Đã lên lịch"],
           ["VIEWED", "Đã xem"],
-          ["MOVED_IN", "Chuyển vào"],
+          ["CONVERTED", "Chốt thuê"],
         ].map(([key, label]) => (
           <button
             className="rounded-xl border border-primary/10 bg-surface-container-lowest/90 p-4 text-left shadow-soft transition hover:-translate-y-0.5 hover:border-primary/25"
@@ -330,11 +349,11 @@ export function AdminLeadManager() {
                 <div className="flex w-full flex-wrap items-center gap-2">
                   <span className="text-sm text-secondary">Đã chọn {selectedIds.length}</span>
                   <select className={adminSelectClass} onChange={(event) => setBulkStatus(event.target.value)} value={bulkStatus}>
-                    {editableLeadStatuses.map((item) => (
+                    {bulkStatusOptions.map((item) => (
                       <option key={item.value} value={item.value}>{item.label}</option>
                     ))}
                   </select>
-                  <button className={adminButtonSecondary} disabled={isSaving} onClick={handleBulkUpdate} type="button">
+                  <button className={adminButtonSecondary} disabled={isSaving || !bulkStatus} onClick={handleBulkUpdate} type="button">
                     Cập nhật hàng loạt
                   </button>
                 </div>
@@ -440,8 +459,8 @@ export function AdminLeadManager() {
               <label className="block">
                 <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Trạng thái</span>
                 <select className={adminSelectClass} onChange={(event) => setStatusDraft(event.target.value)} value={statusDraft}>
-                  {selectedLead.status === "MOVED_IN" ? <option value="MOVED_IN">Đã chuyển vào</option> : null}
-                  {editableLeadStatuses.map((item) => (
+                  {selectedLead.status === "CONVERTED" ? <option value="CONVERTED">Đã chốt thuê</option> : null}
+                  {editableLeadStatuses.filter((item) => canManuallyTransitionLead(selectedLead.status, item.value)).map((item) => (
                     <option key={item.value} value={item.value}>{item.label}</option>
                   ))}
                 </select>
@@ -474,7 +493,12 @@ export function AdminLeadManager() {
                     <option value="evening">Buổi tối</option>
                   </select>
                 </div>
-                <button className={`${adminButtonSecondary} mt-3`} disabled={isSaving} onClick={handleConfirmAppointment} type="button">
+                <button
+                  className={`${adminButtonSecondary} mt-3`}
+                  disabled={isSaving || !["NEW", "CONTACTED", "SCHEDULED"].includes(selectedLead.status)}
+                  onClick={handleConfirmAppointment}
+                  type="button"
+                >
                   Xác nhận lịch xem
                 </button>
               </div>
@@ -493,7 +517,7 @@ export function AdminLeadManager() {
                 </button>
                 <button
                   className={adminButtonSecondary}
-                  disabled={isSaving || selectedLead.status === "MOVED_IN"}
+                  disabled={isSaving || !["SCHEDULED", "VIEWED"].includes(selectedLead.status)}
                   onClick={handleConfirmMovedIn}
                   type="button"
                 >

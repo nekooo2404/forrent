@@ -4,7 +4,7 @@ import { Check, Pencil, Plus, RefreshCw, ShieldCheck, Trash2, UserRound, X } fro
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 
-import { authFetch, saveStoredUser } from "@/lib/auth-storage";
+import { authFetch } from "@/lib/auth-storage";
 import type { ApiUser } from "@/lib/api";
 
 import {
@@ -605,7 +605,6 @@ function AccountSecurityPanel({
         setProfileState({ error: payload.message || "Không thể cập nhật thông tin.", loading: false, message: "" });
         return;
       }
-      saveStoredUser(payload.data);
       await refreshUser();
       setProfileState({ error: "", loading: false, message: "Thông tin tài khoản đã được cập nhật." });
     } catch {

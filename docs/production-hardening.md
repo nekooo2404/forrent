@@ -17,12 +17,11 @@ ADMIN_SENTRY_DSN=<admin-sentry-dsn>
 FRONTEND_SENTRY_TRACES_SAMPLE_RATE=0.0
 ```
 
-Then redeploy:
+Then redeploy by a CI-green commit SHA:
 
 ```bash
-cd /opt/forrent/backend
-docker compose up -d --build
-docker compose exec backend python manage.py check --settings=config.settings.production
+cd /opt/forrent
+sh deploy/ops/deploy-sha.sh <ci-green-commit-sha>
 ```
 
 Frontend Sentry is wired through `@sentry/nextjs`; set separate client/admin DSNs in `backend/.env` before rebuilding Docker images.
@@ -92,10 +91,9 @@ Rotate on this schedule:
 After rotation:
 
 ```bash
-cd /opt/forrent/backend
-docker compose up -d --build
-docker compose exec backend python manage.py check --settings=config.settings.production
-curl https://api.forrent.io.vn/api/health/
+cd /opt/forrent
+sh deploy/ops/deploy-sha.sh <ci-green-commit-sha>
+curl --fail --silent --show-error --location --connect-timeout 10 --max-time 20 https://api.forrent.io.vn/api/health/ >/dev/null
 ```
 
 ## Staging
@@ -146,7 +144,7 @@ Before release, run:
 cd backend
 python manage.py check --settings=config.settings.production
 pytest apps/accounts apps/blogs apps/contacts apps/commissions apps/rooms apps/viewing_requests
-pip-audit -r requirements.txt --strict
+pip-audit -r requirements.txt --strict --timeout 30 --progress-spinner off
 
 cd ../frontend-client
 npm audit --audit-level=high

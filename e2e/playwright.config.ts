@@ -1,5 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const adminBaseURL = process.env.ADMIN_BASE_URL || 'http://localhost:3001';
+const mockApiURL = 'http://127.0.0.1:4100';
+process.env.ADMIN_BASE_URL = adminBaseURL;
+
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
@@ -38,10 +42,28 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: 'cd ../frontend-client && npm run build && npm run start',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 180000,
-  },
+  webServer: [
+    {
+      command: 'node mock-api.mjs',
+      url: `${mockApiURL}/api/health/`,
+      reuseExistingServer: false,
+      timeout: 10000,
+    },
+    {
+      command: 'cd ../frontend-client && node -e "require(\'node:fs\').rmSync(\'.next\',{recursive:true,force:true})" && npm run build && npm run start',
+      env: {
+        API_BASE_URL: mockApiURL,
+        NEXT_PUBLIC_API_BASE_URL: mockApiURL,
+      },
+      url: 'http://localhost:3000',
+      reuseExistingServer: false,
+      timeout: 180000,
+    },
+    {
+      command: 'cd ../frontend-admin && node -e "require(\'node:fs\').rmSync(\'.next\',{recursive:true,force:true})" && npm run build && npm run start',
+      url: adminBaseURL,
+      reuseExistingServer: false,
+      timeout: 180000,
+    },
+  ],
 });

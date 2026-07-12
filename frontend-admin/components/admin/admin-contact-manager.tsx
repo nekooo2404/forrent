@@ -91,7 +91,7 @@ export function AdminContactManager() {
 
   useEffect(() => {
     loadContacts("", "", 1);
-    adminList<AdminRoom>("rooms", token, { ordering: "title", page_size: 100, status: "AVAILABLE" })
+    adminList<AdminRoom>("rooms", token, { ordering: "title", page_size: 100, status: "PUBLISHED" })
       .then((response) => setRooms(response.results))
       .catch(() => null);
     // eslint-disable-next-line react-hooks/exhaustive-deps

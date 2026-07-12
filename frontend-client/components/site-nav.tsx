@@ -76,7 +76,6 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
           className="site-logo-container group relative z-10"
           href="/homepage"
         >
-          <div className="site-logo-glow" />
           <div className="relative">
             <Image
               alt="ForRent"
@@ -126,7 +125,6 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
             onClick={() => setIsMobileMenuOpen(true)}
             type="button"
           >
-            <span className="site-button-glow" />
             <Menu size={24} strokeWidth={2} />
           </button>
 
@@ -170,7 +168,6 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
                 onClick={() => setIsMobileMenuOpen(false)}
                 type="button"
               >
-                <span className="site-button-glow" />
                 <X size={24} strokeWidth={2} />
               </button>
             </div>

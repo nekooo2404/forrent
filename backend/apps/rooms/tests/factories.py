@@ -39,7 +39,7 @@ def create_location_graph():
     return city, ward, amenity, area_range
 
 
-def create_room(created_by=None, status=Room.Status.AVAILABLE):
+def create_room(created_by=None, status=Room.Status.PUBLISHED):
     created_by = created_by or create_admin()
     city, ward, amenity, area_range = create_location_graph()
     deposit_type, _ = DepositType.objects.get_or_create(name="Cọc 1 tháng")

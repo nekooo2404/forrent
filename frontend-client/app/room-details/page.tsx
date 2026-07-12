@@ -163,7 +163,7 @@ function mapDetail(room: ApiRoomDetail): DetailView {
     location,
     area: formatArea(room.actual_area),
     status: roomStatusLabel(room.status),
-    isAvailable: room.status === "AVAILABLE",
+    isAvailable: room.status === "PUBLISHED",
     description,
     secondaryDescription:
       room.short_description ||
@@ -243,9 +243,9 @@ function ListingBody({ detail }: Readonly<{ detail: DetailView }>) {
         <AmenitiesSection amenities={detail.amenities} />
       </div>
 
-      <aside className="space-y-4 lg:sticky lg:top-28 lg:self-start">
+      <aside aria-label="Tư vấn và đặt lịch xem phòng" className="space-y-4 lg:sticky lg:top-28 lg:self-start">
         <ContactCard detail={detail} />
-        <div id="dat-lich-xem">
+        <div>
           <LazyViewingRequestPanel disabled={!detail.isAvailable} roomId={detail.id} />
         </div>
         <SafetyNote />

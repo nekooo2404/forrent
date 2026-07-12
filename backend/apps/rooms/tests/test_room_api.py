@@ -4,9 +4,11 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import serializers
 from rest_framework.test import APIClient
 
+from apps.common.models import AuditLog
 from apps.common.image_validation import validate_uploaded_image_file
 from apps.rooms.tests.factories import create_admin, create_room, create_user
 from apps.locations.models import AreaRange
+from apps.rooms.models import DepositType, Room
 from apps.rooms.serializers import validate_room_image_url
 
 User = get_user_model()
@@ -36,7 +38,7 @@ class TestRoomAPI:
 
     def test_public_room_list_hides_unavailable_rooms(self):
         available_room = create_room()
-        unavailable_room = create_room(status="UNAVAILABLE")
+        unavailable_room = create_room(status=Room.Status.RENTED)
 
         response = self.client.get("/api/rooms/")
 
@@ -44,6 +46,17 @@ class TestRoomAPI:
         slugs = {room["slug"] for room in response.json()["data"]["results"]}
         assert available_room.slug in slugs
         assert unavailable_room.slug not in slugs
+
+    def test_room_keeps_deposit_type_snapshot_after_type_rename(self):
+        room = create_room()
+        deposit_type = room.deposit_type
+        deposit_type.name = "Cọc linh hoạt"
+        deposit_type.save(update_fields=["name", "updated_at"])
+
+        response = self.client.get(f"/api/rooms/{room.slug}/")
+
+        assert response.status_code == 200
+        assert response.json()["data"]["deposit_type_name"] == "Cọc 1 tháng"
 
     def test_tenant_cannot_access_admin_api(self):
         tenant = create_user()
@@ -99,11 +112,108 @@ class TestRoomAPI:
         assert "actual_area" in response.data["errors"]
         assert "commission_percent" in response.data["errors"]
 
+    def test_admin_room_status_change_writes_specific_audit_log(self):
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        self.client.force_authenticate(admin)
+
+        response = self.client.patch(
+            f"/api/admin/rooms/{room.id}/",
+            {"status": Room.Status.HIDDEN},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        log = AuditLog.objects.get(event="room.status_changed", target_id=str(room.id))
+        assert log.metadata == {"from": Room.Status.PUBLISHED, "to": Room.Status.HIDDEN}
+
+    def test_admin_cannot_mark_room_rented_without_lead_conversion(self):
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        self.client.force_authenticate(admin)
+
+        response = self.client.patch(
+            f"/api/admin/rooms/{room.id}/",
+            {"status": Room.Status.RENTED},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        room.refresh_from_db()
+        assert room.status == Room.Status.PUBLISHED
+
+    def test_admin_cannot_republish_rented_room_without_move_out(self):
+        admin = create_admin()
+        room = create_room(created_by=admin, status=Room.Status.RENTED)
+        self.client.force_authenticate(admin)
+
+        response = self.client.patch(
+            f"/api/admin/rooms/{room.id}/",
+            {"status": Room.Status.PUBLISHED},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        room.refresh_from_db()
+        assert room.status == Room.Status.RENTED
+
     def test_room_image_validation_rejects_svg_upload(self):
         image = SimpleUploadedFile("bad.svg", b"<svg></svg>", content_type="image/svg+xml")
 
         with pytest.raises(serializers.ValidationError):
             validate_uploaded_image_file(image, "uploaded_images")
+
+    def test_admin_rejected_room_upload_writes_audit_log(self):
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        self.client.force_authenticate(admin)
+        image = SimpleUploadedFile("bad.svg", b"<svg></svg>", content_type="image/svg+xml")
+
+        response = self.client.patch(
+            f"/api/admin/rooms/{room.id}/",
+            {"uploaded_images": [image]},
+            format="multipart",
+        )
+
+        assert response.status_code == 400
+        log = AuditLog.objects.get(event="room.upload_rejected", target_id=str(room.id))
+        assert log.status == AuditLog.Status.FAILURE
+        assert log.metadata["fields"] == ["uploaded_images"]
+        assert log.metadata["uploaded_image_count"] == 1
+
+    def test_admin_deposit_type_crud_writes_audit_logs(self):
+        admin = create_admin()
+        self.client.force_authenticate(admin)
+
+        create_response = self.client.post("/api/admin/deposit-types/", {"name": "Cọc test"}, format="json")
+        deposit_type_id = create_response.data["data"]["id"]
+        update_response = self.client.patch(
+            f"/api/admin/deposit-types/{deposit_type_id}/",
+            {"name": "Cọc test sửa"},
+            format="json",
+        )
+        delete_response = self.client.delete(f"/api/admin/deposit-types/{deposit_type_id}/")
+
+        assert create_response.status_code == 201
+        assert update_response.status_code == 200
+        assert delete_response.status_code == 200
+        assert AuditLog.objects.filter(event="deposit_type.created", target_id=str(deposit_type_id)).exists()
+        assert AuditLog.objects.filter(event="deposit_type.updated", target_id=str(deposit_type_id)).exists()
+        assert AuditLog.objects.filter(event="deposit_type.deleted", target_id=str(deposit_type_id)).exists()
+
+    def test_used_deposit_type_delete_deactivates_and_writes_audit_log(self):
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        deposit_type = room.deposit_type
+        self.client.force_authenticate(admin)
+
+        response = self.client.delete(f"/api/admin/deposit-types/{deposit_type.id}/")
+
+        assert response.status_code == 200
+        deposit_type.refresh_from_db()
+        assert not deposit_type.is_active
+        assert DepositType.objects.filter(id=deposit_type.id).exists()
+        assert AuditLog.objects.filter(event="deposit_type.deactivated", target_id=str(deposit_type.id)).exists()
 
     def test_room_image_url_rejects_unapproved_host(self):
         with pytest.raises(serializers.ValidationError):

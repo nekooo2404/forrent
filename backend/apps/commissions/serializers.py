@@ -75,6 +75,8 @@ class CommissionPayoutSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs):
+        if "amount" in self.initial_data:
+            raise serializers.ValidationError({"amount": "Payout amount is immutable."})
         next_status = attrs.get("status")
         if not self.instance or not next_status or next_status == self.instance.status:
             return attrs

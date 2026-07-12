@@ -57,6 +57,22 @@ class AdminUserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Role must be TENANT or SALER.")
         return value
 
+    def validate(self, attrs):
+        if self.instance:
+            next_role = attrs.get("role", self.instance.role)
+            next_is_active = attrs.get("is_active", self.instance.is_active)
+            removes_active_saler = (
+                self.instance.role == User.Role.SALER
+                and self.instance.is_active
+                and (next_role != User.Role.SALER or not next_is_active)
+            )
+            if removes_active_saler and not User.objects.filter(
+                role=User.Role.SALER,
+                is_active=True,
+            ).exclude(pk=self.instance.pk).exists():
+                raise serializers.ValidationError({"role": "At least one active SALER account is required."})
+        return attrs
+
     def create(self, validated_data):
         password = validated_data.pop("password", None)
         current_password = validated_data.pop("current_password", "")

@@ -18,7 +18,6 @@ env = environ.Env(
     EMAIL_USE_TLS=(bool, False),
     EMAIL_USE_SSL=(bool, True),
     EMAIL_TIMEOUT=(int, 15),
-    SUPABASE_STORAGE_TIMEOUT=(int, 30),
     SENTRY_TRACES_SAMPLE_RATE=(float, 0.0),
     EXPOSE_API_DOCS=(bool, False),
 )
@@ -64,6 +63,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "apps.common.middleware.RequestIDMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -132,11 +132,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 CLOUDINARY_CLOUD_NAME = env("CLOUDINARY_CLOUD_NAME", default="")
 CLOUDINARY_API_KEY = env("CLOUDINARY_API_KEY", default="")
 CLOUDINARY_API_SECRET = env("CLOUDINARY_API_SECRET", default="")
-
-SUPABASE_URL = env("SUPABASE_URL", default="")
-SUPABASE_SECRET_KEY = env("SUPABASE_SECRET_KEY", default="")
-SUPABASE_STORAGE_BUCKET = env("SUPABASE_STORAGE_BUCKET", default="")
-SUPABASE_STORAGE_TIMEOUT = env("SUPABASE_STORAGE_TIMEOUT")
+CLOUDINARY_UPLOAD_MODERATION = env("CLOUDINARY_UPLOAD_MODERATION", default="")
 
 if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET:
     STORAGES = {
@@ -147,16 +143,6 @@ if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET:
             "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
         },
     }
-elif SUPABASE_URL and SUPABASE_SECRET_KEY and SUPABASE_STORAGE_BUCKET:
-    STORAGES = {
-        "default": {
-            "BACKEND": "apps.common.storage.SupabaseMediaStorage",
-        },
-        "staticfiles": {
-            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-        },
-    }
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "accounts.User"
 
@@ -188,6 +174,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_THROTTLE_RATES": {
         "login": "10/min",
+        "logout": "30/min",
         "register": "5/min",
         "password_reset": "5/min",
         "viewing_request": "5/min",
@@ -200,6 +187,7 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(minutes=env("JWT_REFRESH_TOKEN_LIFETIME")),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
+    "CHECK_REVOKE_TOKEN": True,
     "UPDATE_LAST_LOGIN": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
@@ -212,14 +200,22 @@ SPECTACULAR_SETTINGS = {
     "ENUM_NAME_OVERRIDES": {
         "UserRoleEnum": [("TENANT", "Tenant"), ("SALER", "Saler/Admin")],
         "RoomTypeEnum": [("CCMN", "Chung cu mini"), ("CCDV", "Can ho dich vu"), ("HOUSE", "Nha nguyen can")],
-        "RoomStatusEnum": [("AVAILABLE", "Available"), ("UNAVAILABLE", "Unavailable"), ("HIDDEN", "Hidden")],
+        "RoomStatusEnum": [
+            ("DRAFT", "Draft"),
+            ("PENDING_REVIEW", "Pending review"),
+            ("PUBLISHED", "Published"),
+            ("RENTED", "Rented"),
+            ("HIDDEN", "Hidden"),
+            ("ARCHIVED", "Archived"),
+        ],
         "ViewingRequestStatusEnum": [
             ("NEW", "New"),
             ("CONTACTED", "Contacted"),
+            ("SCHEDULED", "Scheduled"),
             ("VIEWED", "Viewed"),
-            ("MOVED_IN", "Moved in"),
-            ("NOT_MOVED_IN", "Not moved in"),
+            ("CONVERTED", "Converted"),
             ("CANCELLED", "Cancelled"),
+            ("NO_SHOW", "No show"),
         ],
         "BlogStatusEnum": [("DRAFT", "Draft"), ("PUBLISHED", "Published"), ("HIDDEN", "Hidden")],
         "ContactMessageStatusEnum": [("NEW", "New"), ("READ", "Read"), ("HANDLED", "Handled")],
@@ -275,11 +271,14 @@ LOGGING = {
         "verbose": {
             "format": "%(levelname)s %(asctime)s %(name)s %(message)s",
         },
+        "json": {
+            "()": "apps.common.logging.JsonFormatter",
+        },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "verbose",
+            "formatter": "json",
         },
     },
     "root": {

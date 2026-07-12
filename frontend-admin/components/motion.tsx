@@ -17,13 +17,13 @@ export const motionEase = {
 } as const;
 
 export const pageFadeSlide: Variants = {
-  hidden: { opacity: 0, y: 18, filter: "blur(8px)" },
-  show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: motionDuration.slow, ease: motionEase.smooth } },
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: motionDuration.medium, ease: motionEase.smooth } },
 };
 
 export const fadeSlide: Variants = {
-  hidden: { opacity: 0, y: 16, filter: "blur(8px)" },
-  show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: motionDuration.medium, ease: motionEase.smooth } },
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { duration: motionDuration.base, ease: motionEase.smooth } },
 };
 
 export function MotionPage({ children, className = "", ...props }: HTMLMotionProps<"main">) {

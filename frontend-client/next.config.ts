@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
-const supabaseHost = "rwblwugksbwnkzuakgcf.supabase.co";
 const cloudinaryHost = "res.cloudinary.com";
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -62,10 +61,6 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "api.forrent.io.vn",
-      },
-      {
-        protocol: "https",
-        hostname: supabaseHost,
       },
       {
         protocol: "https",
