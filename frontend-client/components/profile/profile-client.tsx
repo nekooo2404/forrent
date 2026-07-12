@@ -18,7 +18,6 @@ import {
   authFetch,
   clearAuthSession,
   refreshStoredAuthSession,
-  saveStoredUser,
 } from "@/lib/auth-storage";
 import {
   formatDate,
@@ -161,7 +160,6 @@ export function ProfileClient() {
       }
 
       setUser(payload.data);
-      saveStoredUser(payload.data);
       toast({
         type: "success",
         title: "Đã cập nhật hồ sơ",

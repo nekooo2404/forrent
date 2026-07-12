@@ -50,7 +50,7 @@ sudo certbot --nginx -d staging.forrent.io.vn -d staging-admin.forrent.io.vn -d 
 ## Verify
 
 ```bash
-curl https://staging-api.forrent.io.vn/api/health/
-curl -I https://staging.forrent.io.vn | grep -i x-robots-tag
-curl -I https://staging-admin.forrent.io.vn | grep -i x-robots-tag
+curl --fail --silent --show-error --location --connect-timeout 10 --max-time 20 https://staging-api.forrent.io.vn/api/health/
+curl --fail --silent --show-error --location --connect-timeout 10 --max-time 20 -I https://staging.forrent.io.vn | grep -i x-robots-tag
+curl --fail --silent --show-error --location --connect-timeout 10 --max-time 20 -I https://staging-admin.forrent.io.vn | grep -i x-robots-tag
 ```

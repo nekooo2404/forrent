@@ -1,4 +1,8 @@
-import type { ApiUser, LoginResponse } from "@/lib/api";
+import type { ApiUser } from "@/lib/api";
+
+export type BrowserAuthSession = {
+  user: ApiUser;
+};
 
 type ApiResponse<T> = {
   success: boolean;
@@ -10,11 +14,10 @@ type RefreshResponse = Record<string, never>;
 
 const accessTokenKey = "access";
 const refreshTokenKey = "refresh";
-const userStorageKey = "user";
 
 const legacyAccessTokenKeys = ["accessToken", "aurelian_access_token"];
 const legacyRefreshTokenKeys = ["refreshToken", "aurelian_refresh_token"];
-const legacyUserStorageKeys = ["currentUser", "aurelian_user"];
+const legacyUserStorageKeys = ["user", "currentUser", "aurelian_user"];
 
 const sensitiveStorageKeys = [
   accessTokenKey,
@@ -25,7 +28,6 @@ const sensitiveStorageKeys = [
 const authStorageKeys = [
   accessTokenKey,
   refreshTokenKey,
-  userStorageKey,
   ...legacyAccessTokenKeys,
   ...legacyRefreshTokenKeys,
   ...legacyUserStorageKeys,
@@ -39,27 +41,27 @@ function clearStoredTokens() {
 }
 
 export function hasStoredAuthSession() {
-  if (typeof window === "undefined") {
-    return false;
-  }
-  return Boolean(window.localStorage.getItem(userStorageKey));
+  return false;
 }
 
-export function saveAuthSession(session: LoginResponse) {
+export function saveAuthSession(_session: BrowserAuthSession) {
+  void _session;
+
   if (typeof window === "undefined") {
     return;
   }
 
-  clearStoredTokens();
-  window.localStorage.setItem(userStorageKey, JSON.stringify(session.user));
+  authStorageKeys.forEach((key) => window.localStorage.removeItem(key));
 }
 
-export function saveStoredUser(user: ApiUser) {
+export function saveStoredUser(_user: ApiUser) {
+  void _user;
+
   if (typeof window === "undefined") {
     return;
   }
 
-  window.localStorage.setItem(userStorageKey, JSON.stringify(user));
+  authStorageKeys.forEach((key) => window.localStorage.removeItem(key));
 }
 
 export function clearAuthSession() {

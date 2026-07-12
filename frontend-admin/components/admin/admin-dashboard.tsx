@@ -195,8 +195,9 @@ export function AdminDashboard() {
               {[
                 ["NEW", "Lead mới"],
                 ["CONTACTED", "Đã liên hệ"],
+                ["SCHEDULED", "Đã lên lịch"],
                 ["VIEWED", "Đã xem phòng"],
-                ["MOVED_IN", "Đã chuyển vào"],
+                ["CONVERTED", "Đã chốt thuê"],
               ].map(([status, label]) => {
                 const count = statusCounts[status] ?? 0;
                 return (

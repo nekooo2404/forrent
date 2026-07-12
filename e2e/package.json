@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "test": "playwright test",
-    "test:ci": "playwright test --project=chromium --project=\"Mobile Chrome\"",
+    "test:ci": "playwright test --project=chromium --project=\"Mobile Chrome\" --project=\"Mobile Safari\" --workers=1",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug"

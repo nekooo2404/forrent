@@ -7,19 +7,39 @@ test.describe('Public critical flows', () => {
     await expect(page).toHaveTitle(/ForRent/);
     await expect(page.getByTestId('site-nav')).toBeVisible();
     await expect(page.getByTestId('site-nav')).toHaveAttribute('data-ready', 'true');
-    await expect(page.locator('a[href="/rooms"]').first()).toBeVisible();
-    await expect(page.locator('a[href="/blogs"]').first()).toBeVisible();
-    await expect(page.locator('a[href="/contact"]').first()).toBeVisible();
-    await expect(page.getByTestId('theme-toggle')).toBeVisible();
 
-    await page.getByTestId('theme-dark').click();
-    await expect(page.locator('html')).toHaveClass(/dark/);
+    const viewport = page.viewportSize();
+    if (viewport && viewport.width < 768) {
+      await expect(page.locator('.site-menu-button')).toBeVisible();
+      await page.locator('.site-menu-button').click();
+      await expect(page.locator('.site-mobile-menu')).toBeVisible();
+      await expect(page.locator('.site-mobile-menu').getByTestId('theme-toggle')).toBeVisible();
+      await page.locator('.site-mobile-menu').getByTestId('theme-dark').click();
+      await expect(page.locator('html')).toHaveClass(/dark/);
 
-    await page.getByTestId('theme-light').click();
-    await expect(page.locator('html')).toHaveClass(/light/);
+      await page.locator('.site-mobile-menu').getByTestId('theme-light').click();
+      await expect(page.locator('html')).toHaveClass(/light/);
 
-    await page.getByTestId('theme-system').click();
-    await expect(page.locator('html')).toHaveClass(/(light|dark)/);
+      await page.locator('.site-mobile-menu').getByTestId('theme-system').click();
+      await expect(page.locator('html')).toHaveClass(/(light|dark)/);
+
+      await page.locator('.site-close-button').click();
+      await expect(page.locator('.site-mobile-menu')).toBeHidden();
+    } else {
+      await expect(page.locator('a[href="/rooms"]').first()).toBeVisible();
+      await expect(page.locator('a[href="/blogs"]').first()).toBeVisible();
+      await expect(page.locator('a[href="/contact"]').first()).toBeVisible();
+      await expect(page.getByTestId('theme-toggle')).toBeVisible();
+
+      await page.getByTestId('theme-dark').click();
+      await expect(page.locator('html')).toHaveClass(/dark/);
+
+      await page.getByTestId('theme-light').click();
+      await expect(page.locator('html')).toHaveClass(/light/);
+
+      await page.getByTestId('theme-system').click();
+      await expect(page.locator('html')).toHaveClass(/(light|dark)/);
+    }
 
     await page.evaluate(() => window.scrollTo(0, 120));
     await expect(page.getByTestId('site-nav')).toHaveClass(/site-navbar-scrolled/);
@@ -54,10 +74,6 @@ test.describe('Public critical flows', () => {
     await page.goto('/rooms');
 
     const wardSelect = page.locator('select[name="ward"]');
-    if ((await wardSelect.count()) === 0) {
-      test.skip(true, 'No ward filter is rendered without backend filter data.');
-    }
-
     await expect(wardSelect).toBeDisabled();
   });
 
@@ -80,17 +96,15 @@ test.describe('Public critical flows', () => {
       .toBe(false);
   });
 
-  test('room detail booking panel is reachable when rooms exist', async ({ page }) => {
+  test('room detail booking panel is reachable', async ({ page }) => {
     await page.goto('/rooms');
 
-    const firstRoom = page.locator('a[href^="/rooms/"]').first();
-    if (!(await firstRoom.isVisible().catch(() => false))) {
-      test.skip(true, 'No rooms are rendered from backend data.');
-    }
-
+    const firstRoom = page.getByRole('link', { name: 'Xem và đặt lịch' }).first();
+    await firstRoom.scrollIntoViewIfNeeded();
+    await expect(firstRoom).toBeVisible();
     await firstRoom.click();
     await expect(page).toHaveURL(/\/rooms\/[^/?#]+/);
-    await expect(page.locator('#dat-lich-xem')).toBeVisible();
+    await expect(page.getByRole('complementary', { name: 'Tư vấn và đặt lịch xem phòng' })).toBeVisible();
   });
 });
 

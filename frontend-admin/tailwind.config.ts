@@ -63,6 +63,7 @@ const config: Config = {
         warning: "rgb(var(--warning) / <alpha-value>)",
         "on-warning": "rgb(var(--on-warning) / <alpha-value>)",
         "warning-container": "rgb(var(--warning-container) / <alpha-value>)",
+        "on-warning-container": "rgb(var(--on-warning-container) / <alpha-value>)",
         gold: "rgb(var(--gold) / <alpha-value>)",
       },
       borderRadius: {

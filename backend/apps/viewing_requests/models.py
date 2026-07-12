@@ -13,17 +13,33 @@ class ViewingRequest(TimeStampedModel):
     class Status(models.TextChoices):
         NEW = "NEW", "New"
         CONTACTED = "CONTACTED", "Contacted"
+        SCHEDULED = "SCHEDULED", "Scheduled"
         VIEWED = "VIEWED", "Viewed"
-        MOVED_IN = "MOVED_IN", "Moved in"
-        NOT_MOVED_IN = "NOT_MOVED_IN", "Not moved in"
+        CONVERTED = "CONVERTED", "Converted"
         CANCELLED = "CANCELLED", "Cancelled"
+        NO_SHOW = "NO_SHOW", "No show"
 
     class TimeSlot(models.TextChoices):
         MORNING = "morning", "Morning, 9:00 - 12:00"
         AFTERNOON = "afternoon", "Afternoon, 12:00 - 16:00"
         EVENING = "evening", "Evening, 16:00 - 19:00"
 
-    ACTIVE_STATUSES = (Status.NEW, Status.CONTACTED, Status.VIEWED)
+    ACTIVE_STATUSES = (Status.NEW, Status.CONTACTED, Status.SCHEDULED, Status.VIEWED)
+
+    @classmethod
+    def can_transition(cls, current_status, next_status):
+        if current_status == next_status:
+            return True
+        allowed = {
+            cls.Status.NEW: {cls.Status.CONTACTED, cls.Status.SCHEDULED, cls.Status.CANCELLED},
+            cls.Status.CONTACTED: {cls.Status.SCHEDULED, cls.Status.CANCELLED},
+            cls.Status.SCHEDULED: {cls.Status.VIEWED, cls.Status.CONVERTED, cls.Status.CANCELLED, cls.Status.NO_SHOW},
+            cls.Status.VIEWED: {cls.Status.CONVERTED, cls.Status.CANCELLED},
+            cls.Status.CONVERTED: set(),
+            cls.Status.CANCELLED: set(),
+            cls.Status.NO_SHOW: set(),
+        }
+        return next_status in allowed.get(current_status, set())
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="viewing_requests")
     room = models.ForeignKey(Room, on_delete=models.PROTECT, related_name="viewing_requests")

@@ -3,9 +3,13 @@ from unittest import mock
 import cloudinary.exceptions
 import pytest
 from django.core.files.base import ContentFile
+from django.http import HttpResponse
+from django.test import RequestFactory
 from django.test import SimpleTestCase, override_settings
 
-from apps.common.storage import CloudinaryMediaStorage, SupabaseMediaStorage
+from apps.common.middleware import RequestIDMiddleware
+from apps.common.audit import audit_event
+from apps.common.storage import CloudinaryMediaStorage
 
 
 @pytest.mark.django_db
@@ -13,6 +17,7 @@ def test_health_check(client):
     response = client.get("/api/health/")
 
     assert response.status_code == 200
+    assert response.headers["X-Request-ID"]
     payload = response.json()
     assert payload["status"] == "ok"
     assert payload["checks"]["database"] is True
@@ -20,33 +25,58 @@ def test_health_check(client):
     assert payload["checks"]["media_storage"] is True
 
 
-@override_settings(
-    SUPABASE_URL="https://example.supabase.co",
-    SUPABASE_SECRET_KEY="secret",
-    SUPABASE_STORAGE_BUCKET="forrent-media",
-    SUPABASE_STORAGE_TIMEOUT=10,
-)
-class SupabaseMediaStorageTests(SimpleTestCase):
-    def test_public_url_uses_bucket_and_quotes_path(self):
-        storage = SupabaseMediaStorage()
+@pytest.mark.django_db
+def test_audit_event_structured_log_includes_request_context():
+    request = RequestFactory().post("/api/admin/test/", HTTP_X_FORWARDED_FOR="203.0.113.10")
+    request.id = "request-123"
 
-        assert storage.url("room images/a b.jpg") == (
-            "https://example.supabase.co/storage/v1/object/public/forrent-media/room%20images/a%20b.jpg"
-        )
+    with mock.patch("apps.common.audit.logger.info") as info:
+        audit_event("admin.test", request=request, metadata={"password": "secret", "status": "ok"})
 
-    def test_available_name_adds_suffix_without_head_request(self):
-        storage = SupabaseMediaStorage()
+    payload = info.call_args.kwargs["extra"]
+    assert payload["request_id"] == "request-123"
+    assert payload["method"] == "POST"
+    assert payload["path"] == "/api/admin/test/"
+    assert payload["ip_address"] == "203.0.113.10"
+    assert payload["metadata_fields"] == ["password", "status"]
 
-        name = storage.get_available_name("room-images/photo.jpg")
 
-        assert name.startswith("room-images/photo_")
-        assert name.endswith(".jpg")
+class RequestIDMiddlewareTests(SimpleTestCase):
+    def test_logs_request_duration_and_status_class(self):
+        request = RequestFactory().get("/api/test/")
+        middleware = RequestIDMiddleware(lambda _request: HttpResponse(status=503))
+
+        with mock.patch("apps.common.middleware.request_logger.warning") as warning:
+            response = middleware(request)
+
+        assert response["X-Request-ID"]
+        payload = warning.call_args.kwargs["extra"]
+        assert payload["status_code"] == 503
+        assert payload["status_class"] == "5xx"
+        assert payload["duration_ms"] >= 0
+
+    def test_logs_exception_before_reraising(self):
+        request = RequestFactory().get("/api/test/")
+
+        def failing_view(_request):
+            raise RuntimeError("boom")
+
+        middleware = RequestIDMiddleware(failing_view)
+
+        with mock.patch("apps.common.middleware.request_logger.exception") as exception:
+            with pytest.raises(RuntimeError):
+                middleware(request)
+
+        payload = exception.call_args.kwargs["extra"]
+        assert payload["path"] == "/api/test/"
+        assert payload["duration_ms"] >= 0
 
 
 @override_settings(
     CLOUDINARY_CLOUD_NAME="demo",
     CLOUDINARY_API_KEY="key",
     CLOUDINARY_API_SECRET="secret",
+    CLOUDINARY_UPLOAD_MODERATION="",
 )
 class CloudinaryMediaStorageTests(SimpleTestCase):
     def test_public_url_uses_secure_cloudinary_url(self):
@@ -56,12 +86,14 @@ class CloudinaryMediaStorageTests(SimpleTestCase):
             "https://res.cloudinary.com/demo/image/upload/v1/room-images/photo"
         )
 
-    def test_available_name_adds_suffix_without_api_request(self):
+    def test_available_name_replaces_user_filename_with_random_id(self):
         storage = CloudinaryMediaStorage()
 
         name = storage.get_available_name("room-images/photo.jpg")
 
-        assert name.startswith("room-images/photo_")
+        assert name.startswith("room-images/")
+        assert "photo" not in name
+        assert len(name.removeprefix("room-images/").removesuffix(".jpg")) == 32
         assert name.endswith(".jpg")
 
     def test_save_uploads_with_public_id_and_keeps_django_name(self):
@@ -76,6 +108,15 @@ class CloudinaryMediaStorageTests(SimpleTestCase):
         assert upload.call_args.kwargs["resource_type"] == "image"
         assert upload.call_args.kwargs["overwrite"] is False
         assert upload.call_args.kwargs["eager"][0]["width"] == 640
+
+    @override_settings(CLOUDINARY_UPLOAD_MODERATION="manual")
+    def test_save_passes_cloudinary_moderation_when_configured(self):
+        storage = CloudinaryMediaStorage()
+
+        with mock.patch("cloudinary.uploader.upload") as upload:
+            storage._save("room-images/photo.jpg", ContentFile(b"image"))
+
+        assert upload.call_args.kwargs["moderation"] == "manual"
 
     def test_exists_returns_false_for_cloudinary_not_found(self):
         storage = CloudinaryMediaStorage()

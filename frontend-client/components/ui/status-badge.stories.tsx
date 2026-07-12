@@ -15,14 +15,14 @@ type Story = StoryObj<typeof meta>;
 
 export const RoomAvailable: Story = {
   args: {
-    status: "AVAILABLE",
+    status: "PUBLISHED",
     type: "room",
   },
 };
 
 export const RoomUnavailable: Story = {
   args: {
-    status: "UNAVAILABLE",
+    status: "RENTED",
     type: "room",
   },
 };
@@ -51,9 +51,12 @@ export const BlogPublished: Story = {
 export const AllRoomStatuses: Story = {
   render: () => (
     <div className="flex flex-wrap gap-3">
-      <StatusBadge status="AVAILABLE" type="room" />
-      <StatusBadge status="UNAVAILABLE" type="room" />
+      <StatusBadge status="DRAFT" type="room" />
+      <StatusBadge status="PENDING_REVIEW" type="room" />
+      <StatusBadge status="PUBLISHED" type="room" />
+      <StatusBadge status="RENTED" type="room" />
       <StatusBadge status="HIDDEN" type="room" />
+      <StatusBadge status="ARCHIVED" type="room" />
     </div>
   ),
 };

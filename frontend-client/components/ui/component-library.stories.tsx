@@ -53,11 +53,11 @@ export const Showcase: Story = {
       <section className="grid gap-3">
         <h2 className="text-xl font-semibold text-primary">Status Badges</h2>
         <div className="flex flex-wrap gap-3">
-          <StatusBadge status="AVAILABLE" type="room" />
-          <StatusBadge status="UNAVAILABLE" type="room" />
+          <StatusBadge status="PUBLISHED" type="room" />
+          <StatusBadge status="RENTED" type="room" />
           <StatusBadge status="PUBLISHED" type="blog" />
           <StatusBadge status="NEW" type="lead" />
-          <StatusBadge status="MOVED_IN" type="lead" />
+          <StatusBadge status="CONVERTED" type="lead" />
           <StatusBadge status="CANCELLED" type="lead" />
         </div>
       </section>

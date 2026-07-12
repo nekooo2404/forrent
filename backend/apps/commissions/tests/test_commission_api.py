@@ -7,6 +7,7 @@ from rest_framework.test import APIClient
 from apps.rooms.tests.factories import create_admin, create_room, create_user
 from apps.viewing_requests.models import ViewingRequest
 from apps.commissions.models import CommissionPayout
+from apps.common.models import AuditLog
 
 
 @pytest.mark.django_db
@@ -24,6 +25,7 @@ class TestCommissionAPI:
             full_name=tenant.full_name,
             phone=tenant.phone,
             email=tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
             confirmed_at=timezone.now(),
             estimated_commission_amount=room.estimated_commission_amount,
         )
@@ -49,6 +51,7 @@ class TestCommissionAPI:
             full_name=tenant.full_name,
             phone=tenant.phone,
             email=tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
             confirmed_at=timezone.now(),
             estimated_commission_amount=room.estimated_commission_amount,
         )
@@ -62,6 +65,34 @@ class TestCommissionAPI:
         payout.refresh_from_db()
         assert payout.status == CommissionPayout.Status.PENDING
 
+    def test_payout_amount_is_immutable(self):
+        tenant = create_user()
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        lead = ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
+            confirmed_at=timezone.now(),
+            estimated_commission_amount=room.estimated_commission_amount,
+        )
+        self.client.force_authenticate(admin)
+        self.client.post(f"/api/admin/viewing-requests/{lead.id}/confirm-moved-in/")
+        payout = CommissionPayout.objects.get(viewing_request=lead)
+
+        response = self.client.patch(
+            f"/api/admin/commissions/payouts/{payout.id}/",
+            {"amount": "1.00"},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        payout.refresh_from_db()
+        assert payout.amount == room.estimated_commission_amount
+
     def test_payout_approval_paid_and_cancel_audit_are_enforced(self):
         tenant = create_user()
         admin = create_admin()
@@ -72,6 +103,7 @@ class TestCommissionAPI:
             full_name=tenant.full_name,
             phone=tenant.phone,
             email=tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
             confirmed_at=timezone.now(),
             estimated_commission_amount=room.estimated_commission_amount,
         )
@@ -91,6 +123,7 @@ class TestCommissionAPI:
         assert payout.approved_by == admin
         assert payout.paid_by == admin
         assert payout.paid_at is not None
+        assert AuditLog.objects.filter(event="commission.payout_status_changed", target_id=str(payout.id)).count() == 2
 
     def test_payout_cancel_requires_reason_and_audits_actor(self):
         tenant = create_user()
@@ -102,6 +135,7 @@ class TestCommissionAPI:
             full_name=tenant.full_name,
             phone=tenant.phone,
             email=tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
             confirmed_at=timezone.now(),
             estimated_commission_amount=room.estimated_commission_amount,
         )
@@ -122,3 +156,4 @@ class TestCommissionAPI:
         assert payout.status == CommissionPayout.Status.CANCELLED
         assert payout.cancelled_by == admin
         assert payout.cancelled_at is not None
+        assert AuditLog.objects.filter(event="commission.payout_status_changed", target_id=str(payout.id)).exists()

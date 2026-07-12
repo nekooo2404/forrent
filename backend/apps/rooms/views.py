@@ -1,16 +1,21 @@
+from urllib.parse import urlparse
+
 from django.core.cache import cache
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_control
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
+from apps.common.models import AuditLog
 from apps.common.permissions import IsAdmin
 from apps.common.responses import success_response
+from apps.common.audit import audit_event
 from apps.common.viewsets import StandardResponseModelViewSetMixin, StandardResponseReadOnlyMixin
 from apps.locations.models import Amenity, AreaRange, City, Ward
 from apps.locations.serializers import AmenitySerializer, AreaRangeSerializer, CitySerializer, WardSerializer
@@ -67,7 +72,7 @@ class PublicRoomFiltersAPIView(APIView):
                 "deposit_types": DepositTypeSerializer(DepositType.objects.active(), many=True).data,
                 "room_types": [{"value": value, "label": label} for value, label in Room.RoomType.choices],
                 "statuses": [
-                    {"value": Room.Status.AVAILABLE, "label": "Còn trống"},
+                    {"value": Room.Status.PUBLISHED, "label": "Còn trống"},
                 ],
             }
             cache.set(cache_key, data, 60 * 10)
@@ -85,11 +90,76 @@ class AdminRoomViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
     def get_queryset(self):
         return admin_rooms_queryset()
 
+    def handle_exception(self, exc):
+        if isinstance(exc, ValidationError) and self.action in {"create", "update", "partial_update"}:
+            self._audit_upload_rejected()
+        return super().handle_exception(exc)
+
+    def _audit_upload_rejected(self):
+        uploaded_images = self.request.FILES.getlist("uploaded_images")
+        thumbnail_present = "thumbnail" in self.request.FILES
+        image_urls = self._request_image_urls()
+        fields = []
+        if uploaded_images:
+            fields.append("uploaded_images")
+        if image_urls:
+            fields.append("image_urls")
+        if thumbnail_present:
+            fields.append("thumbnail")
+        if not fields:
+            return
+
+        target = None
+        if self.action in {"update", "partial_update"}:
+            try:
+                target = self.get_object()
+            except Exception:
+                target = None
+
+        image_url_hosts = []
+        for image_url in image_urls[:5]:
+            hostname = urlparse(str(image_url)).hostname
+            if hostname:
+                image_url_hosts.append(hostname)
+
+        audit_event(
+            "room.upload_rejected",
+            request=self.request,
+            target=target,
+            status=AuditLog.Status.FAILURE,
+            metadata={
+                "fields": fields,
+                "uploaded_image_count": len(uploaded_images),
+                "image_url_count": len(image_urls),
+                "thumbnail_present": thumbnail_present,
+                "image_url_hosts": image_url_hosts,
+            },
+        )
+
+    def _request_image_urls(self):
+        if hasattr(self.request.data, "getlist"):
+            return [value for value in self.request.data.getlist("image_urls") if value]
+        raw_value = self.request.data.get("image_urls", [])
+        if raw_value is None:
+            return []
+        if isinstance(raw_value, str):
+            return [raw_value] if raw_value else []
+        return [value for value in raw_value if value]
+
     def perform_create(self, serializer):
-        RoomService.create_room(serializer=serializer, user=self.request.user)
+        RoomService.create_room(serializer=serializer, user=self.request.user, request=self.request)
 
     def perform_update(self, serializer):
-        RoomService.update_room(serializer=serializer)
+        RoomService.update_room(serializer=serializer, request=self.request)
+
+    def perform_destroy(self, instance):
+        audit_event(
+            "room.deleted",
+            request=self.request,
+            target=instance,
+            metadata={"status": instance.status},
+        )
+        instance.delete()
 
     @extend_schema(
         parameters=[
@@ -103,8 +173,10 @@ class AdminRoomViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
         if request.method == "PATCH":
             image.sort_order = request.data.get("sort_order", image.sort_order)
             image.save(update_fields=["sort_order"])
+            audit_event("room.image_reordered", request=request, target=room, metadata={"image_id": image.id})
             return success_response(data=RoomImageSerializer(image, context=self.get_serializer_context()).data)
         image.delete()
+        audit_event("room.image_deleted", request=request, target=room, metadata={"image_id": image_id})
         return success_response(message="Image deleted successfully.")
 
 
@@ -115,3 +187,38 @@ class AdminDepositTypeViewSet(StandardResponseModelViewSetMixin, ActiveFlagDelet
     filterset_fields = ("is_active",)
     search_fields = ("name",)
     ordering_fields = ("name", "created_at")
+
+    def perform_create(self, serializer):
+        deposit_type = serializer.save()
+        audit_event(
+            "deposit_type.created",
+            request=self.request,
+            target=deposit_type,
+            metadata={"name": deposit_type.name, "is_active": deposit_type.is_active},
+        )
+
+    def perform_update(self, serializer):
+        previous = {
+            "name": serializer.instance.name,
+            "is_active": serializer.instance.is_active,
+        }
+        deposit_type = serializer.save()
+        audit_event(
+            "deposit_type.updated",
+            request=self.request,
+            target=deposit_type,
+            metadata={
+                "from": previous,
+                "to": {"name": deposit_type.name, "is_active": deposit_type.is_active},
+            },
+        )
+
+    def perform_destroy(self, instance):
+        was_used = instance.rooms.exists()
+        audit_event(
+            "deposit_type.deactivated" if was_used else "deposit_type.deleted",
+            request=self.request,
+            target=instance,
+            metadata={"name": instance.name, "was_used": was_used},
+        )
+        instance.delete()

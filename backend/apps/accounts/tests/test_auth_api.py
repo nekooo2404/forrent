@@ -181,6 +181,47 @@ class TestAuthAPI:
         assert response.status_code == 200
         assert "access" in response.data["data"]
 
+    def test_logout_revokes_refresh_without_valid_access_token(self):
+        User.objects.create_user(
+            email="logout@example.com",
+            phone="0911222444",
+            password="Password@123",
+            full_name="Logout User",
+        )
+        login_response = self.client.post(
+            "/api/auth/login/",
+            {"identifier": "logout@example.com", "password": "Password@123"},
+            format="json",
+        )
+        refresh = login_response.data["data"]["refresh"]
+
+        logout_response = self.client.post("/api/auth/logout/", {"refresh": refresh}, format="json")
+        refresh_response = self.client.post("/api/auth/refresh/", {"refresh": refresh}, format="json")
+
+        assert logout_response.status_code == 200
+        assert refresh_response.status_code == 401
+
+    def test_password_change_invalidates_existing_access_token(self):
+        user = User.objects.create_user(
+            email="revoke@example.com",
+            phone="0911222555",
+            password="Password@123",
+            full_name="Revoke User",
+        )
+        login_response = self.client.post(
+            "/api/auth/login/",
+            {"identifier": user.email, "password": "Password@123"},
+            format="json",
+        )
+        access = login_response.data["data"]["access"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+        assert self.client.get("/api/auth/me/").status_code == 200
+
+        user.set_password("NewPassword@123")
+        user.save(update_fields=["password", "updated_at"])
+
+        assert self.client.get("/api/auth/me/").status_code == 401
+
     def test_profile_update_successfully(self):
         tenant = User.objects.create_user(
             email="tenant@example.com",
@@ -439,6 +480,43 @@ class TestAuthAPI:
         assert log.actor == saler
         assert "role" in log.metadata["fields"]
         assert "current_password" not in log.metadata["fields"]
+        role_log = AuditLog.objects.get(event="admin.user_role_changed", target_id=str(tenant.id))
+        assert role_log.metadata == {"from": User.Role.TENANT, "to": User.Role.SALER}
+
+    def test_admin_password_change_for_user_writes_specific_audit_log(self):
+        saler = create_admin()
+        tenant = create_user(email="password-target@example.com", phone="0987654324")
+        self.client.force_authenticate(saler)
+
+        response = self.client.patch(
+            f"/api/admin/users/{tenant.id}/",
+            {"password": "NewPassword@123", "current_password": "Password@123"},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert AuditLog.objects.filter(event="admin.user_password_changed", actor=saler, target_id=str(tenant.id)).exists()
+
+    def test_last_active_saler_cannot_be_demoted_or_deactivated(self):
+        saler = create_admin()
+        self.client.force_authenticate(saler)
+
+        demote_response = self.client.patch(
+            f"/api/admin/users/{saler.id}/",
+            {"role": User.Role.TENANT, "current_password": "Password@123"},
+            format="json",
+        )
+        deactivate_response = self.client.patch(
+            f"/api/admin/users/{saler.id}/",
+            {"is_active": False},
+            format="json",
+        )
+
+        assert demote_response.status_code == 400
+        assert deactivate_response.status_code == 400
+        saler.refresh_from_db()
+        assert saler.role == User.Role.SALER
+        assert saler.is_active is True
 
     def test_tenant_cannot_manage_users(self):
         tenant = create_user(email="tenant2@example.com", phone="0944444444")

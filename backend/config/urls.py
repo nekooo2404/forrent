@@ -41,8 +41,6 @@ def media_storage_configured():
     backend = settings.STORAGES.get("default", {}).get("BACKEND", "")
     if backend.endswith("CloudinaryMediaStorage"):
         return bool(settings.CLOUDINARY_CLOUD_NAME and settings.CLOUDINARY_API_KEY and settings.CLOUDINARY_API_SECRET)
-    if backend.endswith("SupabaseMediaStorage"):
-        return bool(settings.SUPABASE_URL and settings.SUPABASE_SECRET_KEY and settings.SUPABASE_STORAGE_BUCKET)
     return bool(settings.MEDIA_ROOT)
 
 

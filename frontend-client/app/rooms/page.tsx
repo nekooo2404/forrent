@@ -83,7 +83,7 @@ const fallbackFilters: RoomFilters = {
     { value: "HOUSE", label: "Nhà nguyên căn" },
   ],
   statuses: [
-    { value: "AVAILABLE", label: "Còn trống" },
+    { value: "PUBLISHED", label: "Còn trống" },
   ],
 };
 
@@ -106,7 +106,7 @@ function mapRoom(room: ApiRoom): RoomCardView {
     secondaryMeta: amenitiesCount ? `${amenitiesCount} tiện ích` : "Tiện ích cơ bản",
     area: formatArea(room.actual_area),
     status: roomStatusLabel(room.status),
-    unavailable: room.status !== "AVAILABLE",
+    unavailable: room.status !== "PUBLISHED",
     featuredAmenities: room.amenities.slice(0, 3).map((amenity) => amenity.name),
     image: resolveMediaUrl(room.thumbnail_url),
     alt: room.short_description || room.title,
@@ -628,7 +628,7 @@ function RoomCard({ priority = false, room }: Readonly<{ priority?: boolean; roo
         {room.featuredAmenities.length ? (
           <div className="mb-5 flex flex-wrap gap-2">
             {room.featuredAmenities.map((amenity) => (
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary" key={amenity}>
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-secondary" key={amenity}>
                 {amenity}
               </span>
             ))}

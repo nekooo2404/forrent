@@ -51,12 +51,13 @@
   --on-tertiary-fixed-variant: 21 94 117;
   --on-background: 41 23 12;
   --on-primary-container: 120 53 15;
-  --success: 22 163 74;
+  --success: 21 128 61;
   --on-success: 255 255 255;
   --success-container: 220 252 231;
   --warning: 234 179 8;
   --on-warning: 15 23 42;
   --warning-container: 254 249 195;
+  --on-warning-container: 120 53 15;
   --gold: 249 115 22;
   --motion-fast: 160ms;
   --motion-base: 250ms;
@@ -123,6 +124,7 @@
   --warning: 250 204 21;
   --on-warning: 28 20 15;
   --warning-container: 113 63 18;
+  --on-warning-container: 254 215 170;
   --gold: 251 191 36;
 }
 
@@ -217,13 +219,12 @@ button:focus-visible {
 
 .admin-motion-card {
   transition:
-    transform var(--motion-fast) var(--ease-smooth),
     border-color var(--motion-fast) ease,
     box-shadow var(--motion-fast) ease;
 }
 
 .admin-motion-card:hover {
-  transform: translate3d(0, -2px, 0);
+  box-shadow: 0 0 0 1px rgb(var(--primary) / 0.16);
 }
 
 .admin-spotlight {
@@ -233,22 +234,12 @@ button:focus-visible {
 }
 
 .admin-spotlight::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0;
-  border-radius: inherit;
-  background:
-    radial-gradient(22rem circle at 18% 0%, rgb(var(--primary) / 0.14), transparent 44%),
-    linear-gradient(135deg, rgb(var(--surface-container-lowest) / 0.5), transparent 42%);
-  transition: opacity var(--motion-base) var(--ease-smooth);
+  content: none;
 }
 
 .admin-spotlight:hover::before,
 .admin-spotlight:focus-within::before {
-  opacity: 1;
+  opacity: 0;
 }
 
 .admin-spotlight > * {
@@ -257,22 +248,11 @@ button:focus-visible {
 }
 
 .admin-surface {
-  background:
-    radial-gradient(circle at 12% 8%, rgb(var(--primary) / 0.08), transparent 28rem),
-    linear-gradient(180deg, rgb(var(--surface-container-lowest)) 0%, rgb(var(--surface)) 100%);
+  background: rgb(var(--surface));
 }
 
 .admin-surface::before {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  content: "";
-  opacity: 0.16;
-  background-image:
-    linear-gradient(rgb(var(--on-surface) / 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(var(--on-surface) / 0.035) 1px, transparent 1px);
-  background-size: 28px 28px;
+  content: none;
 }
 
 .admin-surface > * {

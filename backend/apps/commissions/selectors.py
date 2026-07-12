@@ -12,9 +12,9 @@ def commission_summary():
     )["total"] or 0
     total_estimated = ViewingRequest.objects.exclude(status__in=[
         ViewingRequest.Status.CANCELLED,
-        ViewingRequest.Status.NOT_MOVED_IN,
+        ViewingRequest.Status.NO_SHOW,
     ]).aggregate(total=Sum("estimated_commission_amount"))["total"] or 0
-    total_moved_in = ViewingRequest.objects.filter(status=ViewingRequest.Status.MOVED_IN).count()
+    total_moved_in = ViewingRequest.objects.filter(status=ViewingRequest.Status.CONVERTED).count()
     total_pending = ViewingRequest.objects.filter(status__in=ViewingRequest.ACTIVE_STATUSES).count()
     payout_totals = CommissionPayout.objects.aggregate(
         pending=Sum("amount", filter=Q(status=CommissionPayout.Status.PENDING)),
@@ -27,7 +27,7 @@ def commission_summary():
             total_estimated_commission=Sum("estimated_commission_amount"),
             total_received_commission=Sum("actual_commission_amount"),
             lead_count=Count("id"),
-            moved_in_count=Count("id", filter=Q(status=ViewingRequest.Status.MOVED_IN)),
+            moved_in_count=Count("id", filter=Q(status=ViewingRequest.Status.CONVERTED)),
         )
         .order_by("room__title")
     )
@@ -65,10 +65,10 @@ def dashboard_summary():
     }
     return {
         "total_rooms": Room.objects.count(),
-        "active_rooms": Room.objects.filter(status=Room.Status.AVAILABLE).count(),
+        "active_rooms": Room.objects.filter(status=Room.Status.PUBLISHED).count(),
         "total_viewing_requests": ViewingRequest.objects.count(),
         "total_new_leads": ViewingRequest.objects.filter(status=ViewingRequest.Status.NEW).count(),
-        "total_moved_in_leads": ViewingRequest.objects.filter(status=ViewingRequest.Status.MOVED_IN).count(),
+        "total_moved_in_leads": ViewingRequest.objects.filter(status=ViewingRequest.Status.CONVERTED).count(),
         "total_estimated_commission": ViewingRequest.objects.aggregate(total=Sum("estimated_commission_amount"))["total"] or 0,
         "total_received_commission": ViewingRequest.objects.filter(is_commission_counted=True).aggregate(total=Sum("actual_commission_amount"))["total"] or 0,
         "status_counts": status_counts,

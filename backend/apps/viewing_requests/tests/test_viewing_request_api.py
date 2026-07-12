@@ -6,6 +6,7 @@ from django.core.cache import cache
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.common.models import AuditLog
 from apps.rooms.models import Room
 from apps.rooms.tests.factories import create_admin, create_room, create_user
 from apps.viewing_requests.models import RoomLease, ViewingRequest, ViewingRequestActivity
@@ -111,7 +112,7 @@ class TestViewingRequestAPI:
 
     def test_create_viewing_request_rejects_unavailable_room(self):
         tenant = create_user()
-        room = create_room(status=Room.Status.UNAVAILABLE)
+        room = create_room(status=Room.Status.RENTED)
         self.client.force_authenticate(tenant)
 
         response = self.client.post(
@@ -140,7 +141,7 @@ class TestViewingRequestAPI:
 
         response = self.client.patch(
             f"/api/admin/viewing-requests/{lead.id}/",
-            {"status": ViewingRequest.Status.MOVED_IN},
+            {"status": ViewingRequest.Status.CONVERTED},
             format="json",
         )
 
@@ -175,6 +176,49 @@ class TestViewingRequestAPI:
         assert lead.confirmed_at is None
         assert response.data["data"]["appointment_confirmed_at"] is None
 
+    def test_admin_can_mark_scheduled_as_viewed_or_no_show(self):
+        tenant = create_user()
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        viewed_lead = ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
+            estimated_commission_amount=room.estimated_commission_amount,
+        )
+        no_show_lead = ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone="0911222333",
+            email="no-show@example.com",
+            status=ViewingRequest.Status.SCHEDULED,
+            estimated_commission_amount=room.estimated_commission_amount,
+        )
+        self.client.force_authenticate(admin)
+
+        viewed_response = self.client.patch(
+            f"/api/admin/viewing-requests/{viewed_lead.id}/",
+            {"status": ViewingRequest.Status.VIEWED},
+            format="json",
+        )
+        no_show_response = self.client.patch(
+            f"/api/admin/viewing-requests/{no_show_lead.id}/",
+            {"status": ViewingRequest.Status.NO_SHOW},
+            format="json",
+        )
+
+        viewed_lead.refresh_from_db()
+        no_show_lead.refresh_from_db()
+        assert viewed_response.status_code == 200
+        assert no_show_response.status_code == 200
+        assert viewed_lead.status == ViewingRequest.Status.VIEWED
+        assert no_show_lead.status == ViewingRequest.Status.NO_SHOW
+        assert AuditLog.objects.filter(event="viewing_request.status_changed").count() == 2
+
     def test_admin_confirm_appointment_action_records_actual_schedule(self):
         tenant = create_user()
         admin = create_admin()
@@ -206,8 +250,9 @@ class TestViewingRequestAPI:
         assert lead.confirmed_at is not None
         assert lead.appointment_date.isoformat() == (timezone.localdate() + timedelta(days=2)).isoformat()
         assert lead.appointment_time_slot == ViewingRequest.TimeSlot.AFTERNOON
-        assert lead.status == ViewingRequest.Status.CONTACTED
-        assert ViewingRequestActivity.objects.filter(viewing_request=lead, action="CONFIRM_APPOINTMENT").exists()
+        assert lead.status == ViewingRequest.Status.SCHEDULED
+        assert ViewingRequestActivity.objects.filter(viewing_request=lead, action="SCHEDULE_APPOINTMENT").exists()
+        assert AuditLog.objects.filter(event="viewing_request.scheduled", target_id=str(lead.id)).exists()
 
     def test_admin_can_assign_lead_and_set_follow_up(self):
         tenant = create_user()
@@ -269,6 +314,60 @@ class TestViewingRequestAPI:
             ViewingRequest.Status.CONTACTED
         }
 
+    def test_admin_bulk_update_rejects_invalid_transition_for_every_lead(self):
+        tenant = create_user()
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        leads = [
+            ViewingRequest.objects.create(
+                user=tenant,
+                room=room,
+                full_name=tenant.full_name,
+                phone=f"09123457{index:02d}",
+                email=f"bulk-invalid-{index}@example.com",
+            )
+            for index in range(2)
+        ]
+        leads[1].status = ViewingRequest.Status.CANCELLED
+        leads[1].save(update_fields=["status", "updated_at"])
+        self.client.force_authenticate(admin)
+
+        response = self.client.post(
+            "/api/admin/viewing-requests/bulk-update/",
+            {"ids": [lead.id for lead in leads], "status": ViewingRequest.Status.CONTACTED},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        statuses = list(
+            ViewingRequest.objects.filter(id__in=[lead.id for lead in leads])
+            .order_by("id")
+            .values_list("status", flat=True)
+        )
+        assert statuses == [ViewingRequest.Status.NEW, ViewingRequest.Status.CANCELLED]
+
+    def test_admin_cannot_assign_lead_to_tenant_account(self):
+        tenant = create_user()
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        lead = ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+        )
+        self.client.force_authenticate(admin)
+
+        response = self.client.patch(
+            f"/api/admin/viewing-requests/{lead.id}/",
+            {"assigned_to": tenant.id},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "assigned_to" in response.data["errors"]
+
     def test_confirm_moved_in_calculates_commission(self):
         tenant = create_user()
         admin = create_admin()
@@ -279,6 +378,7 @@ class TestViewingRequestAPI:
             full_name=tenant.full_name,
             phone=tenant.phone,
             email=tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
             confirmed_at=timezone.now(),
             estimated_commission_amount=room.estimated_commission_amount,
         )
@@ -289,11 +389,100 @@ class TestViewingRequestAPI:
         assert response.status_code == 200
         lead.refresh_from_db()
         room.refresh_from_db()
-        assert lead.status == ViewingRequest.Status.MOVED_IN
+        assert lead.status == ViewingRequest.Status.CONVERTED
         assert lead.is_commission_counted is True
         assert lead.actual_commission_amount == Decimal("2500000.00")
-        assert room.status == Room.Status.UNAVAILABLE
+        assert room.status == Room.Status.RENTED
         assert RoomLease.objects.filter(viewing_request=lead, status=RoomLease.Status.ACTIVE).exists()
+        assert AuditLog.objects.filter(event="viewing_request.converted", target_id=str(lead.id)).exists()
+
+    def test_confirm_moved_in_rejects_cancelled_lead(self):
+        tenant = create_user()
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        lead = ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+            status=ViewingRequest.Status.CANCELLED,
+        )
+        self.client.force_authenticate(admin)
+
+        response = self.client.post(f"/api/admin/viewing-requests/{lead.id}/confirm-moved-in/")
+
+        assert response.status_code == 400
+        room.refresh_from_db()
+        assert room.status == Room.Status.PUBLISHED
+        assert not RoomLease.objects.filter(viewing_request=lead).exists()
+
+    def test_confirm_moved_in_cancels_other_active_leads_for_room(self):
+        first_tenant = create_user()
+        second_tenant = create_user(email="second-move-in@example.com", phone="0938888888")
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        first_lead = ViewingRequest.objects.create(
+            user=first_tenant,
+            room=room,
+            full_name=first_tenant.full_name,
+            phone=first_tenant.phone,
+            email=first_tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
+        )
+        second_lead = ViewingRequest.objects.create(
+            user=second_tenant,
+            room=room,
+            full_name=second_tenant.full_name,
+            phone=second_tenant.phone,
+            email=second_tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
+        )
+        self.client.force_authenticate(admin)
+        response = self.client.post(f"/api/admin/viewing-requests/{first_lead.id}/confirm-moved-in/")
+
+        assert response.status_code == 200
+        second_lead.refresh_from_db()
+        assert second_lead.status == ViewingRequest.Status.CANCELLED
+        assert ViewingRequestActivity.objects.filter(
+            viewing_request=second_lead,
+            action="AUTO_CANCELLED",
+        ).exists()
+        assert AuditLog.objects.filter(
+            event="viewing_request.competing_leads_cancelled",
+            target_id=str(first_lead.id),
+        ).exists()
+
+    def test_confirm_moved_in_rejects_room_with_active_lease(self):
+        first_tenant = create_user()
+        second_tenant = create_user(email="second-active-lease@example.com", phone="0937777777")
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        first_lead = ViewingRequest.objects.create(
+            user=first_tenant,
+            room=room,
+            full_name=first_tenant.full_name,
+            phone=first_tenant.phone,
+            email=first_tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
+        )
+        self.client.force_authenticate(admin)
+        assert self.client.post(f"/api/admin/viewing-requests/{first_lead.id}/confirm-moved-in/").status_code == 200
+        second_lead = ViewingRequest.objects.create(
+            user=second_tenant,
+            room=room,
+            full_name=second_tenant.full_name,
+            phone=second_tenant.phone,
+            email=second_tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
+        )
+
+        response = self.client.post(f"/api/admin/viewing-requests/{second_lead.id}/confirm-moved-in/")
+
+        assert response.status_code == 400
+        second_lead.refresh_from_db()
+        assert second_lead.status == ViewingRequest.Status.SCHEDULED
+        assert RoomLease.objects.filter(room=room, status=RoomLease.Status.ACTIVE).count() == 1
 
     def test_admin_move_out_ends_active_lease_and_reopens_room(self):
         tenant = create_user()
@@ -305,6 +494,7 @@ class TestViewingRequestAPI:
             full_name=tenant.full_name,
             phone=tenant.phone,
             email=tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
             confirmed_at=timezone.now(),
             estimated_commission_amount=room.estimated_commission_amount,
         )
@@ -316,9 +506,10 @@ class TestViewingRequestAPI:
         assert response.status_code == 200
         room.refresh_from_db()
         lease = RoomLease.objects.get(viewing_request=lead)
-        assert room.status == Room.Status.AVAILABLE
+        assert room.status == Room.Status.PUBLISHED
         assert lease.status == RoomLease.Status.ENDED
         assert lease.move_out_at is not None
+        assert AuditLog.objects.filter(event="viewing_request.move_out", target_id=str(lead.id)).exists()
 
     def test_confirm_moved_in_cannot_run_twice(self):
         tenant = create_user()
@@ -330,6 +521,7 @@ class TestViewingRequestAPI:
             full_name=tenant.full_name,
             phone=tenant.phone,
             email=tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
             confirmed_at=timezone.now(),
             estimated_commission_amount=room.estimated_commission_amount,
         )

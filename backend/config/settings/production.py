@@ -1,5 +1,10 @@
 from .base import *  # noqa: F403
 
+from django.core.exceptions import ImproperlyConfigured
+
+if not (CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET):  # noqa: F405
+    raise ImproperlyConfigured("Production requires CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET.")
+
 DEBUG = False
 EXPOSE_API_DOCS = False
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

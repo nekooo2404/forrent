@@ -6,17 +6,21 @@ interface StatusBadgeProps {
 }
 
 const roomStatusConfig: Record<string, { label: string; className: string }> = {
-  AVAILABLE: { label: "Còn trống", className: "bg-success text-on-success" },
-  UNAVAILABLE: { label: "Đã thuê", className: "bg-surface-variant text-on-surface" },
+  DRAFT: { label: "Bản nháp", className: "bg-surface-variant text-on-surface" },
+  PENDING_REVIEW: { label: "Chờ duyệt", className: "bg-warning text-on-warning" },
+  PUBLISHED: { label: "Còn trống", className: "bg-success text-on-success" },
+  RENTED: { label: "Đã thuê", className: "bg-surface-variant text-on-surface" },
   HIDDEN: { label: "Đã ẩn", className: "bg-surface-variant/70 text-on-surface" },
+  ARCHIVED: { label: "Lưu trữ", className: "bg-surface-variant/70 text-on-surface" },
 };
 
 const leadStatusConfig: Record<string, { label: string; className: string }> = {
   NEW: { label: "Mới", className: "bg-primary text-on-primary" },
   CONTACTED: { label: "Đã liên hệ", className: "bg-secondary text-on-secondary" },
+  SCHEDULED: { label: "Đã lên lịch", className: "bg-primary text-on-primary" },
   VIEWED: { label: "Đã xem", className: "bg-warning text-on-warning" },
-  MOVED_IN: { label: "Đã chuyển vào", className: "bg-success text-on-success" },
-  NOT_MOVED_IN: { label: "Không chuyển vào", className: "bg-surface-variant text-on-surface" },
+  CONVERTED: { label: "Đã chốt thuê", className: "bg-success text-on-success" },
+  NO_SHOW: { label: "Không đến xem", className: "bg-surface-variant text-on-surface" },
   CANCELLED: { label: "Đã hủy", className: "bg-error text-on-error" },
 };
 

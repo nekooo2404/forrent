@@ -13,20 +13,42 @@ Không deploy production nếu thiếu một trong các bằng chứng sau:
 
 ## Server Deploy Hygiene
 
-Trước khi rebuild trên server:
+Production chỉ deploy commit SHA đã qua CI xanh. Không deploy bằng `git pull` trực tiếp.
 
 ```bash
 cd /opt/forrent
-git status --short
-git pull --ff-only origin main
-git rev-parse --short HEAD
-sudo chown -R 10001:10001 backend/media backend/staticfiles
-docker compose -f backend/docker-compose.yml build --pull
-docker compose -f backend/docker-compose.yml up -d
-docker compose -f backend/docker-compose.yml exec backend python manage.py migrate --noinput
+sh deploy/ops/deploy-sha.sh <ci-green-commit-sha>
 ```
 
-Không dùng `git pull` khi server còn local changes. Commit hoặc bỏ thay đổi có chủ đích trước, để tránh deploy lệch code local/GitHub/server.
+Script sẽ từ chối dirty worktree, kiểm tra SHA thuộc `origin/main`, bắt buộc `RELEASE_NOTE_PATH` trỏ tới file release note local không rỗng, rebuild container, chạy migration/check và smoke các URL trong `PUBLIC_URLS`.
+Mặc định `PUBLIC_URLS` gồm client `/homepage`, admin `/log-in` và API `/api/health/`.
+Script cũng bắt buộc `main` đang được branch protection và tìm thấy cả workflow `CI` lẫn `Container Security` thành công cho SHA đó qua GitHub CLI:
+
+```bash
+gh auth status
+RELEASE_NOTE_PATH=/opt/forrent-release-notes/<ci-green-commit-sha>.md sh deploy/ops/deploy-sha.sh <ci-green-commit-sha>
+```
+
+Server cần `gh` đã đăng nhập hoặc `GH_TOKEN` có quyền đọc Actions của repo.
+
+Release note nên tạo ngoài worktree để không làm server dirty:
+
+```bash
+sudo mkdir -p /opt/forrent-release-notes
+sudo cp docs/releases/release-note-template.md /opt/forrent-release-notes/<ci-green-commit-sha>.md
+sudo nano /opt/forrent-release-notes/<ci-green-commit-sha>.md
+```
+
+Rollback dùng SHA tốt gần nhất:
+
+```bash
+cd /opt/forrent
+RELEASE_NOTE_PATH=/opt/forrent-release-notes/rollback-<previous-good-commit-sha>.md sh deploy/ops/rollback-sha.sh <previous-good-commit-sha>
+```
+
+Rollback cũng smoke cùng `PUBLIC_URLS`; nếu homepage/admin/API còn lỗi 5xx thì rollback không được xem là hoàn tất.
+
+Mỗi deploy phải có release note ngắn theo `docs/releases/release-note-template.md`, gồm SHA deploy, SHA rollback, CI URL, smoke check và migration notes.
 
 ## External Uptime Monitor
 
@@ -96,7 +118,22 @@ Unauthenticated ZAP baseline is only the first layer. Before a major release, ru
 - admin flow: login, room CRUD, image upload, deposit type CRUD, role update.
 - API flow: token refresh/logout, CSRF/origin rejection, object-level authorization.
 
-Store report artifacts and retest evidence. Do not run destructive active scans against production.
+Use `.github/workflows/authenticated-dast.yml` after staging is deployed. Required GitHub Actions secrets:
+
+- `STAGING_TENANT_IDENTIFIER`
+- `STAGING_TENANT_PASSWORD`
+- `STAGING_ADMIN_IDENTIFIER`
+- `STAGING_ADMIN_PASSWORD`
+
+Run it manually against staging URLs only:
+
+```bash
+gh workflow run "Authenticated DAST" \
+  -f client_url=https://staging.forrent.io.vn \
+  -f admin_url=https://staging-admin.forrent.io.vn
+```
+
+Use staging-only scan accounts, rotate or recreate them after each scan, and keep report artifacts to the shortest practical retention period. Do not run destructive active scans against production.
 
 ## Independent Pentest
 
@@ -122,10 +159,24 @@ Verify after nginx reload:
 
 ```bash
 nginx -t
-curl -I https://api.forrent.io.vn/api/docs/
+curl --fail --silent --show-error --location --connect-timeout 10 --max-time 20 -I https://api.forrent.io.vn/api/docs/
 ```
 
 Production should also have at least one of: Cloudflare WAF, provider WAF, fail2ban/nginx ban rules, or equivalent reverse-proxy protection. Keep screenshots/config export proving rules are enabled for auth/API paths.
+
+Fail2ban templates are included:
+
+- `deploy/fail2ban/filter.d/forrent-nginx-auth.conf`
+- `deploy/fail2ban/jail.d/forrent-nginx-auth.local`
+
+Install them on the server, reload fail2ban, then verify the jail is active:
+
+```bash
+sudo cp deploy/fail2ban/filter.d/forrent-nginx-auth.conf /etc/fail2ban/filter.d/
+sudo cp deploy/fail2ban/jail.d/forrent-nginx-auth.local /etc/fail2ban/jail.d/
+sudo fail2ban-client reload
+sudo fail2ban-client status forrent-nginx-auth
+```
 
 ## Upload Content Policy
 
@@ -137,6 +188,8 @@ Image upload limits are not enough for enterprise. Required controls:
 - malware scan or Cloudinary moderation/add-on before publishing public assets.
 - reject SVG/scriptable formats for room images.
 - log upload actor, room ID, content type, file size and storage public ID.
+
+Set `CLOUDINARY_UPLOAD_MODERATION` only after the corresponding Cloudinary moderation/add-on is enabled and tested in staging.
 
 ## Logs And Metrics
 

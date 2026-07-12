@@ -23,20 +23,20 @@ export default function AdminLogInPage() {
               </span>
               <span>
                 <span className="block font-headline-sm text-2xl uppercase leading-tight">ForRent</span>
-                <span className="block text-xs font-semibold uppercase tracking-[0.22em] text-on-primary/60">Admin Portal</span>
+                <span className="block text-xs font-semibold uppercase tracking-[0.22em] text-on-primary">Admin Portal</span>
               </span>
             </Link>
           </div>
 
           <div className="max-w-sm">
-            <p className="mb-5 text-xs font-semibold uppercase tracking-[0.22em] text-on-primary/60">Secure operations</p>
+            <p className="mb-5 text-xs font-semibold uppercase tracking-[0.22em] text-on-primary">Secure operations</p>
             <h1 className="font-headline-md text-5xl leading-tight">Quản trị phòng, lead và hoa hồng trong một nơi.</h1>
-            <p className="mt-6 leading-7 text-on-primary/70">
+            <p className="mt-6 leading-7 text-on-primary">
               Dành cho tài khoản saler/admin. Mọi thao tác vẫn được Django backend kiểm quyền bằng JWT.
             </p>
           </div>
 
-          <Link className="text-sm font-semibold text-on-primary/75 transition hover:text-on-primary" href={`${publicClientUrl}/homepage`}>
+          <Link className="text-sm font-semibold text-on-primary transition" href={`${publicClientUrl}/homepage`}>
             Mở website public
           </Link>
         </aside>

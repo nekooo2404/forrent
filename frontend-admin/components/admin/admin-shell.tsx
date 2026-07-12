@@ -41,7 +41,6 @@ import {
   authFetch,
   clearAuthSession,
   refreshStoredAuthSession,
-  saveStoredUser,
 } from "@/lib/auth-storage";
 
 import { adminRoleLabel, type AdminContextValue } from "./admin-api";
@@ -102,7 +101,6 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
 
     setToken("cookie-session");
     setUser(payload.data);
-    saveStoredUser(payload.data);
   }, []);
 
   useEffect(() => {

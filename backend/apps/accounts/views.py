@@ -6,6 +6,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
 from apps.accounts.serializers import (
     AdminUserSerializer,
@@ -75,7 +76,8 @@ class LoginAPIView(APIView):
 
 
 class LogoutAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
+    throttle_scope = "logout"
     serializer_class = LogoutSerializer
 
     @extend_schema(request=LogoutSerializer)
@@ -93,7 +95,10 @@ class RefreshAPIView(APIView):
     @extend_schema(request=TokenRefreshSerializer)
     def post(self, request):
         serializer = TokenRefreshSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as exc:
+            raise InvalidToken(str(exc)) from exc
         return success_response(data=serializer.validated_data, message="Token refreshed successfully.")
 
 
@@ -196,3 +201,34 @@ class AdminUserViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
     search_fields = ("full_name", "email", "phone")
     ordering_fields = ("created_at", "full_name", "email", "role")
     http_method_names = ["get", "post", "patch", "head", "options"]
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        audit_event(
+            "admin.user_created",
+            request=self.request,
+            target=user,
+            metadata={"role": user.role, "is_active": user.is_active},
+        )
+
+    def perform_update(self, serializer):
+        previous_role = serializer.instance.role
+        previous_is_active = serializer.instance.is_active
+        password_changed = "password" in serializer.validated_data and bool(serializer.validated_data.get("password"))
+        user = serializer.save()
+        if user.role != previous_role:
+            audit_event(
+                "admin.user_role_changed",
+                request=self.request,
+                target=user,
+                metadata={"from": previous_role, "to": user.role},
+            )
+        if user.is_active != previous_is_active:
+            audit_event(
+                "admin.user_active_changed",
+                request=self.request,
+                target=user,
+                metadata={"from": previous_is_active, "to": user.is_active},
+            )
+        if password_changed:
+            audit_event("admin.user_password_changed", request=self.request, target=user)

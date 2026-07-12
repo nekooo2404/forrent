@@ -15,7 +15,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const [rooms, blogs] = await Promise.all([
-    getRooms({ page_size: 100, status: "AVAILABLE", ordering: "-updated_at" }).catch(() => null),
+    getRooms({ page_size: 100, status: "PUBLISHED", ordering: "-updated_at" }).catch(() => null),
     getBlogs({ page_size: 100, ordering: "-published_at" }).catch(() => null),
   ]);
 

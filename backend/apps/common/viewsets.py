@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -24,7 +25,19 @@ class StandardResponseReadOnlyMixin:
 class StandardResponseUpdateMixin(StandardResponseReadOnlyMixin):
     success_update_message = "Updated successfully."
 
+    def _lock_instance_for_update(self):
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        lookup_value = self.kwargs.get(lookup_url_kwarg)
+        if lookup_value is None:
+            return
+        model = self.get_queryset().model
+        model._default_manager.select_for_update().only(model._meta.pk.name).filter(
+            **{self.lookup_field: lookup_value}
+        ).first()
+
+    @transaction.atomic
     def update(self, request, *args, **kwargs):
+        self._lock_instance_for_update()
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
@@ -53,7 +66,9 @@ class StandardResponseModelViewSetMixin(StandardResponseUpdateMixin):
             headers=headers,
         )
 
+    @transaction.atomic
     def destroy(self, request, *args, **kwargs):
+        self._lock_instance_for_update()
         instance = self.get_object()
         self.perform_destroy(instance)
         audit_admin_action(request, "resource_deleted", instance)

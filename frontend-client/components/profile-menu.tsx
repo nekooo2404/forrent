@@ -6,29 +6,31 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   clearAuthSession,
-  hasStoredAuthSession,
   refreshStoredAuthSession,
 } from "@/lib/auth-storage";
 
 export function ProfileMenu() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(() => hasStoredAuthSession());
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    refreshStoredAuthSession()
-      .then((token) => setIsLoggedIn(Boolean(token)))
-      .catch(() => setIsLoggedIn(false));
+    let isMounted = true;
 
-    function refreshAuthState() {
-      setIsLoggedIn(hasStoredAuthSession());
+    async function refreshAuthState() {
+      try {
+        const token = await refreshStoredAuthSession();
+        if (isMounted) setIsLoggedIn(Boolean(token));
+      } catch {
+        if (isMounted) setIsLoggedIn(false);
+      }
     }
 
-    window.addEventListener("storage", refreshAuthState);
+    refreshAuthState();
     window.addEventListener("focus", refreshAuthState);
 
     return () => {
-      window.removeEventListener("storage", refreshAuthState);
+      isMounted = false;
       window.removeEventListener("focus", refreshAuthState);
     };
   }, []);

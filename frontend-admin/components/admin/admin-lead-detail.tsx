@@ -9,6 +9,7 @@ import {
   adminList,
   adminMessageFrom,
   adminRequest,
+  canManuallyTransitionLead,
   formatAdminDate,
   formatAdminDateOnly,
   formatAdminVnd,
@@ -32,8 +33,9 @@ import {
 const statuses = [
   { label: "Lead mới", value: "NEW" },
   { label: "Đã liên hệ", value: "CONTACTED" },
+  { label: "Đã lên lịch", value: "SCHEDULED" },
   { label: "Đã xem phòng", value: "VIEWED" },
-  { label: "Không chuyển vào", value: "NOT_MOVED_IN" },
+  { label: "Không đến xem", value: "NO_SHOW" },
   { label: "Đã hủy", value: "CANCELLED" },
 ];
 
@@ -255,8 +257,8 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
               <label className="block">
                 <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Cập nhật trạng thái</span>
                 <select className={adminSelectClass} onChange={(event) => setStatus(event.target.value)} value={status}>
-                  {lead.status === "MOVED_IN" ? <option value="MOVED_IN">Đã chuyển vào</option> : null}
-                  {statuses.map((item) => (
+                  {lead.status === "CONVERTED" ? <option value="CONVERTED">Đã chốt thuê</option> : null}
+                  {statuses.filter((item) => canManuallyTransitionLead(lead.status, item.value)).map((item) => (
                     <option key={item.value} value={item.value}>{item.label}</option>
                   ))}
                 </select>
@@ -289,7 +291,12 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
                     <option value="evening">Buổi tối</option>
                   </select>
                 </div>
-                <button className={`${adminButtonSecondary} mt-3`} disabled={isSaving} onClick={handleConfirmAppointment} type="button">
+                <button
+                  className={`${adminButtonSecondary} mt-3`}
+                  disabled={isSaving || !["NEW", "CONTACTED", "SCHEDULED"].includes(lead.status)}
+                  onClick={handleConfirmAppointment}
+                  type="button"
+                >
                   Xác nhận lịch xem
                 </button>
               </div>
@@ -305,7 +312,7 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
                 </button>
                 <button
                   className={adminButtonSecondary}
-                  disabled={isSaving || lead.status === "MOVED_IN"}
+                  disabled={isSaving || !["SCHEDULED", "VIEWED"].includes(lead.status)}
                   onClick={handleConfirmMovedIn}
                   type="button"
                 >
@@ -316,7 +323,7 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
             </form>
           </AdminPanel>
 
-          {lead.status === "MOVED_IN" ? (
+          {lead.status === "CONVERTED" ? (
             <AdminPanel title="Kết thúc lượt thuê">
               <div className="space-y-4">
                 <p className="text-sm leading-6 text-secondary">

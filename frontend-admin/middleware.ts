@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const supabaseHost = "rwblwugksbwnkzuakgcf.supabase.co";
 const cloudinaryHost = "res.cloudinary.com";
 const productionApiOrigin = "https://api.forrent.io.vn";
 const isProduction = process.env.NODE_ENV === "production";
@@ -75,7 +74,7 @@ export function middleware(request: NextRequest) {
     `script-src ${scriptSources}`,
     `style-src 'self' 'nonce-${requestNonce}' https://fonts.googleapis.com`,
     "font-src 'self' https://fonts.gstatic.com",
-    `img-src 'self' data: blob: https://${supabaseHost} https://${cloudinaryHost} ${apiOrigin} ${localApiSources.join(" ")}`,
+    `img-src 'self' data: blob: https://${cloudinaryHost} ${apiOrigin} ${localApiSources.join(" ")}`,
     `connect-src 'self' ${apiOrigin} ${sentryOrigin} ${localApiSources.join(" ")}`,
     "object-src 'none'",
     "base-uri 'self'",

@@ -7,8 +7,7 @@ import type { ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
 
 import { useToast } from "@/hooks/use-toast";
-import { saveAuthSession } from "@/lib/auth-storage";
-import type { LoginResponse } from "@/lib/api";
+import { saveAuthSession, type BrowserAuthSession } from "@/lib/auth-storage";
 
 type AuthApiResponse<T> = {
   success: boolean;
@@ -69,7 +68,7 @@ export function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier: identifierValue, password: passwordValue }),
       });
-      const payload = (await response.json()) as AuthApiResponse<LoginResponse>;
+      const payload = (await response.json()) as AuthApiResponse<BrowserAuthSession>;
 
       if (!response.ok || !payload.success || !payload.data) {
         toast({

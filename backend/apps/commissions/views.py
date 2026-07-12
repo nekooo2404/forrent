@@ -8,6 +8,7 @@ from apps.commissions.selectors import commission_summary, dashboard_summary
 from apps.commissions.serializers import CommissionPayoutSerializer, CommissionSummarySerializer, DashboardSummarySerializer
 from apps.common.permissions import IsAdmin
 from apps.common.responses import success_response
+from apps.common.audit import audit_event
 from apps.common.viewsets import StandardResponseModelViewSetMixin
 
 
@@ -45,6 +46,7 @@ class CommissionPayoutViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
         )
 
     def perform_update(self, serializer):
+        previous_status = serializer.instance.status
         payout = serializer.save()
         status = serializer.validated_data.get("status")
         if status == CommissionPayout.Status.APPROVED and payout.approved_at is None:
@@ -64,3 +66,10 @@ class CommissionPayoutViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
             payout.cancelled_by = self.request.user
             payout.cancelled_at = timezone.now()
             payout.save(update_fields=["cancelled_by", "cancelled_at", "updated_at"])
+        if status and status != previous_status:
+            audit_event(
+                "commission.payout_status_changed",
+                request=self.request,
+                target=payout,
+                metadata={"from": previous_status, "to": payout.status, "viewing_request_id": payout.viewing_request_id},
+            )

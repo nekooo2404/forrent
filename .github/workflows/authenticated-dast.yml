@@ -1,0 +1,99 @@
+name: Authenticated DAST
+
+on:
+  workflow_dispatch:
+    inputs:
+      client_url:
+        description: Staging client base URL
+        required: true
+        default: https://staging.forrent.io.vn
+      admin_url:
+        description: Staging admin base URL
+        required: true
+        default: https://staging-admin.forrent.io.vn
+
+jobs:
+  zap-authenticated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      CLIENT_URL: ${{ inputs.client_url }}
+      ADMIN_URL: ${{ inputs.admin_url }}
+      STAGING_TENANT_IDENTIFIER: ${{ secrets.STAGING_TENANT_IDENTIFIER }}
+      STAGING_TENANT_PASSWORD: ${{ secrets.STAGING_TENANT_PASSWORD }}
+      STAGING_ADMIN_IDENTIFIER: ${{ secrets.STAGING_ADMIN_IDENTIFIER }}
+      STAGING_ADMIN_PASSWORD: ${{ secrets.STAGING_ADMIN_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check required staging secrets
+        timeout-minutes: 1
+        run: |
+          test -n "$STAGING_TENANT_IDENTIFIER"
+          test -n "$STAGING_TENANT_PASSWORD"
+          test -n "$STAGING_ADMIN_IDENTIFIER"
+          test -n "$STAGING_ADMIN_PASSWORD"
+
+      - name: Login and scan authenticated client/admin pages
+        timeout-minutes: 20
+        run: |
+          set -eu
+
+          login_and_scan() {
+            role="$1"
+            base_url="$2"
+            identifier="$3"
+            password="$4"
+            target_path="$5"
+            cookie_file="$RUNNER_TEMP/${role}.cookies"
+            payload_file="$RUNNER_TEMP/${role}.login.json"
+            report_file="${role}-zap-authenticated.html"
+
+            LOGIN_IDENTIFIER="$identifier" LOGIN_PASSWORD="$password" PAYLOAD_FILE="$payload_file" \
+              python3 -c 'import json, os; open(os.environ["PAYLOAD_FILE"], "w", encoding="utf-8").write(json.dumps({"identifier": os.environ["LOGIN_IDENTIFIER"], "password": os.environ["LOGIN_PASSWORD"]}))'
+
+            curl --fail --silent --show-error --location \
+              --connect-timeout 10 --max-time 30 \
+              -c "$cookie_file" \
+              -H "Content-Type: application/json" \
+              -H "Origin: $base_url" \
+              --data-binary "@$payload_file" \
+              "$base_url/api/auth/log-in" >/dev/null
+
+            curl --fail --silent --show-error --location \
+              --connect-timeout 10 --max-time 30 \
+              -b "$cookie_file" \
+              "$base_url/api/auth/me" >/dev/null
+
+            cookie_header="$(awk 'BEGIN{ORS=""} !/^#/ && NF >= 7 {printf "%s%s=%s", sep, $6, $7; sep="; "}' "$cookie_file")"
+            test -n "$cookie_header"
+
+            zap_status=0
+            timeout 600 docker run --rm \
+              -v "$PWD:/zap/wrk:rw" \
+              ghcr.io/zaproxy/zaproxy:stable \
+              zap-baseline.py \
+              -t "$base_url$target_path" \
+              -r "$report_file" \
+              -a \
+              -z "-config replacer.full_list(0).description=auth-cookie -config replacer.full_list(0).enabled=true -config replacer.full_list(0).matchtype=REQ_HEADER -config replacer.full_list(0).matchstr=Cookie -config replacer.full_list(0).replacement=$cookie_header" || zap_status=$?
+
+            rm -f "$payload_file" "$cookie_file"
+            return "$zap_status"
+          }
+
+          login_and_scan tenant "$CLIENT_URL" "$STAGING_TENANT_IDENTIFIER" "$STAGING_TENANT_PASSWORD" "/profile"
+          login_and_scan admin "$ADMIN_URL" "$STAGING_ADMIN_IDENTIFIER" "$STAGING_ADMIN_PASSWORD" "/admin/rooms"
+
+      - name: Upload ZAP reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        timeout-minutes: 2
+        with:
+          name: authenticated-zap-reports
+          retention-days: 7
+          path: |
+            tenant-zap-authenticated.html
+            admin-zap-authenticated.html

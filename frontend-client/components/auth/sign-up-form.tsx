@@ -7,8 +7,8 @@ import type { ChangeEvent, FormEvent, InputHTMLAttributes } from "react";
 import { useMemo, useState } from "react";
 
 import { useToast } from "@/hooks/use-toast";
-import { saveAuthSession } from "@/lib/auth-storage";
-import type { ApiUser, LoginResponse } from "@/lib/api";
+import { saveAuthSession, type BrowserAuthSession } from "@/lib/auth-storage";
+import type { ApiUser } from "@/lib/api";
 import { validators } from "@/lib/validation";
 
 type AuthApiResponse<T> = {
@@ -165,7 +165,7 @@ export function SignUpForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier: fields.email.trim(), password: fields.password }),
       });
-      const loginPayload = (await loginResponse.json()) as AuthApiResponse<LoginResponse>;
+      const loginPayload = (await loginResponse.json()) as AuthApiResponse<BrowserAuthSession>;
 
       if (loginResponse.ok && loginPayload.success && loginPayload.data) {
         saveAuthSession(loginPayload.data);
