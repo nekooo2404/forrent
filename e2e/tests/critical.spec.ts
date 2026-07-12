@@ -1,6 +1,20 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('Public critical flows', () => {
+  test('anonymous public navigation does not refresh tokens', async ({ page }) => {
+    const refreshRequests: string[] = [];
+    page.on('request', (request) => {
+      if (new URL(request.url()).pathname === '/api/auth/refresh') refreshRequests.push(request.url());
+    });
+
+    for (const path of ['/homepage', '/rooms', '/contact', '/blogs', '/log-in']) {
+      await page.goto(path);
+      await page.waitForLoadState('networkidle');
+    }
+
+    expect(refreshRequests).toEqual([]);
+  });
+
   test('homepage nav, theme toggle, and scroll state work', async ({ page }) => {
     await page.goto('/homepage');
 
@@ -53,6 +67,8 @@ test.describe('Public critical flows', () => {
 
     await page.locator('.site-menu-button').click();
     await expect(page.locator('.site-mobile-menu')).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Điều hướng chính' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Điều hướng trên thiết bị di động' })).toBeVisible();
     await expect(page.locator('.site-mobile-menu a[href="/rooms"]')).toBeVisible();
 
     await page.locator('.site-close-button').click();
@@ -105,6 +121,13 @@ test.describe('Public critical flows', () => {
     await firstRoom.click();
     await expect(page).toHaveURL(/\/rooms\/[^/?#]+/);
     await expect(page.getByRole('complementary', { name: 'Tư vấn và đặt lịch xem phòng' })).toBeVisible();
+  });
+
+  test('legacy room detail URL permanently redirects to the clean URL', async ({ page }) => {
+    await page.goto('/room-details?slug=e2e-room');
+
+    await expect(page).toHaveURL(/\/rooms\/e2e-room$/);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 });
 

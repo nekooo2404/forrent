@@ -161,7 +161,7 @@ export function AdminUserManager() {
           </button>
         }
         eyebrow="Users"
-        subtitle="Quản lý tài khoản saler/admin và người thuê. Hệ thống hiện chỉ dùng hai role: SALER và TENANT."
+        subtitle="Quản lý tài khoản nhân viên tư vấn, quản trị viên và người thuê. Hệ thống dùng hai nhóm quyền SALER và TENANT."
         title="Quản lý người dùng"
       />
 
@@ -184,13 +184,13 @@ export function AdminUserManager() {
             <Field label="Role">
               <select className={adminSelectClass} onChange={(event) => setForm({ ...form, role: event.target.value as UserForm["role"] })} value={form.role}>
                 <option value="TENANT">Người thuê</option>
-                <option value="SALER">Saler/Admin</option>
+                <option value="SALER">Nhân viên tư vấn/Quản trị viên</option>
               </select>
             </Field>
             <Field label={form.id ? "Mật khẩu mới, để trống nếu không đổi" : "Mật khẩu"}>
               <input className={adminInputClass} minLength={8} onChange={(event) => setForm({ ...form, password: event.target.value })} type="password" value={form.password} />
             </Field>
-            <Field label="Mật khẩu admin hiện tại khi tạo saler, đổi role hoặc đổi password">
+            <Field label="Mật khẩu quản trị hiện tại khi tạo nhân viên, đổi vai trò hoặc đổi mật khẩu">
               <input
                 className={adminInputClass}
                 onChange={(event) => setForm({ ...form, current_password: event.target.value })}
@@ -232,7 +232,7 @@ export function AdminUserManager() {
               <select className={adminSelectClass} onChange={(event) => setRole(event.target.value)} value={role}>
                 <option value="">Tất cả role</option>
                 <option value="TENANT">Người thuê</option>
-                <option value="SALER">Saler/Admin</option>
+                <option value="SALER">Nhân viên tư vấn/Quản trị viên</option>
               </select>
               <button className={adminButtonSecondary} type="submit">Lọc</button>
             </form>

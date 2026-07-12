@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
-import { AnimatePresence } from "framer-motion";
 import { Toast } from "./toast";
 
 interface ToastOptions {
@@ -44,11 +43,9 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
     <ToastContext.Provider value={{ toast }}>
       {children}
       <div aria-live="polite" aria-atomic="true" className="pointer-events-none fixed bottom-4 right-4 z-[200] flex flex-col gap-3">
-        <AnimatePresence>
-          {toasts.map((toastItem) => (
-            <Toast key={toastItem.id} onClose={() => removeToast(toastItem.id)} {...toastItem} />
-          ))}
-        </AnimatePresence>
+        {toasts.map((toastItem) => (
+          <Toast key={toastItem.id} onClose={() => removeToast(toastItem.id)} {...toastItem} />
+        ))}
       </div>
     </ToastContext.Provider>
   );

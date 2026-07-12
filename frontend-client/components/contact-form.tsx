@@ -83,7 +83,7 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
         return;
       }
 
-      const message = "Đã nhận yêu cầu. Saler sẽ liên hệ để xác nhận phòng, cọc và lịch xem.";
+      const message = "Đã nhận yêu cầu. Nhân viên tư vấn sẽ liên hệ để xác nhận phòng, cọc và lịch xem.";
       form.reset();
       setState("success");
       toast({
@@ -180,7 +180,7 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
         {state === "submitting" ? "Đang gửi..." : "Gửi nhu cầu thuê phòng"}
       </button>
       <p className="text-center text-sm leading-6 text-on-surface-variant">
-        Sau khi gửi, saler sẽ gọi lại để xác nhận phòng còn trống, cọc, phí và lịch xem.
+        Sau khi gửi, nhân viên tư vấn sẽ gọi lại để xác nhận phòng còn trống, cọc, phí và lịch xem.
       </p>
 
     </form>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { permanentRedirect } from "next/navigation";
 import {
   ArrowLeft,
   AlertTriangle,
@@ -44,6 +45,7 @@ import {
   type ApiRoomDetail,
 } from "@/lib/api";
 import { shortDescription } from "@/lib/seo";
+import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/site-config";
 
 type RoomDetailsPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -148,7 +150,7 @@ function mapDetail(room: ApiRoomDetail): DetailView {
   const description =
     room.description ||
     room.short_description ||
-    "Thông tin phòng đang được cập nhật. Bạn có thể gửi yêu cầu tư vấn để saler xác nhận chi tiết trước khi xem phòng.";
+    "Thông tin phòng đang được cập nhật. Bạn có thể gửi yêu cầu để nhân viên tư vấn xác nhận chi tiết trước khi xem phòng.";
 
   return {
     id: room.id,
@@ -191,7 +193,13 @@ function iconForAmenity(icon: string) {
   return <Sparkles {...props} />;
 }
 
-export default async function RoomDetailsPage({ searchParams }: RoomDetailsPageProps) {
+export default async function LegacyRoomDetailsPage({ searchParams }: RoomDetailsPageProps) {
+  const params = (await searchParams) ?? {};
+  const slug = firstParam(params.slug);
+  permanentRedirect(slug ? `/rooms/${encodeURIComponent(slug)}` : "/rooms");
+}
+
+export async function RoomDetailsContent({ searchParams }: RoomDetailsPageProps) {
   const params = (await searchParams) ?? {};
   const slug = await findInitialSlug(firstParam(params.slug));
   const detail = slug ? await getCachedRoomDetail(slug).then(mapDetail).catch(() => null) : null;
@@ -265,7 +273,7 @@ function ListingHeader({ detail }: Readonly<{ detail: DetailView }>) {
       <h1 className="text-2xl font-semibold leading-snug text-on-surface md:text-3xl">{detail.title}</h1>
       <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-on-surface-variant">
         <MapPin className="mt-0.5 shrink-0 text-primary" size={18} strokeWidth={1.8} />
-        {detail.location || "Địa chỉ sẽ được saler xác nhận trước khi xem phòng"}
+        {detail.location || "Địa chỉ sẽ được nhân viên tư vấn xác nhận trước khi xem phòng"}
       </p>
       <div className="mt-5 grid divide-y divide-outline-variant/20 rounded-lg border border-outline-variant/20 bg-surface-container-low sm:grid-cols-4 sm:divide-x sm:divide-y-0">
         <ListingStat label="Giá thuê" value={detail.price} />
@@ -343,7 +351,7 @@ function AmenitiesSection({ amenities }: Readonly<{ amenities: ApiAmenity[] }>) 
         </div>
       ) : (
         <p className="rounded-lg border border-dashed border-outline-variant/30 bg-surface-container-low p-4 text-sm text-on-surface-variant">
-          Tiện ích đang được cập nhật. Saler sẽ xác nhận lại trước lịch xem.
+          Tiện ích đang được cập nhật. Nhân viên tư vấn sẽ xác nhận lại trước lịch xem.
         </p>
       )}
     </section>
@@ -368,11 +376,11 @@ function ContactCard({ detail }: Readonly<{ detail: DetailView }>) {
       </div>
 
       <div className="grid gap-2">
-        <a className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-semibold text-on-primary transition hover:bg-surface-tint" href="tel:0382912254">
+        <a className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-semibold text-on-primary transition hover:bg-surface-tint" href={`tel:${CONTACT_PHONE}`}>
           <Phone size={18} strokeWidth={1.8} />
-          0382912254
+          {CONTACT_PHONE}
         </a>
-        <a className="flex items-center justify-center gap-2 rounded-lg border border-primary px-4 py-3 font-semibold text-primary transition hover:bg-primary/5" href="mailto:buihoaowo@gmail.com">
+        <a className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-primary px-4 py-3 font-semibold text-primary transition hover:bg-primary/5" href={`mailto:${CONTACT_EMAIL}`}>
           <Mail size={18} strokeWidth={1.8} />
           Gửi email
         </a>

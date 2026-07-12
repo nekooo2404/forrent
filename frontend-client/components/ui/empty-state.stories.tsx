@@ -61,7 +61,7 @@ export const NoRooms: Story = {
   args: {
     icon: <Home size={48} strokeWidth={1.5} />,
     title: "Không có phòng trống",
-    description: "Hiện tại không có phòng trống phù hợp. Saler sẽ báo lại khi có phòng đúng khu vực và ngân sách.",
+    description: "Hiện tại không có phòng trống phù hợp. Nhân viên tư vấn sẽ báo lại khi có phòng đúng khu vực và ngân sách.",
     action: {
       label: "Gửi nhu cầu thuê phòng",
       href: "/contact",
