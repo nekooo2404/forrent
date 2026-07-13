@@ -47,6 +47,10 @@ test('rooms listing visual regression', async ({ page }, testInfo) => {
 
   await page.addInitScript(() => localStorage.setItem('theme', 'dark'));
   await page.goto('/rooms');
+  await expect(page.locator('[data-room-card]:visible').first()).toHaveAttribute('data-layout', 'wide');
+  const themedOption = page.getByRole('option', { name: 'Tất cả trạng thái' });
+  await expect(themedOption).toHaveCSS('background-color', 'rgb(33, 22, 16)');
+  await expect(themedOption).toHaveCSS('color', 'rgb(255, 237, 213)');
   await expect(page.locator('main')).toHaveScreenshot('rooms-list-dark.png', {
     maxDiffPixelRatio: 0.04,
     threshold: 0.2,
