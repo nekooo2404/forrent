@@ -22,7 +22,7 @@
     "@storybook/addon-essentials": "8.6.18",
     "@storybook/addon-interactions": "8.6.18",
     "@storybook/addon-links": "8.6.18",
-    "@storybook/react-webpack5": "8.6.18",
+    "@storybook/react-webpack5": "10.5.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
