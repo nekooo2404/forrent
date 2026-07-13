@@ -27,7 +27,7 @@ jobs:
     env:
       TARGET: ${{ github.event.inputs.target || matrix.target }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Check target availability
         run: |
           curl --fail --silent --show-error --location \
