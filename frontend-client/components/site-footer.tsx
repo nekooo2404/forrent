@@ -14,7 +14,7 @@ const footerHrefByLabel: Record<string, string> = {
 
 export function SiteFooter() {
   return (
-    <footer className="scroll-reveal w-full border-t border-outline-variant/20 bg-surface-container-highest pb-10 pt-20">
+    <footer className="scroll-reveal w-full border-t border-outline-variant/20 bg-surface-container-highest pb-8 pt-14">
       <div className="mx-auto grid max-w-container-max grid-cols-1 gap-gutter px-margin-mobile md:grid-cols-4 md:px-margin-desktop">
         <div className="mb-8 md:col-span-1 md:mb-0">
           <Link className="mb-6 block font-headline-md text-headline-md uppercase text-primary" href="/homepage">
@@ -33,12 +33,12 @@ export function SiteFooter() {
           <p className="mb-4 font-body-md text-body-md text-secondary">
             Cần tìm phòng theo khu vực, ngân sách hoặc diện tích? Gửi nhu cầu, nhân viên tư vấn sẽ xác nhận phòng còn trống, cọc và lịch xem.
           </p>
-          <Link className="premium-button inline-flex min-h-11 items-center rounded border border-primary px-5 py-3 font-button text-button text-primary transition hover:bg-primary hover:text-on-primary" href="/contact">
+          <Link className="premium-button inline-flex min-h-11 items-center rounded border border-secondary px-5 py-3 font-button text-button text-secondary transition hover:bg-secondary hover:text-on-secondary" href="/contact">
             Liên hệ tư vấn
           </Link>
         </div>
       </div>
-      <div className="mx-auto mt-16 flex max-w-container-max flex-col gap-2 border-t border-outline-variant/10 px-margin-mobile pt-8 font-body-md text-sm text-secondary md:px-margin-desktop">
+      <div className="mx-auto mt-10 flex max-w-container-max flex-col gap-2 border-t border-outline-variant/10 px-margin-mobile pt-6 font-body-md text-sm text-secondary md:px-margin-desktop">
         <p>© 2026 FORRENT. ĐÃ ĐĂNG KÝ BẢN QUYỀN.</p>
         <p>Đơn vị vận hành: {LEGAL_NAME} · {LEGAL_ADDRESS}</p>
         {BUSINESS_REGISTRATION ? <p>Mã số đăng ký kinh doanh: {BUSINESS_REGISTRATION}</p> : null}

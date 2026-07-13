@@ -22,8 +22,13 @@ test.describe('Public critical flows', () => {
     await expect(page.getByTestId('site-nav')).toBeVisible();
     await expect(page.getByTestId('site-nav')).toHaveAttribute('data-ready', 'true');
 
+    const initialNavHeight = await page.getByTestId('site-nav').evaluate((element) => element.getBoundingClientRect().height);
+    expect(initialNavHeight).toBeLessThanOrEqual(82);
+
     const viewport = page.viewportSize();
     if (viewport && viewport.width < 768) {
+      await expect(page.getByTestId('theme-compact-toggle')).toBeHidden();
+      await expect(page.getByTestId('site-nav').getByRole('button', { name: 'Tài khoản' })).toBeHidden();
       await expect(page.locator('.site-menu-button')).toBeVisible();
       await page.locator('.site-menu-button').click();
       await expect(page.locator('.site-mobile-menu')).toBeVisible();
@@ -57,6 +62,59 @@ test.describe('Public critical flows', () => {
 
     await page.evaluate(() => window.scrollTo(0, 120));
     await expect(page.getByTestId('site-nav')).toHaveClass(/site-navbar-scrolled/);
+
+    if (viewport && viewport.width >= 768) {
+      await expect
+        .poll(() => page.getByTestId('site-nav').evaluate((element) => element.getBoundingClientRect().height))
+        .toBeLessThan(initialNavHeight);
+    }
+  });
+
+  test('homepage starts with readable content and touch-sized controls', async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 320, height: 700 });
+    await page.goto('/homepage');
+
+    const skipLink = page.getByRole('link', { name: 'Bỏ qua điều hướng' });
+    await expect(skipLink).toBeAttached();
+    await expect(skipLink).toHaveAttribute('href', '#main-content');
+    await expect(page.locator('#main-content')).toHaveAttribute('tabindex', '-1');
+    if (testInfo.project.name !== 'Mobile Safari') {
+      await page.keyboard.press('Tab');
+      await expect(skipLink).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(page.locator('#main-content')).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(page.getByTestId('site-nav').locator(':focus')).toHaveCount(0);
+    }
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Phòng');
+    await expect(page.locator('body')).toHaveCSS('font-family', /Open Sans/);
+
+    const controls = page.locator('#home-room-search, #home-max-price, #home-room-type');
+    for (let index = 0; index < (await controls.count()); index += 1) {
+      const box = await controls.nth(index).boundingBox();
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(43.5);
+    }
+
+    const horizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth + 1,
+    );
+    expect(horizontalOverflow).toBe(false);
+
+    const description = page.getByText('Phòng gọn, giá rõ, phù hợp người đi làm và sinh viên.');
+    await expect(description).toBeVisible();
+    await expect(description).toHaveCSS('opacity', '1');
+  });
+
+  test('public PWA metadata and offline fallback are available', async ({ request }) => {
+    const manifest = await request.get('/manifest.webmanifest');
+    const serviceWorker = await request.get('/sw.js');
+    const offline = await request.get('/offline');
+
+    expect(manifest.ok()).toBeTruthy();
+    expect(await manifest.json()).toMatchObject({ name: 'ForRent', display: 'standalone' });
+    expect(serviceWorker.ok()).toBeTruthy();
+    expect(await serviceWorker.text()).toContain('forrent-static');
+    expect(offline.ok()).toBeTruthy();
   });
 
   test('mobile menu opens and closes', async ({ page }) => {
@@ -79,6 +137,9 @@ test.describe('Public critical flows', () => {
     await page.goto('/rooms');
 
     const filterForm = page.locator('form[action="/rooms"]').filter({ has: page.locator('input[name="search"]') });
+    if (!(await filterForm.isVisible())) {
+      await page.getByText('Bộ lọc phòng', { exact: true }).click();
+    }
     await expect(filterForm).toBeVisible();
     await filterForm.locator('input[name="search"]').fill('test');
     await filterForm.locator('button[type="submit"]').click();
