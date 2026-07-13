@@ -128,15 +128,22 @@ export function AdminLeadManager() {
     }, {});
   }, [leads]);
   const filteredWards = useMemo(() => (city ? wards.filter((item) => String(item.city) === city) : wards), [city, wards]);
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const selectedLeads = useMemo(
-    () => leads.filter((lead) => selectedIds.includes(lead.id)),
-    [leads, selectedIds],
+    () => leads.filter((lead) => selectedIdSet.has(lead.id)),
+    [leads, selectedIdSet],
   );
   const bulkStatusOptions = useMemo(
     () => editableLeadStatuses.filter(
       (item) => item.value !== "SCHEDULED" && selectedLeads.every((lead) => canManuallyTransitionLead(lead.status, item.value)),
     ),
     [selectedLeads],
+  );
+  const selectedLeadStatusOptions = useMemo(
+    () => selectedLead
+      ? editableLeadStatuses.filter((item) => canManuallyTransitionLead(selectedLead.status, item.value))
+      : [],
+    [selectedLead],
   );
 
   useEffect(() => {
@@ -460,7 +467,7 @@ export function AdminLeadManager() {
                 <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Trạng thái</span>
                 <select className={adminSelectClass} onChange={(event) => setStatusDraft(event.target.value)} value={statusDraft}>
                   {selectedLead.status === "CONVERTED" ? <option value="CONVERTED">Đã chốt thuê</option> : null}
-                  {editableLeadStatuses.filter((item) => canManuallyTransitionLead(selectedLead.status, item.value)).map((item) => (
+                  {selectedLeadStatusOptions.map((item) => (
                     <option key={item.value} value={item.value}>{item.label}</option>
                   ))}
                 </select>

@@ -4,6 +4,18 @@ import { mockAdminDashboard, mockAdminRoomInventory } from './admin-mocks';
 
 const adminBaseURL = process.env.ADMIN_BASE_URL || 'http://localhost:3001';
 
+test('homepage visual regression', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium', 'Screenshot baseline is tracked for the desktop Chromium project only.');
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.addInitScript(() => localStorage.setItem('theme', 'light'));
+  await page.goto('/homepage');
+  await expect(page.locator('main')).toHaveScreenshot('homepage-light.png', {
+    maxDiffPixelRatio: 0.04,
+    threshold: 0.2,
+  });
+});
+
 test('desktop navbar visual regression', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Screenshot baseline is tracked for the desktop Chromium project only.');
 
@@ -36,6 +48,19 @@ test('rooms listing visual regression', async ({ page }, testInfo) => {
   await page.addInitScript(() => localStorage.setItem('theme', 'dark'));
   await page.goto('/rooms');
   await expect(page.locator('main')).toHaveScreenshot('rooms-list-dark.png', {
+    maxDiffPixelRatio: 0.04,
+    threshold: 0.2,
+  });
+});
+
+test('rooms mobile visual regression', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium', 'Screenshot baseline is tracked for the desktop Chromium project only.');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => localStorage.setItem('theme', 'dark'));
+  await page.goto('/rooms');
+  await expect(page.getByRole('button', { name: 'Bộ lọc phòng' })).toHaveAttribute('aria-expanded', 'false');
+  await expect(page).toHaveScreenshot('rooms-list-dark-mobile.png', {
     maxDiffPixelRatio: 0.04,
     threshold: 0.2,
   });

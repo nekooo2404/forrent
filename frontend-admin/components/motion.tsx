@@ -7,11 +7,3 @@ export function MotionPage({ children, className = "", ...props }: ComponentProp
     </main>
   );
 }
-
-export function MotionSection({ children, className = "", ...props }: ComponentPropsWithoutRef<"div">) {
-  return (
-    <div className={`scroll-reveal ${className}`} {...props}>
-      {children}
-    </div>
-  );
-}

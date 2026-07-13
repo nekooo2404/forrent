@@ -1,19 +1,17 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BedDouble, MapPin, ReceiptText, Search, ShieldCheck, ShowerHead, Sparkles } from "lucide-react";
+import { ArrowRight, BedDouble, MapPin, ReceiptText, Search, ShieldCheck, ShowerHead } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { MotionItem, MotionList, MotionPage, MotionSection } from "@/components/motion";
-import { fastImageProps, fastImageUrl } from "@/lib/image";
+import { fastImageUrl } from "@/lib/image";
 import {
   formatArea,
   formatOptionalVnd,
   formatVnd,
-  getBlogs,
-  getCachedRoomFilters,
   getRooms,
   resolveMediaUrl,
   roomTypeLabel,
@@ -41,7 +39,6 @@ const collections = [
     description: "Phòng gọn, giá rõ, phù hợp người đi làm và sinh viên.",
     href: "/rooms?room_type=CCMN",
     icon: <BedDouble aria-hidden="true" size={34} strokeWidth={1.7} />,
-    className: "md:col-span-2 md:row-span-1",
   },
   {
     kicker: "KHU VỰC SÁNG TẠO",
@@ -49,7 +46,6 @@ const collections = [
     description: "Có nội thất, dịch vụ cơ bản và lịch xem linh hoạt.",
     href: "/rooms?room_type=CCDV",
     icon: <ReceiptText aria-hidden="true" size={34} strokeWidth={1.7} />,
-    className: "md:col-span-1 md:row-span-2",
   },
   {
     kicker: "KHÔNG GIAN RIÊNG",
@@ -57,7 +53,6 @@ const collections = [
     description: "Phù hợp gia đình hoặc nhóm thuê dài hạn.",
     href: "/rooms?room_type=HOUSE",
     icon: <ShowerHead aria-hidden="true" size={34} strokeWidth={1.7} />,
-    className: "md:col-span-2 md:row-span-1",
   },
 ] satisfies Array<{
   kicker: string;
@@ -65,7 +60,6 @@ const collections = [
   description: string;
   href: string;
   icon: ReactNode;
-  className: string;
 }>;
 
 type PropertyCardView = {
@@ -85,12 +79,6 @@ type PropertyCardView = {
   labelClassName?: string;
   image: string | null;
   alt: string;
-};
-
-type BackendSignal = {
-  label: string;
-  value: string;
-  note: string;
 };
 
 function mapProperty(room: ApiRoom, index: number): PropertyCardView {
@@ -115,34 +103,21 @@ function mapProperty(room: ApiRoom, index: number): PropertyCardView {
 }
 
 export default async function Homepage() {
-  const [roomsResponse, filtersResponse, blogsResponse] = await Promise.all([
-    getRooms({ page_size: 3, status: "PUBLISHED", ordering: "-created_at" }).catch(() => null),
-    getCachedRoomFilters().catch(() => null),
-    getBlogs({ page_size: 1, ordering: "-published_at" }).catch(() => null),
-  ]);
+  const roomsResponse = await getRooms({ page_size: 3, status: "PUBLISHED", ordering: "-created_at" }).catch(() => null);
   const properties = roomsResponse?.results.map(mapProperty) ?? [];
   const heroRoomImage = properties[0]?.image;
-  const availableSignals = [
-    { label: "Phòng trống", value: roomsResponse?.count ?? properties.length, note: "có thể đặt lịch xem" },
-    { label: "Khu vực", value: filtersResponse?.wards.length ?? 0, note: "đang hỗ trợ tìm kiếm" },
-    { label: "Tiện ích", value: filtersResponse?.amenities.length ?? 0, note: "được mô tả rõ ràng" },
-    { label: "Bài viết", value: blogsResponse?.count ?? 0, note: "kinh nghiệm thuê thực tế" },
-  ]
-    .filter((signal) => signal.value > 1)
-    .map<BackendSignal>((signal) => ({ ...signal, value: String(signal.value) }));
-  const signals = availableSignals.length > 1 ? availableSignals : [];
 
   return (
     <MotionPage className="bg-surface text-on-surface">
       <SiteNav active="home" />
 
-      <header className="v-ui-shell relative px-margin-mobile pb-16 pt-28 md:px-margin-desktop md:pt-32">
-        <div className="mx-auto grid min-h-[720px] w-full max-w-container-max items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+      <header className="relative px-margin-mobile pb-14 pt-24 md:px-margin-desktop md:pt-28">
+        <div className="mx-auto grid w-full max-w-container-max items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
           <MotionSection className="text-reveal">
-            <span className="mb-5 inline-flex rounded-full border border-primary/15 bg-surface-container-lowest px-4 py-2 font-label-caps text-label-caps uppercase tracking-widest text-primary shadow-soft">
-              ForRent live · Hà Nội · dữ liệu thật
-            </span>
-            <h1 className="mb-6 max-w-4xl text-[44px] font-extrabold leading-[1.04] text-primary md:text-[76px]">
+            <p className="mb-4 font-label-caps text-label-caps uppercase text-secondary">
+              Phòng thuê theo tháng tại Hà Nội
+            </p>
+            <h1 className="mb-6 max-w-4xl text-[40px] font-extrabold leading-[1.08] text-primary md:text-[64px]">
               Phòng đẹp, giá rõ, đặt lịch không vòng vo
             </h1>
             <p className="max-w-2xl font-body-lg text-body-lg font-medium text-on-surface-variant">
@@ -159,7 +134,7 @@ export default async function Homepage() {
           </MotionSection>
 
           <MotionSection className="relative">
-            <div className="premium-card relative aspect-[4/5] overflow-hidden rounded-[1.25rem] bg-primary shadow-high">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-outline-variant/25 bg-surface-container-low lg:aspect-[5/4]">
               {heroRoomImage ? (
                 <Image
                   alt="Không gian phòng thuê sáng, gọn, có nội thất cơ bản và ánh sáng tự nhiên"
@@ -169,7 +144,6 @@ export default async function Homepage() {
                   quality={82}
                   sizes="(min-width: 1024px) 520px, 100vw"
                   src={fastImageUrl(heroRoomImage, 1200, 82)}
-                  {...fastImageProps()}
                 />
               ) : (
                 <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_28%_20%,rgb(var(--primary)_/_0.28),transparent_22rem),linear-gradient(135deg,rgb(var(--surface-container)),rgb(var(--surface-container-high)))] p-10">
@@ -183,20 +157,16 @@ export default async function Homepage() {
                   />
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-inverse-surface/82 via-transparent to-transparent" />
-              <div className="absolute bottom-5 left-5 right-5 rounded-xl border border-outline-variant/30 bg-surface-container-lowest/85 p-4 text-on-surface shadow-soft backdrop-blur">
-                <p className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-tertiary">
-                  <Sparkles size={15} strokeWidth={1.8} />
-                  Phòng mới cập nhật
-                </p>
-                <p className="text-sm leading-6 text-on-surface-variant">Xem ảnh thực tế, giá thuê, mức cọc và tình trạng phòng trước khi đặt lịch.</p>
+              <div className="absolute bottom-4 left-4 right-4 rounded-md border border-outline-variant/30 bg-surface-container-lowest p-4 text-on-surface">
+                <p className="mb-1 text-sm font-semibold text-primary">Ảnh phòng thực tế</p>
+                <p className="text-sm leading-6 text-on-surface-variant">Xem giá thuê, mức cọc và tình trạng phòng trước khi đặt lịch.</p>
               </div>
             </div>
           </MotionSection>
 
-          <MotionSection className="urban-panel spotlight-card w-full rounded-2xl p-4 md:col-span-2 md:p-5">
+          <MotionSection className="urban-panel w-full rounded-lg p-4 md:col-span-2 md:p-5">
             <form action="/rooms" className="grid gap-4 md:grid-cols-[1.6fr_1fr_1fr_auto] md:items-end">
-              <div className="flex flex-col rounded-xl bg-surface-container-lowest px-4 py-3">
+              <div className="flex flex-col rounded-md bg-surface-container-low px-4 py-3">
                 <label className="mb-2 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-room-search">Khu vực</label>
                 <div className="relative">
                   <MapPin
@@ -206,7 +176,7 @@ export default async function Homepage() {
                     strokeWidth={1.8}
                   />
                   <input
-                    className="w-full border-none bg-transparent py-1 pl-8 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:ring-0"
+                    className="min-h-11 w-full border-none bg-transparent py-2 pl-8 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:ring-0"
                     id="home-room-search"
                     name="search"
                     placeholder="Tây Mỗ, Cầu Giấy..."
@@ -215,11 +185,11 @@ export default async function Homepage() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4 md:contents">
-                <div className="flex flex-col rounded-xl bg-surface-container-lowest px-4 py-3">
+                <div className="flex flex-col rounded-md bg-surface-container-low px-4 py-3">
                   <label className="mb-2 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-max-price">Giá tối đa</label>
                   <div>
                     <input
-                      className="w-full border-none bg-transparent py-1 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:ring-0"
+                      className="min-h-11 w-full border-none bg-transparent py-2 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:ring-0"
                       id="home-max-price"
                       name="max_price"
                       placeholder="8.000.000"
@@ -227,11 +197,11 @@ export default async function Homepage() {
                     />
                   </div>
                 </div>
-                <div className="flex flex-col rounded-xl bg-surface-container-lowest px-4 py-3">
+                <div className="flex flex-col rounded-md bg-surface-container-low px-4 py-3">
                   <label className="mb-2 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-room-type">Loại phòng</label>
                   <div>
                     <select
-                      className="w-full border-none bg-transparent py-1 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:ring-0"
+                      className="min-h-11 w-full border-none bg-transparent py-2 font-body-md text-body-md text-on-surface focus:ring-0"
                       id="home-room-type"
                       name="room_type"
                       defaultValue=""
@@ -245,19 +215,18 @@ export default async function Homepage() {
                 </div>
               </div>
               <button
-                className="premium-button urban-cta group flex h-full min-h-[68px] w-full items-center justify-center gap-2 rounded-xl px-7 font-button text-button"
+                className="premium-button urban-cta group flex min-h-12 w-full items-center justify-center gap-2 rounded-md px-7 font-button text-button"
                 type="submit"
               >
                 <Search className="transition-colors group-hover:text-gold" size={20} strokeWidth={1.8} />
                 Tìm ngay
               </button>
             </form>
-            {signals.length ? <BackendSignals signals={signals} /> : null}
           </MotionSection>
         </div>
       </header>
 
-      <section className="ambient-gradient px-margin-mobile py-24 md:px-margin-desktop">
+      <section className="bg-surface px-margin-mobile py-20 md:px-margin-desktop">
         <div className="mx-auto max-w-container-max">
           <MotionSection className="mb-12 flex flex-col items-start justify-between md:flex-row md:items-end">
             <div>
@@ -267,7 +236,7 @@ export default async function Homepage() {
               </p>
             </div>
             <Link
-              className="mt-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-surface-container-lowest px-5 py-3 font-button text-button text-primary shadow-soft transition hover:-translate-y-0.5 hover:border-primary hover:bg-primary hover:text-on-primary md:mt-0"
+              className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-md border border-primary/30 px-5 py-3 font-button text-button text-primary transition hover:bg-surface-container-low md:mt-0"
               href="/rooms"
             >
               Xem tất cả phòng
@@ -275,22 +244,21 @@ export default async function Homepage() {
             </Link>
           </MotionSection>
 
-          <MotionList className="stagger-list grid grid-cols-1 gap-unit md:h-[600px] md:grid-cols-3 md:gap-gutter">
+          <MotionList className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-gutter">
             {collections.map((item) => (
-              <MotionItem className={item.className} key={item.title}>
+              <MotionItem key={item.title}>
                 <Link
                   aria-label={`Xem ${item.title}`}
-                  className="group relative block h-64 overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-container-lowest shadow-soft transition hover:-translate-y-1 md:h-full"
+                  className="group flex h-full min-h-64 flex-col rounded-lg border border-outline-variant/30 bg-surface-container-lowest p-6 transition hover:border-primary/35"
                   href={item.href}
                 >
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgb(var(--primary)_/_0.18),transparent_18rem),linear-gradient(135deg,rgb(var(--surface-container-lowest)),rgb(var(--surface-container)))]" />
-                  <div className="absolute inset-0 flex flex-col justify-end p-6">
-                    <span className="mb-auto flex size-14 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-on-primary">
+                  <div className="flex h-full flex-col">
+                    <span className="mb-10 flex size-12 items-center justify-center rounded-md bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-on-primary">
                       {item.icon}
                     </span>
-                    <span className="mb-2 font-label-caps text-label-caps tracking-widest text-gold">{item.kicker}</span>
+                    <span className="mb-2 font-label-caps text-label-caps text-secondary">{item.kicker}</span>
                     <h3 className="mb-2 font-headline-sm text-headline-sm text-primary">{item.title}</h3>
-                    <p className="translate-y-4 font-body-md text-body-md text-on-surface-variant opacity-0 transition-[transform,opacity] duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                    <p className="font-body-md text-body-md text-on-surface-variant">
                       {item.description}
                     </p>
                   </div>
@@ -301,7 +269,7 @@ export default async function Homepage() {
         </div>
       </section>
 
-      <section className="bg-surface-container-low px-margin-mobile py-24 md:px-margin-desktop">
+      <section className="bg-surface-container-low px-margin-mobile py-20 md:px-margin-desktop">
         <div className="mx-auto max-w-container-max">
           <MotionSection className="mb-16 text-center">
             <span className="urban-badge mb-4 px-3 py-1 font-label-caps text-label-caps uppercase tracking-widest">Còn trống thật</span>
@@ -348,10 +316,10 @@ export default async function Homepage() {
         </div>
       </section>
 
-      <section className="urban-band px-margin-mobile py-20 text-orange-50 md:px-margin-desktop">
+      <section className="urban-band px-margin-mobile py-16 md:px-margin-desktop">
         <div className="mx-auto grid max-w-container-max gap-gutter md:grid-cols-[1.2fr_2fr] md:items-center">
           <MotionSection>
-            <span className="mb-4 block font-label-caps text-label-caps uppercase tracking-widest text-amber-100">Đi xem không mất thời gian</span>
+            <span className="mb-4 block font-label-caps text-label-caps uppercase text-on-primary/75 dark:text-secondary">Đi xem không mất thời gian</span>
             <h2 className="font-headline-md text-headline-md">Trước khi đi, mọi thứ quan trọng đã được xác nhận.</h2>
           </MotionSection>
           <MotionList className="grid gap-4 md:grid-cols-3">
@@ -383,20 +351,19 @@ function PropertyCard({ property }: Readonly<{ property: PropertyCardView }>) {
   const detailHref = property.slug ? `/rooms/${encodeURIComponent(property.slug)}` : "/rooms";
 
   return (
-    <article className="premium-card urban-card spotlight-card group cursor-pointer overflow-hidden rounded-2xl">
+    <article className="premium-card urban-card group overflow-hidden rounded-lg">
       <div className="relative h-72 overflow-hidden">
         <Link aria-label={`Xem chi tiết ${property.title}`} className="absolute inset-0" href={detailHref}>
           {property.image ? (
             <Image
               alt={property.alt}
-              className="shared-image object-cover transition-transform duration-700 group-hover:scale-105"
+              className="shared-image object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               decoding="async"
               fill
               loading="lazy"
               quality={78}
               sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
               src={fastImageUrl(property.image, 1200, 78)}
-              {...fastImageProps()}
             />
           ) : (
             <ImagePlaceholder />
@@ -407,13 +374,13 @@ function PropertyCard({ property }: Readonly<{ property: PropertyCardView }>) {
             {property.label}
           </div>
         ) : null}
-        <div className="absolute right-4 top-4 rounded-full bg-success px-3 py-1 font-label-caps text-label-caps uppercase tracking-wider text-on-success shadow-sm">
+        <div className="absolute right-4 top-4 rounded-md bg-success px-3 py-1 font-label-caps text-label-caps uppercase text-on-success">
           Còn trống
         </div>
       </div>
       <div className="p-6">
         <div className="mb-3 flex items-start justify-between gap-4">
-          <Link className="font-headline-sm text-headline-sm text-primary hover:text-secondary" href={detailHref}>
+          <Link className="line-clamp-2 font-headline-sm text-headline-sm text-primary hover:text-secondary" href={detailHref}>
             {property.title}
           </Link>
           <span className="text-right font-headline-sm text-headline-sm text-primary">{property.price}</span>
@@ -440,7 +407,7 @@ function PropertyCard({ property }: Readonly<{ property: PropertyCardView }>) {
         {property.featuredAmenities.length ? (
           <div className="mb-4 flex flex-wrap gap-2">
             {property.featuredAmenities.map((amenity) => (
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-secondary" key={amenity}>
+              <span className="rounded-md bg-primary/10 px-3 py-1 text-xs font-medium text-secondary" key={amenity}>
                 {amenity}
               </span>
             ))}
@@ -462,26 +429,12 @@ function PropertyCard({ property }: Readonly<{ property: PropertyCardView }>) {
   );
 }
 
-function BackendSignals({ signals }: Readonly<{ signals: BackendSignal[] }>) {
-  return (
-    <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-      {signals.map((signal) => (
-        <div className="rounded-xl border border-outline-variant/20 bg-surface-container-low px-4 py-3" key={signal.label}>
-          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-on-surface-variant">{signal.label}</p>
-          <p className="mt-1 text-2xl font-extrabold tabular-nums text-primary">{signal.value}</p>
-          <p className="mt-1 text-xs text-on-surface-variant">{signal.note}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function UrbanStep({ children, icon, title }: Readonly<{ children: ReactNode; icon: ReactNode; title: string }>) {
   return (
-    <div className="h-full rounded-2xl border border-primary/25 bg-primary/10 p-5 backdrop-blur-sm">
-      <div className="mb-4 inline-flex rounded-xl bg-primary/15 p-3 text-amber-100">{icon}</div>
-      <h3 className="mb-2 font-headline-sm text-xl text-orange-50">{title}</h3>
-      <p className="font-body-md text-sm leading-6 text-orange-50/75">{children}</p>
+    <div className="h-full rounded-lg border border-on-primary/20 bg-on-primary/5 p-5 dark:border-outline-variant/30 dark:bg-surface-container">
+      <div className="mb-4 inline-flex rounded-md bg-on-primary/10 p-3 text-on-primary dark:bg-primary/10 dark:text-primary">{icon}</div>
+      <h3 className="mb-2 font-headline-sm text-xl text-on-primary dark:text-primary">{title}</h3>
+      <p className="font-body-md text-sm leading-6 text-on-primary dark:text-on-surface-variant">{children}</p>
     </div>
   );
 }
