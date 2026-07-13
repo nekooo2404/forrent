@@ -32,11 +32,22 @@ class Command(BaseCommand):
         admin.set_password("Admin@123")
         admin.save()
 
-        hanoi, _ = City.objects.get_or_create(name="Ha Noi", defaults={"slug": "ha-noi"})
+        hanoi, _ = City.objects.update_or_create(
+            slug="ha-noi",
+            defaults={"name": "Hà Nội", "is_active": True},
+        )
         hcm, _ = City.objects.get_or_create(name="Ho Chi Minh", defaults={"slug": "ho-chi-minh"})
 
-        cau_giay, _ = Ward.objects.get_or_create(city=hanoi, name="Cau Giay", defaults={"slug": "cau-giay"})
-        dong_da, _ = Ward.objects.get_or_create(city=hanoi, name="Dong Da", defaults={"slug": "dong-da"})
+        cau_giay, _ = Ward.objects.update_or_create(
+            city=hanoi,
+            slug="cau-giay",
+            defaults={"name": "Cầu Giấy", "is_active": True},
+        )
+        dong_da, _ = Ward.objects.update_or_create(
+            city=hanoi,
+            slug="dong-da",
+            defaults={"name": "Đống Đa", "is_active": True},
+        )
         binh_thanh, _ = Ward.objects.get_or_create(city=hcm, name="Binh Thanh", defaults={"slug": "binh-thanh"})
 
         amenities = []

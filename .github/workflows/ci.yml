@@ -69,7 +69,7 @@ jobs:
         timeout-minutes: 3
       - run: python manage.py makemigrations --check --dry-run
         timeout-minutes: 3
-      - run: pytest apps/accounts apps/blogs apps/common apps/contacts apps/commissions apps/rooms apps/viewing_requests
+      - run: pytest apps/accounts apps/blogs apps/common apps/contacts apps/commissions apps/locations apps/rooms apps/viewing_requests
         timeout-minutes: 8
       - run: pip-audit -r requirements.txt --strict --timeout 30 --progress-spinner off
         timeout-minutes: 5
