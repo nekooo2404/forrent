@@ -13,7 +13,7 @@ jobs:
       issues: write
       contents: read
     steps:
-      - uses: actions/github-script@v8
+      - uses: actions/github-script@v9
         timeout-minutes: 3
         with:
           script: |
