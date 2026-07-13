@@ -99,7 +99,7 @@ Khong commit file `.env`, database dump, media rieng tu, hoac backup len Git.
 
 ## 9. CI/CD
 
-Repo co GitHub Actions tai `.github/workflows/ci.yml` va CircleCI tai `.circleci/config.yml`:
+Repo dùng GitHub Actions tại `.github/workflows/ci.yml` làm pipeline CI duy nhất:
 
 - Backend: `manage.py check`, pytest, `pip-audit`.
 - Frontend client/admin: `npm audit --audit-level=high`, lint, build.

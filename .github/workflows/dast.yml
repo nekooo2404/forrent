@@ -7,25 +7,16 @@ on:
         description: Target URL to scan
         required: false
         default: https://forrent.io.vn
-  schedule:
-    - cron: "0 20 * * 0"
 
 jobs:
   zap-baseline:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - https://forrent.io.vn
-          - https://admin.forrent.io.vn/log-in
-          - https://api.forrent.io.vn/api/health/
     permissions:
       contents: read
       issues: write
     env:
-      TARGET: ${{ github.event.inputs.target || matrix.target }}
+      TARGET: ${{ inputs.target }}
     steps:
       - uses: actions/checkout@v6
       - name: Check target availability
