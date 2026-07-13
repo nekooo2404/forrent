@@ -204,7 +204,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
         </div>
       </header>
 
-      <section className="mx-auto flex w-full max-w-container-max flex-grow flex-col gap-gutter px-margin-mobile py-12 md:flex-row md:px-margin-desktop">
+      <section className="mx-auto flex w-full max-w-container-max flex-grow flex-col gap-gutter px-margin-mobile py-12 md:px-margin-desktop lg:flex-row">
         <FilterSidebar
           activeAreaRange={areaRange}
           activeCity={city}
@@ -218,12 +218,12 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
           search={search}
         />
 
-        <div className="flex w-full flex-col gap-8 md:w-[calc(100%-304px-24px)]">
+        <div className="flex min-w-0 flex-1 flex-col gap-8">
           <ResultHeader activeFilters={activeFilterLabels} currentPage={currentPage} totalCount={totalCount} />
           {rooms.length ? (
-            <div className={`stagger-list grid w-full grid-cols-1 gap-gutter ${rooms.length === 1 ? "mx-auto max-w-xl" : "xl:grid-cols-2"}`}>
+            <div className={`stagger-list grid w-full grid-cols-1 gap-gutter ${rooms.length > 1 ? "xl:grid-cols-2" : ""}`}>
               {rooms.map((room, index) => (
-                <RoomCard key={room.id} priority={index < 2} room={room} />
+                <RoomCard key={room.id} priority={index < 2} room={room} wide={rooms.length === 1} />
               ))}
             </div>
           ) : (
@@ -352,9 +352,9 @@ function FilterSidebar({
   }
 
   return (
-    <aside className="w-full flex-shrink-0 md:w-[304px]">
+    <aside className="w-full flex-shrink-0 lg:w-[280px]">
       <ResponsiveFilter>
-      <form action="/rooms" className="custom-scrollbar urban-card mt-3 max-h-none overflow-visible rounded-lg md:sticky md:top-[80px] md:mt-0 md:max-h-[calc(100vh-96px)] md:overflow-y-auto">
+      <form action="/rooms" className="urban-card mt-3 overflow-visible rounded-lg lg:mt-0">
         <div className="p-4">
           <div className="mb-4 flex items-center justify-between border-b border-outline-variant/20 pb-4">
             <h2 className="font-headline-sm text-headline-sm text-primary">Bộ lọc</h2>
@@ -553,16 +553,18 @@ function FilterSection({
   );
 }
 
-function RoomCard({ priority = false, room }: Readonly<{ priority?: boolean; room: RoomCardView }>) {
+function RoomCard({ priority = false, room, wide = false }: Readonly<{ priority?: boolean; room: RoomCardView; wide?: boolean }>) {
   const detailHref = room.slug ? `/rooms/${encodeURIComponent(room.slug)}` : "/rooms";
 
   return (
     <article
-      className={`premium-card urban-card group flex flex-col overflow-hidden rounded-lg ${
+      className={`premium-card urban-card group flex flex-col overflow-hidden rounded-lg ${wide ? "xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,1.08fr)]" : ""} ${
         room.unavailable ? "opacity-80" : ""
       }`}
+      data-layout={wide ? "wide" : "standard"}
+      data-room-card
     >
-      <div className={`relative h-[320px] overflow-hidden ${room.unavailable ? "grayscale-[30%]" : ""}`}>
+      <div className={`relative h-[280px] overflow-hidden sm:h-[320px] ${wide ? "xl:h-full xl:min-h-[560px]" : ""} ${room.unavailable ? "grayscale-[30%]" : ""}`}>
         <Link aria-label={`Xem chi tiết ${room.title}`} className="absolute inset-0" href={detailHref}>
           {room.image ? (
             <Image

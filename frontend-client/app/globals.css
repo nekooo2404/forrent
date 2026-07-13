@@ -198,6 +198,20 @@ select {
   min-height: 44px;
 }
 
+select {
+  color-scheme: light;
+}
+
+.dark select {
+  color-scheme: dark;
+}
+
+select option,
+select optgroup {
+  background-color: rgb(var(--surface-container-lowest));
+  color: rgb(var(--on-surface));
+}
+
 /* Global focus indicators - WCAG 2.1 compliant */
 *:focus-visible {
   outline: 2px solid rgb(var(--primary));
