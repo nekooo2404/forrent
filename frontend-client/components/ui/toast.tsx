@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { AlertCircle, CheckCircle2, Info, X, AlertTriangle } from "lucide-react";
+import { useRef } from "react";
 
 interface ToastProps {
   type: "success" | "error" | "info" | "warning";
@@ -26,20 +26,18 @@ const colorMap = {
 
 export function Toast({ type, title, message, onClose }: Readonly<ToastProps>) {
   const Icon = iconMap[type];
+  const pointerStart = useRef<number | null>(null);
 
   return (
-    <motion.div
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      className={`pointer-events-auto flex w-[min(360px,calc(100vw-2rem))] items-start gap-3 rounded-lg border p-4 shadow-elevated ${colorMap[type]}`}
-      drag="x"
-      dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.2}
-      exit={{ opacity: 0, x: 100, scale: 0.95 }}
-      initial={{ opacity: 0, x: 100, scale: 0.95 }}
-      onDragEnd={(_, info) => {
-        if (info.offset.x > 100) onClose();
+    <div
+      className={`scroll-reveal pointer-events-auto flex w-[min(360px,calc(100vw-2rem))] items-start gap-3 rounded-lg border p-4 shadow-elevated ${colorMap[type]}`}
+      onPointerDown={(event) => {
+        pointerStart.current = event.clientX;
       }}
-      transition={{ duration: 0.3 }}
+      onPointerUp={(event) => {
+        if (pointerStart.current !== null && event.clientX - pointerStart.current > 100) onClose();
+        pointerStart.current = null;
+      }}
     >
       <Icon className="mt-0.5 shrink-0" size={20} strokeWidth={1.8} />
       <div className="min-w-0 flex-1">
@@ -54,6 +52,6 @@ export function Toast({ type, title, message, onClose }: Readonly<ToastProps>) {
       >
         <X size={18} strokeWidth={1.8} />
       </button>
-    </motion.div>
+    </div>
   );
 }

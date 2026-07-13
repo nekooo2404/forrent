@@ -20,16 +20,23 @@ jobs:
         target:
           - https://forrent.io.vn
           - https://admin.forrent.io.vn/log-in
-          - https://api.forrent.io.vn/api/
+          - https://api.forrent.io.vn/api/health/
     permissions:
       contents: read
       issues: write
+    env:
+      TARGET: ${{ github.event.inputs.target || matrix.target }}
     steps:
       - uses: actions/checkout@v6
+      - name: Check target availability
+        run: |
+          curl --fail --silent --show-error --location \
+            --retry 3 --retry-delay 5 --retry-all-errors \
+            --connect-timeout 10 --max-time 30 "$TARGET" > /dev/null
       - name: OWASP ZAP baseline scan
-        uses: zaproxy/action-baseline@v0.14.0
+        uses: zaproxy/action-baseline@v0.15.0
         timeout-minutes: 10
         with:
-          target: ${{ github.event.inputs.target || matrix.target }}
+          target: ${{ env.TARGET }}
           fail_action: true
           cmd_options: "-a -T 6"

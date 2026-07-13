@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
-import { CalendarCheck, Clock3, Mail, MapPin, MessageCircle, Phone, ReceiptText } from "lucide-react";
+import { CalendarCheck, Clock3, Mail, MapPin, Phone, ReceiptText } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { ContactForm } from "@/components/contact-form";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
+import { CONTACT_EMAIL, CONTACT_PHONE, LEGAL_ADDRESS } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Liên hệ - ForRent",
-  description: "Liên hệ saler ForRent để nhận tư vấn phòng thuê theo khu vực, giá và lịch xem.",
+  description: "Liên hệ nhân viên tư vấn ForRent để nhận hỗ trợ tìm phòng theo khu vực, giá và lịch xem.",
   alternates: {
     canonical: "/contact",
   },
@@ -17,13 +18,7 @@ export const metadata: Metadata = {
 const offices = [
   {
     city: "Hà Nội",
-    address: (
-      <>
-        Tây Mỗ
-        <br />
-        Hà Nội
-      </>
-    ),
+    address: LEGAL_ADDRESS,
   },
 ];
 
@@ -50,7 +45,7 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
             Gửi nhu cầu, nhận phòng phù hợp
           </h1>
           <p className="font-body-lg text-body-lg text-on-surface-variant">
-            Cho ForRent biết khu vực, ngân sách và lịch xem mong muốn. Saler sẽ gọi lại để xác nhận phòng còn trống, cọc và phí trước khi bạn đi xem.
+            Cho ForRent biết khu vực, ngân sách và lịch xem mong muốn. Nhân viên tư vấn sẽ gọi lại để xác nhận phòng còn trống, cọc và phí trước khi bạn đi xem.
           </p>
         </div>
 
@@ -62,18 +57,13 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
               </h2>
               <ul className="space-y-6">
                 <ContactInfo icon={<Phone size={22} strokeWidth={1.8} />} label="SĐT">
-                  <a className="transition-colors hover:text-gold" href="tel:0382912254">
-                    0382912254
+                  <a className="inline-flex min-h-11 items-center transition-colors hover:text-gold" href={`tel:${CONTACT_PHONE}`}>
+                    {CONTACT_PHONE}
                   </a>
                 </ContactInfo>
                 <ContactInfo icon={<Mail size={22} strokeWidth={1.8} />} label="MAIL">
-                  <a className="transition-colors hover:text-gold" href="mailto:buihoaowo@gmail.com">
-                    buihoaowo@gmail.com
-                  </a>
-                </ContactInfo>
-                <ContactInfo icon={<MessageCircle size={22} strokeWidth={1.8} />} label="FB">
-                  <a className="transition-colors hover:text-gold" href="https://www.facebook.com/defghoa/" rel="noreferrer" target="_blank">
-                    Hoa Bui Duc
+                  <a className="inline-flex min-h-11 items-center transition-colors hover:text-gold" href={`mailto:${CONTACT_EMAIL}`}>
+                    {CONTACT_EMAIL}
                   </a>
                 </ContactInfo>
               </ul>
@@ -102,7 +92,7 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
               </h2>
               <ol className="space-y-5">
                 <ContactStep icon={<Clock3 size={22} strokeWidth={1.8} />} title="1. Gọi xác nhận">
-                  Saler gọi lại để chốt khu vực, ngân sách và thời gian xem.
+                  Nhân viên tư vấn gọi lại để chốt khu vực, ngân sách và thời gian xem.
                 </ContactStep>
                 <ContactStep icon={<ReceiptText size={22} strokeWidth={1.8} />} title="2. Kiểm tra phí">
                   Giá tháng, cọc, điện nước và phí dịch vụ được xác nhận trước.

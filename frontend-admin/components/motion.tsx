@@ -1,45 +1,17 @@
-"use client";
+import type { ComponentPropsWithoutRef } from "react";
 
-import { motion, type HTMLMotionProps, type Variants } from "framer-motion";
-
-export const motionDuration = {
-  fast: 0.16,
-  base: 0.25,
-  medium: 0.4,
-  slow: 0.6,
-} as const;
-
-export const motionEase = {
-  out: [0.2, 0.8, 0.2, 1],
-  in: [0.4, 0, 1, 1],
-  inOut: [0.4, 0, 0.2, 1],
-  smooth: [0.22, 1, 0.36, 1],
-} as const;
-
-export const pageFadeSlide: Variants = {
-  hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0, transition: { duration: motionDuration.medium, ease: motionEase.smooth } },
-};
-
-export const fadeSlide: Variants = {
-  hidden: { opacity: 0, y: 8 },
-  show: { opacity: 1, y: 0, transition: { duration: motionDuration.base, ease: motionEase.smooth } },
-};
-
-export function MotionPage({ children, className = "", ...props }: HTMLMotionProps<"main">) {
+export function MotionPage({ children, className = "", ...props }: ComponentPropsWithoutRef<"main">) {
   return (
-    <motion.main animate="show" className={className} initial="hidden" variants={pageFadeSlide} {...props}>
+    <main className={className} {...props}>
       {children}
-    </motion.main>
+    </main>
   );
 }
 
-export function MotionSection({ children, ...props }: HTMLMotionProps<"div">) {
+export function MotionSection({ children, className = "", ...props }: ComponentPropsWithoutRef<"div">) {
   return (
-    <motion.div initial="hidden" variants={fadeSlide} viewport={{ once: true, margin: "-60px" }} whileInView="show" {...props}>
+    <div className={`scroll-reveal ${className}`} {...props}>
       {children}
-    </motion.div>
+    </div>
   );
 }
-
-export const MotionDiv = motion.div;

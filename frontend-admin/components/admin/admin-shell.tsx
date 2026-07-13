@@ -149,7 +149,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
       <AdminGateMessage
         actionHref="/log-in"
         actionLabel="Đăng nhập"
-        description={error || "Bạn cần đăng nhập bằng tài khoản saler/admin để vào cổng quản trị."}
+        description={error || "Bạn cần đăng nhập bằng tài khoản nhân viên tư vấn hoặc quản trị viên để vào cổng quản trị."}
         title="Cần đăng nhập"
       />
     );

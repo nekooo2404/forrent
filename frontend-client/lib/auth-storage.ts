@@ -11,6 +11,7 @@ type ApiResponse<T> = {
 };
 
 type RefreshResponse = Record<string, never>;
+type SessionResponse = { authenticated: boolean };
 
 const accessTokenKey = "access";
 const refreshTokenKey = "refresh";
@@ -85,6 +86,12 @@ export async function refreshStoredAuthSession() {
 
   clearStoredTokens();
   return "cookie-session";
+}
+
+export async function getAuthSession() {
+  const response = await fetch("/api/auth/session", { cache: "no-store" });
+  const payload = (await response.json().catch(() => null)) as ApiResponse<SessionResponse> | null;
+  return Boolean(response.ok && payload?.success && payload.data?.authenticated);
 }
 
 export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}) {

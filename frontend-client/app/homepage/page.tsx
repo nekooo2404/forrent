@@ -122,12 +122,15 @@ export default async function Homepage() {
   ]);
   const properties = roomsResponse?.results.map(mapProperty) ?? [];
   const heroRoomImage = properties[0]?.image;
-  const signals: BackendSignal[] = [
-    { label: "Phòng trống", value: String(roomsResponse?.count ?? properties.length), note: "đồng bộ từ backend" },
-    { label: "Khu vực", value: String(filtersResponse?.wards.length ?? 0), note: "có thể lọc ngay" },
-    { label: "Tiện ích", value: String(filtersResponse?.amenities.length ?? 0), note: "đang map từ API" },
-    { label: "Bài viết", value: String(blogsResponse?.count ?? 0), note: "kinh nghiệm thuê" },
-  ];
+  const availableSignals = [
+    { label: "Phòng trống", value: roomsResponse?.count ?? properties.length, note: "có thể đặt lịch xem" },
+    { label: "Khu vực", value: filtersResponse?.wards.length ?? 0, note: "đang hỗ trợ tìm kiếm" },
+    { label: "Tiện ích", value: filtersResponse?.amenities.length ?? 0, note: "được mô tả rõ ràng" },
+    { label: "Bài viết", value: blogsResponse?.count ?? 0, note: "kinh nghiệm thuê thực tế" },
+  ]
+    .filter((signal) => signal.value > 1)
+    .map<BackendSignal>((signal) => ({ ...signal, value: String(signal.value) }));
+  const signals = availableSignals.length > 1 ? availableSignals : [];
 
   return (
     <MotionPage className="bg-surface text-on-surface">
@@ -172,7 +175,7 @@ export default async function Homepage() {
                 <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_28%_20%,rgb(var(--primary)_/_0.28),transparent_22rem),linear-gradient(135deg,rgb(var(--surface-container)),rgb(var(--surface-container-high)))] p-10">
                   <Image
                     alt="ForRent"
-                    className="h-auto w-56 dark:drop-shadow-[0_0_18px_rgba(217,119,6,0.28)]"
+                    className="h-auto w-56 rounded-lg bg-inverse-surface p-3"
                     height={96}
                     priority
                     src="/brand/forrent-logo.png"
@@ -186,7 +189,7 @@ export default async function Homepage() {
                   <Sparkles size={15} strokeWidth={1.8} />
                   Phòng mới cập nhật
                 </p>
-                <p className="text-sm leading-6 text-on-surface-variant">Ảnh, giá, cọc và trạng thái được lấy từ backend, không dùng dữ liệu fallback giả.</p>
+                <p className="text-sm leading-6 text-on-surface-variant">Xem ảnh thực tế, giá thuê, mức cọc và tình trạng phòng trước khi đặt lịch.</p>
               </div>
             </div>
           </MotionSection>
@@ -249,7 +252,7 @@ export default async function Homepage() {
                 Tìm ngay
               </button>
             </form>
-            <BackendSignals signals={signals} />
+            {signals.length ? <BackendSignals signals={signals} /> : null}
           </MotionSection>
         </div>
       </header>
@@ -308,7 +311,15 @@ export default async function Homepage() {
             </p>
           </MotionSection>
           {properties.length ? (
-            <MotionList className="stagger-list grid grid-cols-1 gap-gutter md:grid-cols-2 lg:grid-cols-3">
+            <MotionList
+              className={`stagger-list grid w-full grid-cols-1 gap-gutter ${
+                properties.length === 1
+                  ? "mx-auto max-w-md"
+                  : properties.length === 2
+                    ? "mx-auto max-w-4xl md:grid-cols-2"
+                    : "md:grid-cols-2 lg:grid-cols-3"
+              }`}
+            >
               {properties.map((property) => (
                 <MotionItem key={property.id}>
                   <PropertyCard property={property} />
@@ -319,7 +330,7 @@ export default async function Homepage() {
             <div className="rounded border border-outline-variant/20 bg-surface-container-lowest p-10 text-center shadow-soft">
               <h3 className="font-headline-sm text-headline-sm text-primary">Chưa có phòng đang trống</h3>
               <p className="mt-3 font-body-md text-body-md text-on-surface-variant">
-                Bạn có thể quay lại sau hoặc gửi nhu cầu để saler báo khi có phòng phù hợp.
+                Bạn có thể quay lại sau hoặc gửi nhu cầu để nhân viên tư vấn báo khi có phòng phù hợp.
               </p>
               <Link className="premium-button mt-6 inline-flex rounded bg-primary px-6 py-3 font-button text-button text-on-primary" href="/contact">
                 Gửi nhu cầu thuê phòng
@@ -346,7 +357,7 @@ export default async function Homepage() {
           <MotionList className="grid gap-4 md:grid-cols-3">
             <MotionItem>
               <UrbanStep icon={<ShieldCheck size={22} strokeWidth={1.8} />} title="Còn trống">
-                Saler xác nhận lại tình trạng phòng trước lịch xem.
+                Nhân viên tư vấn xác nhận lại tình trạng phòng trước lịch xem.
               </UrbanStep>
             </MotionItem>
             <MotionItem>
@@ -429,7 +440,7 @@ function PropertyCard({ property }: Readonly<{ property: PropertyCardView }>) {
         {property.featuredAmenities.length ? (
           <div className="mb-4 flex flex-wrap gap-2">
             {property.featuredAmenities.map((amenity) => (
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary" key={amenity}>
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-secondary" key={amenity}>
                 {amenity}
               </span>
             ))}
@@ -453,7 +464,7 @@ function PropertyCard({ property }: Readonly<{ property: PropertyCardView }>) {
 
 function BackendSignals({ signals }: Readonly<{ signals: BackendSignal[] }>) {
   return (
-    <div className="mt-4 grid gap-2 md:grid-cols-4">
+    <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
       {signals.map((signal) => (
         <div className="rounded-xl border border-outline-variant/20 bg-surface-container-low px-4 py-3" key={signal.label}>
           <p className="text-xs font-semibold uppercase tracking-[0.08em] text-on-surface-variant">{signal.label}</p>

@@ -449,7 +449,7 @@ export function AdminLeadManager() {
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <Info label="Tạo lúc" value={formatAdminDate(selectedLead.created_at)} />
                   <Info label="Lịch xem" value={formatAdminDateOnly(selectedLead.preferred_viewing_date)} />
-                  <Info label="Saler xử lý" value={selectedLead.assigned_to_name || "Chưa gán"} />
+                  <Info label="Nhân viên xử lý" value={selectedLead.assigned_to_name || "Chưa gán"} />
                   <Info label="Follow-up" value={formatAdminDate(selectedLead.next_follow_up_at)} />
                   <Info label="Hoa hồng dự kiến" value={formatAdminVnd(selectedLead.estimated_commission_amount)} />
                   <Info label="Đã ghi nhận" value={formatAdminVnd(selectedLead.actual_commission_amount)} />
@@ -468,7 +468,7 @@ export function AdminLeadManager() {
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Saler phụ trách</span>
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Nhân viên phụ trách</span>
                   <select className={adminSelectClass} onChange={(event) => setAssignedToDraft(event.target.value)} value={assignedToDraft}>
                     <option value="">Chưa gán</option>
                     {salers.map((saler) => (
@@ -506,7 +506,7 @@ export function AdminLeadManager() {
               <label className="block">
                 <span className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-secondary">
                   <MessageSquareText size={14} strokeWidth={1.8} />
-                  Ghi chú saler
+                  Ghi chú tư vấn
                 </span>
                 <textarea className={`${adminInputClass} min-h-32`} onChange={(event) => setNoteDraft(event.target.value)} value={noteDraft} />
               </label>

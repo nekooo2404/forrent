@@ -4,7 +4,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { mockAdminDashboard, mockAdminRoomInventory } from './admin-mocks';
 
 const adminBaseURL = process.env.ADMIN_BASE_URL || 'http://localhost:3001';
-const publicPaths = ['/homepage', '/rooms', '/contact', '/log-in', '/sign-up', '/forget-password'];
+const publicPaths = ['/homepage', '/rooms', '/blogs', '/contact', '/privacy', '/terms', '/log-in', '/sign-up', '/forget-password'];
 const adminPaths = ['/log-in'];
 const themes = ['light', 'dark'] as const;
 const viewports = [

@@ -260,7 +260,7 @@ export function ProfileClient() {
           </h1>
           <p className="font-body-lg text-body-lg text-on-surface-variant/70">
             Theo dõi lịch xem phòng, cập nhật liên hệ và nhận lại thông tin từ
-            saler.
+            nhân viên tư vấn.
           </p>
         </div>
       </section>
@@ -460,7 +460,7 @@ function ViewingRequestsSummary({
             Bạn chưa có yêu cầu xem phòng nào.
           </p>
           <p className="mt-2 text-sm text-on-surface-variant">
-            Chọn phòng còn trống và đặt lịch, saler sẽ gọi lại để xác nhận giờ
+            Chọn phòng còn trống và đặt lịch, nhân viên tư vấn sẽ gọi lại để xác nhận giờ
             xem.
           </p>
           <Link

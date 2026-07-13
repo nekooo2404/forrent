@@ -52,6 +52,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Per-request CSP nonces keep HTML dynamic; public API data is revalidated in lib/api.ts.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (

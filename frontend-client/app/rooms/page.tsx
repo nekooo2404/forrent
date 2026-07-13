@@ -198,7 +198,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
             <div className="mt-6 flex flex-wrap gap-3 text-sm">
               <span className="rounded-full border border-orange-200/20 bg-primary/10 px-4 py-2 text-orange-50/90">Còn trống được ưu tiên</span>
               <span className="rounded-full border border-orange-200/20 bg-primary/10 px-4 py-2 text-orange-50/90">Cọc và phí hiện rõ</span>
-              <span className="rounded-full border border-orange-200/20 bg-primary/10 px-4 py-2 text-orange-50/90">Saler gọi xác nhận</span>
+              <span className="rounded-full border border-orange-200/20 bg-primary/10 px-4 py-2 text-orange-50/90">Nhân viên gọi xác nhận</span>
             </div>
           </div>
 
@@ -225,7 +225,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
         <div className="flex w-full flex-col gap-10 md:w-[calc(100%-280px-24px)]">
           <ResultHeader activeFilters={activeFilterLabels} currentPage={currentPage} totalCount={totalCount} />
           {rooms.length ? (
-            <div className="stagger-list grid grid-cols-1 gap-gutter xl:grid-cols-2">
+            <div className={`stagger-list grid w-full grid-cols-1 gap-gutter ${rooms.length === 1 ? "mx-auto max-w-xl" : "xl:grid-cols-2"}`}>
               {rooms.map((room, index) => (
                 <RoomCard key={room.id} priority={index < 2} room={room} />
               ))}
@@ -234,7 +234,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
             <div className="urban-card rounded-2xl p-10 text-center">
               <h2 className="font-headline-sm text-headline-sm text-primary">Chưa có phòng phù hợp</h2>
               <p className="mt-3 font-body-md text-body-md text-on-surface-variant">
-                Thử xóa bớt bộ lọc hoặc gửi nhu cầu thuê phòng. Saler sẽ báo lại khi có phòng đúng khu vực và ngân sách.
+                Thử xóa bớt bộ lọc hoặc gửi nhu cầu thuê phòng. Nhân viên tư vấn sẽ báo lại khi có phòng đúng khu vực và ngân sách.
               </p>
               <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
                 <Link className="premium-button inline-flex rounded-xl border border-primary px-5 py-3 font-button text-button text-primary" href="/rooms">
@@ -268,7 +268,7 @@ function ResultHeader({
     <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-4 shadow-soft">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-on-surface-variant">Kết quả từ backend</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-on-surface-variant">Phòng phù hợp</p>
           <h2 className="mt-1 font-headline-sm text-headline-sm text-primary">
             {totalCount} phòng phù hợp · trang {currentPage}
           </h2>
@@ -280,7 +280,7 @@ function ResultHeader({
       {activeFilters.length ? (
         <div className="mt-4 flex flex-wrap gap-2">
           {activeFilters.map((filter) => (
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary" key={filter}>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-secondary" key={filter}>
               {filter}
             </span>
           ))}

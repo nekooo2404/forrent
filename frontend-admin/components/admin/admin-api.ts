@@ -320,7 +320,7 @@ export function formatAdminDate(value?: string | null) {
 }
 
 export function adminRoleLabel(role: string) {
-  return role === "SALER" ? "Saler/Admin" : role === "TENANT" ? "Người thuê" : role;
+  return role === "SALER" ? "Nhân viên tư vấn/Quản trị viên" : role === "TENANT" ? "Người thuê" : role;
 }
 
 export function formatAdminDateOnly(value?: string | null) {

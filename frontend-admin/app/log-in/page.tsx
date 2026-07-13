@@ -32,7 +32,7 @@ export default function AdminLogInPage() {
             <p className="mb-5 text-xs font-semibold uppercase tracking-[0.22em] text-on-primary">Secure operations</p>
             <h1 className="font-headline-md text-5xl leading-tight">Quản trị phòng, lead và hoa hồng trong một nơi.</h1>
             <p className="mt-6 leading-7 text-on-primary">
-              Dành cho tài khoản saler/admin. Mọi thao tác vẫn được Django backend kiểm quyền bằng JWT.
+              Dành cho tài khoản nhân viên tư vấn hoặc quản trị viên. Mọi thao tác đều được backend kiểm tra quyền truy cập.
             </p>
           </div>
 

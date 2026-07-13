@@ -152,6 +152,11 @@ body {
               color var(--motion-base) var(--ease-smooth);
 }
 
+body.mobile-menu-open,
+body.gallery-modal-open {
+  overflow: hidden;
+}
+
 ::selection {
   background: #d97706;
   color: #fff7ed;
@@ -581,7 +586,15 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 }
 
 .dark .site-logo-container img {
-  filter: brightness(1.18) saturate(1.06);
+  filter: none;
+}
+
+.dark .site-logo-container {
+  border: 1px solid rgb(var(--outline-variant) / 0.32);
+  border-radius: 8px;
+  background: rgb(var(--inverse-surface));
+  box-shadow: 0 3px 12px rgb(0 0 0 / 0.2);
+  padding: 4px 8px;
 }
 
 /* Nav pills */
