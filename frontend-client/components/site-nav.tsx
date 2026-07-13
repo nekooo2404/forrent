@@ -3,10 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ProfileMenu } from "@/components/profile-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 type NavKey = "home" | "rooms" | "blogs" | "contact";
 
@@ -21,21 +22,22 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuRef = useFocusTrap<HTMLDivElement>(isMobileMenuOpen);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Detect scroll for glass effect
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };
+    handleScroll();
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Body scroll lock when mobile menu is open
   useEffect(() => {
     if (isMobileMenuOpen) {
       document.body.classList.add("mobile-menu-open");
@@ -47,13 +49,19 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
     };
   }, [isMobileMenuOpen]);
 
-  // Close menu on Escape key
+  function closeMenu({ restoreFocus = true } = {}) {
+    setIsMobileMenuOpen(false);
+    if (restoreFocus) {
+      window.requestAnimationFrame(() => menuButtonRef.current?.focus());
+    }
+  }
+
   useEffect(() => {
     if (!isMobileMenuOpen) return;
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setIsMobileMenuOpen(false);
+        closeMenu();
       }
     }
 
@@ -62,17 +70,16 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
   }, [isMobileMenuOpen]);
 
   return (
-    <nav aria-label="Điều hướng chính" data-ready={mounted ? "true" : "false"} data-testid="site-nav" className={`fixed top-0 z-50 w-full transition-all duration-500 ${
-      scrolled
-        ? "site-navbar-scrolled"
-        : "site-navbar"
-    }`}>
-      <div className="site-navbar-gradient" />
-
-      <div className="relative mx-auto flex h-20 max-w-container-max items-center justify-between px-margin-mobile md:h-24 md:px-margin-desktop">
+    <>
+      <nav aria-label="Điều hướng chính" data-ready={mounted ? "true" : "false"} data-testid="site-nav" className={`fixed top-0 z-50 w-full transition-colors duration-200 ${
+        scrolled
+          ? "site-navbar-scrolled"
+          : "site-navbar"
+      }`}>
+      <div className={`relative mx-auto flex max-w-container-max items-center justify-between px-margin-mobile transition-[height] duration-200 md:px-margin-desktop ${scrolled ? "h-16" : "h-16 lg:h-20"}`}>
         <Link
           aria-label="ForRent - Trang chủ"
-          className="site-logo-container group relative z-10"
+          className={`site-logo-container group relative z-10 inline-flex shrink-0 items-center transition-[width,height] duration-200 ${scrolled ? "h-10 w-32" : "h-10 w-32 lg:h-11 lg:w-[142px]"}`}
           href="/homepage"
         >
           <div className="relative">
@@ -88,7 +95,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
           </div>
         </Link>
 
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="hidden items-center gap-1 lg:flex">
           {navItems.map((item) => (
             <Link
               aria-current={item.key === active ? "page" : undefined}
@@ -98,51 +105,49 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
               href={item.href}
               key={item.key}
             >
-              <span className="site-nav-pill-bg" />
               <span className="relative z-10 font-body-md text-sm font-semibold tracking-wide">
                 {item.label}
               </span>
-              {item.key === active && (
-                <span className="site-nav-pill-indicator" />
-              )}
             </Link>
           ))}
         </div>
 
         <div className="flex items-center gap-3 md:gap-4">
-          <div className="site-button-shell hidden sm:block">
+          <div className="site-button-shell hidden lg:block">
             <ThemeToggle />
-          </div>
-          <div className="site-button-shell sm:hidden">
-            <ThemeToggle compact />
           </div>
 
           <button
             aria-expanded={isMobileMenuOpen}
             aria-label="Menu"
-            className="site-menu-button md:hidden"
+            className="site-menu-button lg:hidden"
             onClick={() => setIsMobileMenuOpen(true)}
+            ref={menuButtonRef}
             type="button"
           >
             <Menu size={24} strokeWidth={2} />
           </button>
 
-          <div className="site-button-shell">
+          <div className="site-button-shell hidden lg:block">
             <ProfileMenu />
           </div>
         </div>
       </div>
 
       {isMobileMenuOpen ? (
-          <div className="site-mobile-menu scroll-reveal">
-            <div className="site-mobile-gradient" />
-
-            <div className="relative z-10 flex h-20 items-center justify-between border-b border-outline-variant/20 px-margin-mobile backdrop-blur-xl">
+          <div
+            aria-label="Menu chính"
+            aria-modal="true"
+            className="site-mobile-menu"
+            ref={mobileMenuRef}
+            role="dialog"
+          >
+            <div className="relative z-10 flex h-16 items-center justify-between border-b border-outline-variant/20 px-margin-mobile">
               <Link
                 aria-label="ForRent - Trang chủ"
-                className="site-logo-container inline-flex h-11 w-[142px] shrink-0 items-center"
+                className="site-logo-container inline-flex h-10 w-32 shrink-0 items-center"
                 href="/homepage"
-                onClick={() => setIsMobileMenuOpen(false)}
+                onClick={() => closeMenu({ restoreFocus: false })}
               >
                 <Image
                   alt="ForRent"
@@ -157,7 +162,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
               <button
                 aria-label="Đóng menu"
                 className="site-close-button"
-                onClick={() => setIsMobileMenuOpen(false)}
+                onClick={() => closeMenu()}
                 type="button"
               >
                 <X size={24} strokeWidth={2} />
@@ -166,7 +171,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
 
             <nav
               aria-label="Điều hướng trên thiết bị di động"
-              className="relative z-10 flex flex-col gap-2 p-6 pb-44"
+              className="relative z-10 flex flex-1 flex-col gap-1 p-4"
             >
               {navItems.map((item) => (
                 <div key={item.key}>
@@ -176,13 +181,12 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
                       item.key === active ? "site-mobile-link-active" : ""
                     }`}
                     href={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={() => closeMenu({ restoreFocus: false })}
                   >
-                    <span className="site-mobile-link-bg" />
                     <span className="relative z-10 font-body-md text-lg font-semibold">
                       {item.label}
                     </span>
-                    {item.key === active ? <span className="ml-auto size-2 rounded-full bg-primary" /> : null}
+                    {item.key === active ? <span className="ml-auto h-5 w-1 rounded bg-primary" /> : null}
                   </Link>
                 </div>
               ))}
@@ -196,6 +200,8 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
             </div>
           </div>
       ) : null}
-    </nav>
+      </nav>
+      <div className="h-0 scroll-mt-20" id="main-content" tabIndex={-1} />
+    </>
   );
 }

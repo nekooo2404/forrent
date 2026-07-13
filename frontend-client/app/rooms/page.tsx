@@ -19,7 +19,8 @@ import type { ReactNode } from "react";
 
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
-import { fastImageProps, fastImageUrl } from "@/lib/image";
+import { ResponsiveFilter } from "@/components/responsive-filter";
+import { fastImageUrl } from "@/lib/image";
 import {
   formatArea,
   formatOptionalVnd,
@@ -183,26 +184,21 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
     <main className="flex min-h-[100dvh] flex-col bg-surface text-on-surface">
       <SiteNav active="rooms" />
 
-      <header className="urban-band px-margin-mobile pb-10 pt-32 text-orange-50 md:px-margin-desktop">
-        <div className="scroll-reveal mx-auto flex w-full max-w-container-max flex-col justify-between gap-8 md:flex-row md:items-end">
+      <header className="border-b border-outline-variant/20 bg-surface-container-low px-margin-mobile pb-10 pt-24 md:px-margin-desktop md:pt-28">
+        <div className="mx-auto flex w-full max-w-container-max flex-col justify-between gap-8 md:flex-row md:items-end">
           <div className="max-w-3xl">
-            <span className="mb-4 inline-flex rounded-full border border-teal-300/25 bg-teal-300/10 px-4 py-2 font-label-caps text-label-caps uppercase tracking-widest text-teal-100">
+            <p className="mb-3 font-label-caps text-label-caps uppercase text-secondary">
               Danh sách phòng Hà Nội
-            </span>
-            <h1 className="mb-4 font-display-lg-mobile text-display-lg-mobile text-orange-50 md:font-display-lg md:text-6xl">
+            </p>
+            <h1 className="mb-4 max-w-3xl text-[36px] font-extrabold leading-[1.12] text-primary md:text-[52px]">
               Chọn phòng đang trống, rõ giá trước khi đi xem
             </h1>
-            <p className="max-w-2xl font-body-lg text-body-lg text-orange-50/80">
+            <p className="max-w-2xl font-body-lg text-body-lg text-on-surface-variant">
               Hiển thị {rooms.length} trong {totalCount} phòng. Lọc theo khu vực, ngân sách, diện tích và tiện ích để chốt lịch xem nhanh hơn.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3 text-sm">
-              <span className="rounded-full border border-orange-200/20 bg-primary/10 px-4 py-2 text-orange-50/90">Còn trống được ưu tiên</span>
-              <span className="rounded-full border border-orange-200/20 bg-primary/10 px-4 py-2 text-orange-50/90">Cọc và phí hiện rõ</span>
-              <span className="rounded-full border border-orange-200/20 bg-primary/10 px-4 py-2 text-orange-50/90">Nhân viên gọi xác nhận</span>
-            </div>
           </div>
 
-          <div className="urban-panel w-full rounded-2xl p-4 text-on-surface md:w-auto">
+          <div className="w-full md:w-auto">
             <SortForm ordering={ordering} params={params} />
           </div>
         </div>
@@ -222,7 +218,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
           search={search}
         />
 
-        <div className="flex w-full flex-col gap-10 md:w-[calc(100%-280px-24px)]">
+        <div className="flex w-full flex-col gap-8 md:w-[calc(100%-304px-24px)]">
           <ResultHeader activeFilters={activeFilterLabels} currentPage={currentPage} totalCount={totalCount} />
           {rooms.length ? (
             <div className={`stagger-list grid w-full grid-cols-1 gap-gutter ${rooms.length === 1 ? "mx-auto max-w-xl" : "xl:grid-cols-2"}`}>
@@ -231,7 +227,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
               ))}
             </div>
           ) : (
-            <div className="urban-card rounded-2xl p-10 text-center">
+            <div className="urban-card rounded-lg p-8 text-center md:p-10">
               <h2 className="font-headline-sm text-headline-sm text-primary">Chưa có phòng phù hợp</h2>
               <p className="mt-3 font-body-md text-body-md text-on-surface-variant">
                 Thử xóa bớt bộ lọc hoặc gửi nhu cầu thuê phòng. Nhân viên tư vấn sẽ báo lại khi có phòng đúng khu vực và ngân sách.
@@ -265,7 +261,7 @@ function ResultHeader({
   totalCount: number;
 }>) {
   return (
-    <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-4 shadow-soft">
+    <div className="border-b border-outline-variant/25 pb-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.1em] text-on-surface-variant">Phòng phù hợp</p>
@@ -273,14 +269,14 @@ function ResultHeader({
             {totalCount} phòng phù hợp · trang {currentPage}
           </h2>
         </div>
-        <Link className="premium-button rounded-xl border border-primary/20 px-4 py-3 text-sm font-semibold text-primary" href="/contact">
+        <Link className="premium-button rounded-md border border-primary/30 px-4 py-3 text-sm font-semibold text-primary" href="/contact">
           Không thấy phòng hợp? Gửi nhu cầu
         </Link>
       </div>
       {activeFilters.length ? (
         <div className="mt-4 flex flex-wrap gap-2">
           {activeFilters.map((filter) => (
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-secondary" key={filter}>
+            <span className="rounded-md bg-primary/10 px-3 py-1 text-xs font-semibold text-secondary" key={filter}>
               {filter}
             </span>
           ))}
@@ -306,7 +302,7 @@ function SortForm({
       })}
       <select
         aria-label="Sắp xếp"
-        className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-4 py-3 font-button text-button text-primary transition-colors focus:border-primary focus:ring-primary md:w-52"
+        className="w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-4 py-3 font-button text-button text-primary transition-colors focus:border-primary focus:ring-primary md:w-52"
         defaultValue={ordering}
         name="ordering"
       >
@@ -315,7 +311,7 @@ function SortForm({
         <option value="-price">Giá cao trước</option>
         <option value="-actual_area">Diện tích lớn trước</option>
       </select>
-      <button className="premium-button urban-cta rounded-xl px-5 py-3 font-button text-button" type="submit">
+      <button className="premium-button urban-cta rounded-md px-5 py-3 font-button text-button" type="submit">
         Áp dụng
       </button>
     </form>
@@ -357,7 +353,8 @@ function FilterSidebar({
 
   return (
     <aside className="w-full flex-shrink-0 md:w-[304px]">
-      <form action="/rooms" className="custom-scrollbar urban-card sticky top-[104px] max-h-none overflow-visible rounded-2xl md:max-h-[calc(100vh-124px)] md:overflow-y-auto">
+      <ResponsiveFilter>
+      <form action="/rooms" className="custom-scrollbar urban-card mt-3 max-h-none overflow-visible rounded-lg md:sticky md:top-[80px] md:mt-0 md:max-h-[calc(100vh-96px)] md:overflow-y-auto">
         <div className="p-4">
           <div className="mb-4 flex items-center justify-between border-b border-outline-variant/20 pb-4">
             <h2 className="font-headline-sm text-headline-sm text-primary">Bộ lọc</h2>
@@ -369,7 +366,7 @@ function FilterSidebar({
           <FilterSection title="Tìm kiếm" icon={<Search size={18} strokeWidth={1.8} />}>
             <input
               aria-label="Tìm kiếm phòng"
-              className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
+              className="w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
               defaultValue={search}
               name="search"
               placeholder="Tên phòng, địa chỉ..."
@@ -400,7 +397,7 @@ function FilterSidebar({
             <FilterSection title="Phường" icon={<Minus size={18} strokeWidth={1.8} />}>
               <select
                 aria-label="Chọn phường"
-                className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
                 defaultValue={activeWard ?? ""}
                 disabled={!activeCity}
                 name="ward"
@@ -419,7 +416,7 @@ function FilterSidebar({
           <div className="grid grid-cols-1 gap-3">
             <input
               aria-label="Giá từ"
-              className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
+              className="w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
               defaultValue={activeMinPrice}
               min="0"
               name="min_price"
@@ -428,7 +425,7 @@ function FilterSidebar({
             />
             <input
               aria-label="Giá đến"
-              className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
+              className="w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
               defaultValue={activeMaxPrice}
               min="0"
               name="max_price"
@@ -491,7 +488,7 @@ function FilterSidebar({
         <FilterSection title="Trạng thái" icon={<Minus size={18} strokeWidth={1.8} />}>
           <select
             aria-label="Chọn trạng thái phòng"
-            className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
+            className="w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
             defaultValue={activeStatus ?? ""}
             name="status"
           >
@@ -526,11 +523,12 @@ function FilterSidebar({
 
         {/* Sticky button at bottom on mobile */}
         <div className="sticky bottom-0 border-t border-outline-variant/10 bg-surface-container-lowest/95 p-4 md:static md:border-none md:bg-transparent">
-          <button className="premium-button urban-cta w-full rounded-xl px-4 py-3 font-button text-button" type="submit">
+          <button className="premium-button urban-cta w-full rounded-md px-4 py-3 font-button text-button" type="submit">
             Áp dụng bộ lọc
           </button>
         </div>
       </form>
+      </ResponsiveFilter>
     </aside>
   );
 }
@@ -560,7 +558,7 @@ function RoomCard({ priority = false, room }: Readonly<{ priority?: boolean; roo
 
   return (
     <article
-      className={`premium-card urban-card spotlight-card scroll-reveal group flex flex-col overflow-hidden rounded-2xl ${
+      className={`premium-card urban-card group flex flex-col overflow-hidden rounded-lg ${
         room.unavailable ? "opacity-80" : ""
       }`}
     >
@@ -569,7 +567,7 @@ function RoomCard({ priority = false, room }: Readonly<{ priority?: boolean; roo
           {room.image ? (
             <Image
               alt={room.alt}
-              className="shared-image object-cover transition-transform duration-700 group-hover:scale-105"
+              className="shared-image object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               decoding="async"
               fill
               loading={priority ? "eager" : "lazy"}
@@ -577,7 +575,6 @@ function RoomCard({ priority = false, room }: Readonly<{ priority?: boolean; roo
               quality={78}
               sizes="(min-width: 1280px) 500px, (min-width: 768px) 50vw, 100vw"
               src={fastImageUrl(room.image, priority ? 1200 : 768, priority ? 82 : 78)}
-              {...fastImageProps()}
             />
           ) : (
             <ImagePlaceholder />
@@ -628,7 +625,7 @@ function RoomCard({ priority = false, room }: Readonly<{ priority?: boolean; roo
         {room.featuredAmenities.length ? (
           <div className="mb-5 flex flex-wrap gap-2">
             {room.featuredAmenities.map((amenity) => (
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-secondary" key={amenity}>
+              <span className="rounded-md bg-primary/10 px-3 py-1 text-xs font-medium text-secondary" key={amenity}>
                 {amenity}
               </span>
             ))}
@@ -639,7 +636,7 @@ function RoomCard({ priority = false, room }: Readonly<{ priority?: boolean; roo
           <RoomMeta icon={<BedDouble size={20} strokeWidth={1.8} />} label={room.primaryMeta} />
           <RoomMeta icon={<Bath size={20} strokeWidth={1.8} />} label={room.secondaryMeta} />
           <RoomMeta icon={<Ruler size={20} strokeWidth={1.8} />} label={room.area} />
-          <Link className="premium-button urban-cta ml-auto rounded-xl px-4 py-3 font-body-md text-sm" href={detailHref}>
+          <Link className="premium-button urban-cta ml-auto rounded-md px-4 py-3 font-body-md text-sm" href={detailHref}>
             Xem và đặt lịch
           </Link>
         </div>
@@ -650,7 +647,7 @@ function RoomCard({ priority = false, room }: Readonly<{ priority?: boolean; roo
 
 function CostPill({ icon, label, value }: Readonly<{ icon: ReactNode; label: string; value: string }>) {
   return (
-    <div className="rounded-xl border border-outline-variant/20 bg-surface-container-low p-3">
+    <div className="rounded-md border border-outline-variant/20 bg-surface-container-low p-3">
       <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-secondary">
         {icon}
         {label}
