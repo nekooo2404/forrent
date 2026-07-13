@@ -23,4 +23,4 @@ jobs:
 
           echo "Checking API: https://api.forrent.io.vn/api/health/"
           curl "${CURL_ARGS[@]}" https://api.forrent.io.vn/api/health/ \
-            | python -c "import json, sys; data=json.load(sys.stdin); assert data.get('status') == 'ok' and all(data.get(key) is True for key in ('database', 'cache', 'media_storage'))"
+            | python -c "import json, sys; data=json.load(sys.stdin); checks=data.get('checks', {}); assert data.get('status') == 'ok' and all(checks.get(key) is True for key in ('database', 'cache', 'media_storage'))"
