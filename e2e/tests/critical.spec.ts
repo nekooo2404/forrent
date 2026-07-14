@@ -59,6 +59,7 @@ test.describe('Public critical flows', () => {
     const hero = page.getByTestId('homepage-hero');
     await expect(hero).toBeVisible();
     await expect(hero.locator('img')).toHaveAttribute('src', /forrent-hero-old-quarter/);
+    await expect.poll(() => hero.locator('img').evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
     await expect(hero.getByRole('button', { name: 'Tìm phòng' })).toBeVisible();
     await expect(page.getByText('Phòng mới sẽ được cập nhật tại đây')).toHaveCount(0);
   });

@@ -117,7 +117,7 @@ export default async function Homepage() {
           className="object-cover object-[58%_center] lg:object-center"
           fill
           priority
-          quality={84}
+          quality={82}
           sizes="100vw"
           src="/brand/forrent-hero-old-quarter.jpg"
         />
