@@ -15,6 +15,20 @@ test('homepage visual regression', async ({ page }, testInfo) => {
   });
 });
 
+test('homepage mobile hero visual regression', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium', 'Screenshot baseline is tracked for the desktop Chromium project only.');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/homepage');
+
+  const hero = page.getByTestId('homepage-hero');
+  await expect.poll(() => hero.locator('img').evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  await expect(hero).toHaveScreenshot('homepage-mobile-hero-light.png', {
+    maxDiffPixelRatio: 0.01,
+    threshold: 0.2,
+  });
+});
+
 test('desktop navbar visual regression', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Screenshot baseline is tracked for the desktop Chromium project only.');
 
