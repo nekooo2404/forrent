@@ -86,26 +86,19 @@ git commit -m "test: cover homepage hero and account navigation"
 ### Task 2: Add The Brand Hero Asset And Layout
 
 **Files:**
-- Create: `frontend-client/public/brand/forrent-hero-old-quarter.png`
+- Create: `frontend-client/public/brand/forrent-hero-old-quarter.jpg`
+- Create: `docs/assets/third-party-assets.md`
 - Modify: `frontend-client/app/homepage/page.tsx`
 
-- [ ] **Step 1: Generate the project-owned bitmap asset**
+- [ ] **Step 1: Download and document the licensed Unsplash asset**
 
-Use the built-in image generation tool with this prompt:
+Download the approved Unsplash image into the project:
 
-```text
-Use case: photorealistic-natural
-Asset type: full-width website homepage hero
-Primary request: a realistic compact Hanoi rental interior inspired by the Vietnamese old quarter, welcoming and practical rather than luxurious
-Scene/backdrop: tidy living and sleeping space with warm timber furniture, aged lime-plaster neutral walls, subtle traditional patterned tile, linen, one small green plant, and a glimpse of a wooden shutter
-Style/medium: editorial architectural photography, natural materials and believable rental-room proportions
-Composition/framing: wide landscape 3:2, camera at eye level, strongest visual detail on the right half, calm negative space on the left for white website copy, no extreme wide-angle distortion
-Lighting/mood: soft daylight mixed with restrained warm amber practical light, inviting but not dark
-Color palette: warm walnut, terracotta, muted cream, charcoal accents
-Constraints: no people, no text, no logos, no watermark, no luxury-hotel styling, no visible brand marks, no clutter
+```powershell
+curl.exe -L --fail --silent --show-error "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=2000&h=1200&q=86&fm=jpg" -o "frontend-client/public/brand/forrent-hero-old-quarter.jpg"
 ```
 
-Inspect the generated result, then copy the selected image to `frontend-client/public/brand/forrent-hero-old-quarter.png`.
+Record its source and the Unsplash License in `docs/assets/third-party-assets.md`, then inspect the local file before implementation.
 
 - [ ] **Step 2: Replace the split placeholder hero with the full-bleed hero**
 
@@ -122,7 +115,7 @@ In `frontend-client/app/homepage/page.tsx`, remove `heroRoomImage` and the condi
     fill
     priority
     sizes="100vw"
-    src="/brand/forrent-hero-old-quarter.png"
+    src="/brand/forrent-hero-old-quarter.jpg"
   />
   <div aria-hidden="true" className="absolute inset-0 bg-inverse-surface/65" />
   <div className="relative mx-auto flex min-h-[550px] w-full max-w-container-max flex-col px-margin-mobile pb-4 pt-8 text-inverse-on-surface md:px-margin-desktop lg:min-h-[560px] lg:pb-6 lg:pt-14">
@@ -191,7 +184,7 @@ Expected: pass.
 - [ ] **Step 4: Commit the hero**
 
 ```powershell
-git add frontend-client/app/homepage/page.tsx frontend-client/public/brand/forrent-hero-old-quarter.png
+git add frontend-client/app/homepage/page.tsx frontend-client/public/brand/forrent-hero-old-quarter.jpg docs/assets/third-party-assets.md
 git commit -m "feat: add enterprise homepage hero"
 ```
 

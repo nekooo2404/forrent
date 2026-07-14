@@ -38,9 +38,9 @@ Replace the empty logo placeholder on the public homepage with a stable, brand-o
 
 ## Image Asset
 
-- Generate one original bitmap image showing a realistic compact Hanoi interior with warm timber, amber practical lighting, lime-plaster or aged neutral walls, and restrained old-quarter character.
-- Avoid luxury-hotel styling, people, visible text, logos, heavy darkness, or misleading room-listing claims.
-- Store the optimized local asset under `frontend-client/public/brand/` and render it with `next/image`, `fill`, `priority`, responsive `sizes`, and a fixed hero aspect/height.
+- Use a licensed Unsplash interior photograph with warm timber and restrained neutral tones. Download it into the repository so production does not depend on Unsplash availability or require a third-party image CSP rule.
+- Record the exact source URL, license URL, local path, and retrieval date in `docs/assets/third-party-assets.md`.
+- Store the optimized local asset at `frontend-client/public/brand/forrent-hero-old-quarter.jpg` and render it with `next/image`, `fill`, `priority`, responsive `sizes`, and a fixed hero height.
 - Treat the image as brand atmosphere rather than a specific rental listing; use empty alternative text because the adjacent copy carries the content.
 
 ## States And Failure Handling

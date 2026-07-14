@@ -105,126 +105,112 @@ function mapProperty(room: ApiRoom, index: number): PropertyCardView {
 export default async function Homepage() {
   const roomsResponse = await getRooms({ page_size: 3, status: "PUBLISHED", ordering: "-created_at" }).catch(() => null);
   const properties = roomsResponse?.results.map(mapProperty) ?? [];
-  const heroRoomImage = properties[0]?.image;
 
   return (
     <PublicShell active="home">
-      <header className="relative px-margin-mobile pb-14 pt-24 md:px-margin-desktop md:pt-28">
-        <div className="mx-auto grid w-full max-w-container-max items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
-          <MotionSection className="text-reveal">
-            <p className="mb-4 font-label-caps text-label-caps uppercase text-secondary">
+      <header
+        className="relative mt-16 min-h-[550px] overflow-hidden lg:mt-20 lg:min-h-[560px]"
+        data-testid="homepage-hero"
+      >
+        <Image
+          alt=""
+          className="object-cover object-[58%_center] lg:object-center"
+          fill
+          priority
+          quality={84}
+          sizes="100vw"
+          src="/brand/forrent-hero-old-quarter.jpg"
+        />
+        <div aria-hidden="true" className="absolute inset-0 bg-inverse-surface/72" />
+
+        <div className="relative mx-auto flex min-h-[550px] w-full max-w-container-max flex-col px-margin-mobile pb-4 pt-6 text-inverse-on-surface md:px-margin-desktop md:pt-9 lg:min-h-[560px] lg:pb-6 lg:pt-12">
+          <div className="max-w-2xl">
+            <p className="mb-2 font-label-caps text-label-caps uppercase text-inverse-primary md:mb-3">
               Phòng thuê theo tháng tại Hà Nội
             </p>
-            <h1 className="mb-6 max-w-4xl text-[40px] font-extrabold leading-[1.12] text-on-surface md:text-[52px]">
+            <h1 className="max-w-2xl text-[34px] font-extrabold leading-[1.1] md:text-[44px] lg:text-[48px]">
               Phòng đẹp, giá rõ, đặt lịch không vòng vo
             </h1>
-            <p className="max-w-2xl font-body-lg text-body-lg font-medium text-on-surface-variant">
-              Lọc phòng còn trống theo khu vực, giá tháng, cọc, phí và tiện ích. Chọn phòng xong, ForRent gọi lại xác nhận trước khi bạn đi xem.
+            <p className="mt-3 max-w-xl text-sm font-medium leading-6 text-inverse-on-surface/90 md:mt-4 md:text-lg md:leading-7">
+              Lọc phòng còn trống theo khu vực, giá tháng, cọc và tiện ích. ForRent xác nhận lại trước khi bạn đi xem.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link className="premium-button urban-cta inline-flex rounded-xl px-6 py-4 font-button text-button" href="/rooms">
-                Xem phòng trống
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold md:mt-4">
+              <Link
+                className="inline-flex min-h-11 items-center whitespace-nowrap underline decoration-inverse-primary/70 underline-offset-4 transition-colors hover:text-inverse-primary"
+                href="/rooms"
+              >
+                Xem tất cả phòng
               </Link>
-              <Link className="premium-button inline-flex rounded-xl border border-primary/20 bg-surface-container-lowest px-6 py-4 font-button text-button text-primary" href="/contact">
+              <Link
+                className="inline-flex min-h-11 items-center whitespace-nowrap underline decoration-inverse-primary/70 underline-offset-4 transition-colors hover:text-inverse-primary"
+                href="/contact"
+              >
                 Gửi nhu cầu
               </Link>
             </div>
-          </MotionSection>
+          </div>
 
-          <MotionSection className="relative">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-lg border border-outline-variant/25 bg-surface-container-low lg:aspect-[5/4]">
-              {heroRoomImage ? (
-                <Image
-                  alt="Không gian phòng thuê sáng, gọn, có nội thất cơ bản và ánh sáng tự nhiên"
-                  className="object-cover"
-                  fill
-                  priority
-                  quality={82}
-                  sizes="(min-width: 1024px) 520px, 100vw"
-                  src={fastImageUrl(heroRoomImage, 1200, 82)}
+          <form
+            action="/rooms"
+            className="mt-auto grid grid-cols-2 gap-2 rounded-lg border border-outline-variant/40 bg-surface-container-lowest/95 p-3 text-on-surface shadow-high lg:grid-cols-[1.4fr_0.85fr_0.85fr_auto] lg:items-end"
+          >
+            <div className="col-span-2 flex flex-col rounded-md bg-surface-container-low px-4 py-2 lg:col-span-1">
+              <label className="mb-1 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-room-search">
+                Khu vực
+              </label>
+              <div className="relative">
+                <MapPin
+                  aria-hidden="true"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 text-on-surface-variant"
+                  size={20}
+                  strokeWidth={1.8}
                 />
-              ) : (
-                <div className="flex h-full items-center justify-center bg-surface-container-high p-10">
-                  <Image
-                    alt="ForRent"
-                    className="h-auto w-56 rounded-lg bg-inverse-surface p-3"
-                    height={96}
-                    priority
-                    src="/brand/forrent-logo.png"
-                    width={240}
-                  />
-                </div>
-              )}
-              <div className="absolute bottom-4 left-4 right-4 rounded-md border border-outline-variant/30 bg-surface-container-lowest p-4 text-on-surface">
-                <p className="mb-1 text-sm font-semibold text-on-surface">{heroRoomImage ? "Ảnh phòng thực tế" : "Tìm phòng theo nhu cầu"}</p>
-                <p className="text-sm leading-6 text-on-surface-variant">
-                  {heroRoomImage
-                    ? "Xem giá thuê, mức cọc và tình trạng phòng trước khi đặt lịch."
-                    : "Phòng mới sẽ được cập nhật tại đây khi đã có đủ giá, cọc và thông tin cần thiết."}
-                </p>
+                <input
+                  className="min-h-11 w-full border-none bg-transparent py-2 pl-7 text-base text-on-surface placeholder:text-on-surface-variant/60 focus:ring-0"
+                  id="home-room-search"
+                  name="search"
+                  placeholder="Tây Mỗ, Cầu Giấy..."
+                  type="text"
+                />
               </div>
             </div>
-          </MotionSection>
-
-          <MotionSection className="urban-panel w-full rounded-lg p-4 md:col-span-2 md:p-5">
-            <form action="/rooms" className="grid gap-4 md:grid-cols-[1.6fr_1fr_1fr_auto] md:items-end">
-              <div className="flex flex-col rounded-md bg-surface-container-low px-4 py-3">
-                <label className="mb-2 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-room-search">Khu vực</label>
-                <div className="relative">
-                  <MapPin
-                    aria-hidden="true"
-                    className="absolute left-0 top-1/2 -translate-y-1/2 text-on-surface-variant"
-                    size={22}
-                    strokeWidth={1.8}
-                  />
-                  <input
-                    className="min-h-11 w-full border-none bg-transparent py-2 pl-8 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:ring-0"
-                    id="home-room-search"
-                    name="search"
-                    placeholder="Tây Mỗ, Cầu Giấy..."
-                    type="text"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 md:contents">
-                <div className="flex flex-col rounded-md bg-surface-container-low px-4 py-3">
-                  <label className="mb-2 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-max-price">Giá tối đa</label>
-                  <div>
-                    <input
-                      className="min-h-11 w-full border-none bg-transparent py-2 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:ring-0"
-                      id="home-max-price"
-                      name="max_price"
-                      placeholder="8.000.000"
-                      type="number"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col rounded-md bg-surface-container-low px-4 py-3">
-                  <label className="mb-2 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-room-type">Loại phòng</label>
-                  <div>
-                    <select
-                      className="min-h-11 w-full border-none bg-transparent py-2 font-body-md text-body-md text-on-surface focus:ring-0"
-                      id="home-room-type"
-                      name="room_type"
-                      defaultValue=""
-                    >
-                      <option value="">Tất cả</option>
-                      <option value="CCMN">CCMN</option>
-                      <option value="CCDV">CCDV</option>
-                      <option value="HOUSE">Nhà nguyên căn</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <button
-                className="premium-button urban-cta group flex min-h-12 w-full items-center justify-center gap-2 rounded-md px-7 font-button text-button"
-                type="submit"
+            <div className="flex flex-col rounded-md bg-surface-container-low px-4 py-2">
+              <label className="mb-1 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-max-price">
+                Giá tối đa
+              </label>
+              <input
+                className="min-h-11 w-full border-none bg-transparent py-2 text-base text-on-surface placeholder:text-on-surface-variant/60 focus:ring-0"
+                id="home-max-price"
+                min="0"
+                name="max_price"
+                placeholder="8.000.000"
+                type="number"
+              />
+            </div>
+            <div className="flex flex-col rounded-md bg-surface-container-low px-4 py-2">
+              <label className="mb-1 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-room-type">
+                Loại phòng
+              </label>
+              <select
+                className="min-h-11 w-full border-none bg-transparent py-2 text-base text-on-surface focus:ring-0"
+                defaultValue=""
+                id="home-room-type"
+                name="room_type"
               >
-                <Search className="transition-colors group-hover:text-gold" size={20} strokeWidth={1.8} />
-                Tìm ngay
-              </button>
-            </form>
-          </MotionSection>
+                <option value="">Tất cả</option>
+                <option value="CCMN">CCMN</option>
+                <option value="CCDV">CCDV</option>
+                <option value="HOUSE">Nhà nguyên căn</option>
+              </select>
+            </div>
+            <button
+              className="premium-button urban-cta col-span-2 flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-md px-6 font-button text-button lg:col-span-1"
+              type="submit"
+            >
+              <Search aria-hidden="true" size={20} strokeWidth={1.8} />
+              Tìm phòng
+            </button>
+          </form>
         </div>
       </header>
 
