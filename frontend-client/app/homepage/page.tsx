@@ -121,7 +121,7 @@ export default async function Homepage() {
           sizes="100vw"
           src="/brand/forrent-hero-old-quarter.jpg"
         />
-        <div aria-hidden="true" className="absolute inset-0 bg-inverse-surface/72" />
+        <div aria-hidden="true" className="absolute inset-0 bg-inverse-surface/70" />
 
         <div className="relative mx-auto flex min-h-[550px] w-full max-w-container-max flex-col px-margin-mobile pb-4 pt-6 text-inverse-on-surface md:px-margin-desktop md:pt-9 lg:min-h-[560px] lg:pb-6 lg:pt-12">
           <div className="max-w-2xl">
