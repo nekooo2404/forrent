@@ -69,6 +69,7 @@ const config: Config = {
         gold: "rgb(var(--gold) / <alpha-value>)",
       },
       spacing: {
+        gutter: "24px",
         "margin-mobile": "16px",
         "margin-desktop": "24px",
       },
@@ -76,13 +77,13 @@ const config: Config = {
         sans: ["var(--font-open-sans)", "sans-serif"],
       },
       fontSize: {
-        "display-lg": ["58px", { lineHeight: "1.0", fontWeight: "800" }],
-        button: ["15px", { lineHeight: "1.0", letterSpacing: "0.05em", fontWeight: "500" }],
+        "display-lg": ["52px", { lineHeight: "1.12", letterSpacing: "0", fontWeight: "800" }],
+        button: ["15px", { lineHeight: "1.2", letterSpacing: "0", fontWeight: "600" }],
         "headline-sm": ["24px", { lineHeight: "1.3", fontWeight: "600" }],
         "headline-md": ["32px", { lineHeight: "1.2", fontWeight: "600" }],
         "display-lg-mobile": ["32px", { lineHeight: "1.2", fontWeight: "700" }],
         "body-md": ["16px", { lineHeight: "1.5", fontWeight: "400" }],
-        "label-caps": ["12px", { lineHeight: "1.0", letterSpacing: "0.1em", fontWeight: "600" }],
+        "label-caps": ["12px", { lineHeight: "1.3", letterSpacing: "0", fontWeight: "600" }],
       },
       maxWidth: {
         "container-max": "1280px",

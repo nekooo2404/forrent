@@ -320,7 +320,7 @@ export function formatAdminDate(value?: string | null) {
 }
 
 export function adminRoleLabel(role: string) {
-  return role === "SALER" ? "Nhân viên tư vấn/Quản trị viên" : role === "TENANT" ? "Người thuê" : role;
+  return role === "SALER" ? "Nhân viên tư vấn" : role === "TENANT" ? "Người thuê" : role;
 }
 
 export function formatAdminDateOnly(value?: string | null) {
@@ -340,7 +340,7 @@ export function formatAdminVnd(value?: string | number | null) {
 export function leadStatusLabel(status: string) {
   return (
     {
-      NEW: "Lead mới",
+      NEW: "Yêu cầu mới",
       CONTACTED: "Đã liên hệ",
       SCHEDULED: "Đã lên lịch",
       VIEWED: "Đã xem phòng",

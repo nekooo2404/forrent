@@ -20,7 +20,7 @@ export function EmptyState({ icon, title, description, action, secondaryAction }
   return (
     <div className="rounded-2xl border border-dashed border-outline-variant/30 bg-surface-container-low/30 p-10 text-center">
       {icon && <div className="mb-4 flex justify-center text-secondary">{icon}</div>}
-      <h2 className="font-headline-sm text-headline-sm text-primary">{title}</h2>
+      <h2 className="font-headline-sm text-headline-sm text-on-surface">{title}</h2>
       <p className="mx-auto mt-3 max-w-md font-body-md text-body-md leading-relaxed text-on-surface-variant">{description}</p>
       {(action || secondaryAction) && (
         <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">

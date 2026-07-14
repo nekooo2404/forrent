@@ -5,7 +5,7 @@ export default function OfflinePage() {
     <main className="grid min-h-[100dvh] place-items-center bg-surface px-margin-mobile text-on-surface" id="main-content" tabIndex={-1}>
       <section className="max-w-lg rounded-lg border border-outline-variant/30 bg-surface-container-lowest p-8 text-center">
         <p className="font-label-caps text-label-caps text-secondary">ForRent</p>
-        <h1 className="mt-3 font-headline-md text-headline-md text-primary">Bạn đang ngoại tuyến</h1>
+        <h1 className="mt-3 font-headline-md text-headline-md text-on-surface">Bạn đang ngoại tuyến</h1>
         <p className="mt-4 leading-7 text-on-surface-variant">
           Kiểm tra kết nối rồi tải lại trang. Những trang bạn đã mở trước đó vẫn có thể xem từ bộ nhớ thiết bị.
         </p>

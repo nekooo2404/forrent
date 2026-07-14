@@ -40,7 +40,7 @@ export function StatusBadge({ status, type }: Readonly<StatusBadgeProps>) {
   const config = statusConfigs[type][status] || { label: status, className: "bg-surface-variant text-on-surface" };
 
   return (
-    <span className={`inline-flex items-center rounded-full px-3 py-1.5 font-label-caps text-label-caps uppercase tracking-wider shadow-sm ${config.className}`}>
+    <span className={`inline-flex items-center rounded-full px-3 py-1.5 font-label-caps text-label-caps uppercase shadow-sm ${config.className}`}>
       {config.label}
     </span>
   );

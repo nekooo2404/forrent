@@ -85,7 +85,7 @@ export function ForgotPasswordClient() {
   return (
     <div className="w-full max-w-md rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-8 shadow-elevated md:p-10">
       <div className="mb-10 text-center">
-        <h1 className="mb-3 font-headline-md text-headline-md text-primary">Quên mật khẩu</h1>
+        <h1 className="mb-3 font-headline-md text-headline-md text-on-surface">Quên mật khẩu</h1>
         <p className="font-body-md text-body-md text-on-surface-variant">Nhập email để nhận OTP, sau đó đặt lại mật khẩu.</p>
       </div>
 
@@ -120,7 +120,7 @@ function AuthInput({
 }: Readonly<{ label: string; maxLength?: number; onChange: (value: string) => void; type?: string; value: string }>) {
   return (
     <label className="block">
-      <span className="mb-2 block font-label-caps text-label-caps uppercase tracking-widest text-primary">{label}</span>
+      <span className="mb-2 block font-label-caps text-label-caps uppercase text-primary">{label}</span>
       <input
         className="w-full border-0 border-b border-outline-variant bg-transparent px-0 py-3 font-body-md text-primary transition-colors focus:border-primary focus:ring-0"
         maxLength={maxLength}

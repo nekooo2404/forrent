@@ -224,7 +224,7 @@ export function ProfileClient() {
         <div className="mx-auto mb-6 inline-flex size-16 items-center justify-center rounded-full border border-outline-variant/30 bg-surface-container-lowest">
           <UserRound size={30} strokeWidth={1.8} />
         </div>
-        <h1 className="mb-4 font-headline-md text-headline-md text-primary">
+        <h1 className="mb-4 font-headline-md text-headline-md text-on-surface">
           Vui lòng đăng nhập
         </h1>
         <p className="mb-8 font-body-md text-body-md text-on-surface-variant">
@@ -255,7 +255,7 @@ export function ProfileClient() {
           <span className="mb-2 block font-label-caps text-label-caps text-on-surface-variant">
             Tài khoản khách thuê
           </span>
-          <h1 className="mb-2 font-display-lg-mobile text-display-lg-mobile text-primary md:font-display-lg md:text-display-lg">
+          <h1 className="mb-2 font-display-lg-mobile text-display-lg-mobile text-on-surface md:font-display-lg md:text-display-lg">
             {user.full_name}
           </h1>
           <p className="font-body-lg text-body-lg text-on-surface-variant/70">
@@ -268,7 +268,7 @@ export function ProfileClient() {
       <div className="grid grid-cols-1 gap-gutter lg:grid-cols-12">
         <section className="rounded-lg bg-surface-container-lowest p-8 shadow-soft md:p-12 lg:col-span-8">
           <div className="mb-10 flex items-center justify-between">
-            <h2 className="font-headline-sm text-headline-sm text-primary">
+            <h2 className="font-headline-sm text-headline-sm text-on-surface">
               Cập nhật thông tin
             </h2>
             <Lock size={22} strokeWidth={1.8} className="text-outline" />

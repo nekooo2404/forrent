@@ -319,9 +319,9 @@ export function AdminRoomManager() {
             </button>
           </>
         }
-        eyebrow="Inventory"
-        subtitle="Tạo, cập nhật, lọc và kiểm soát trạng thái phòng. Dữ liệu ghi trực tiếp vào backend Django và database."
-        title="Room Inventory"
+        eyebrow="Danh mục phòng"
+        subtitle="Tạo, cập nhật, lọc và kiểm soát trạng thái phòng cho thuê."
+        title="Quản lý phòng"
       />
 
       <div className="mb-5 space-y-3">
@@ -372,7 +372,7 @@ export function AdminRoomManager() {
             {/* Desktop: Table */}
             <div className="hidden overflow-x-auto lg:block">
               <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-primary/10 text-xs uppercase tracking-[0.16em] text-secondary">
+                <thead className="border-b border-primary/10 text-xs uppercase text-secondary">
                   <tr>
                     <th className="py-3 pr-5 font-semibold">Phòng</th>
                     <th className="py-3 pr-5 font-semibold">Vị trí</th>
@@ -443,7 +443,7 @@ export function AdminRoomManager() {
                 <div className="rounded-lg border border-primary/10 bg-surface-container-lowest p-4" key={room.id}>
                   <div className="mb-3 flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
-                      <h3 className="truncate font-semibold text-primary">{room.title}</h3>
+                      <h3 className="truncate font-semibold text-on-surface">{room.title}</h3>
                       <p className="mt-1 truncate text-xs text-secondary">{room.slug}</p>
                     </div>
                     <StatusBadge status={room.status} type="room" />
@@ -602,7 +602,7 @@ function RoomFormModal({
       }}
     >
       <section
-        aria-label={editingRoom ? "Edit room" : "Create room"}
+        aria-label={editingRoom ? "Sửa phòng" : "Tạo phòng"}
         aria-modal="true"
         className="admin-modal-panel max-h-[94dvh] w-full max-w-5xl overflow-y-auto rounded-t-2xl bg-surface shadow-elevated md:rounded-2xl"
         ref={modalRef}
@@ -610,10 +610,10 @@ function RoomFormModal({
       >
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-primary/10 bg-surface/95 px-5 py-4 backdrop-blur">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-secondary">{editingRoom ? "Edit listing" : "New listing"}</p>
-            <h2 className="font-headline-sm text-2xl text-primary">{editingRoom ? "Cập nhật phòng" : "Tạo phòng mới"}</h2>
+            <p className="text-xs font-semibold uppercase text-secondary">{editingRoom ? "Sửa phòng" : "Phòng mới"}</p>
+            <h2 className="font-headline-sm text-2xl text-on-surface">{editingRoom ? "Cập nhật phòng" : "Tạo phòng mới"}</h2>
           </div>
-          <button aria-label="Đóng cửa sổ phòng" className="rounded-md p-2 text-secondary transition hover:bg-surface-container hover:text-primary" onClick={onClose} type="button">
+          <button aria-label="Đóng cửa sổ phòng" className="inline-flex size-11 items-center justify-center rounded-md text-secondary transition hover:bg-surface-container hover:text-primary" onClick={onClose} type="button">
             <X size={22} strokeWidth={1.8} />
           </button>
         </div>
@@ -625,7 +625,7 @@ function RoomFormModal({
             </Field>
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Slug">
-                <input className={adminInputClass} onChange={(event) => update("slug", event.target.value)} placeholder="Để trống để backend tự tạo" value={form.slug} />
+                <input className={adminInputClass} onChange={(event) => update("slug", event.target.value)} placeholder="Để trống để hệ thống tự tạo" value={form.slug} />
               </Field>
               <Field label="Loại hình">
                 <select className={adminSelectClass} onChange={(event) => update("room_type", event.target.value)} value={form.room_type}>
@@ -738,7 +738,7 @@ function RoomFormModal({
                   <input className={adminInputClass} min="0" onChange={(event) => update("commission_percent", event.target.value)} step="0.1" type="number" value={form.commission_percent} />
                 </Field>
                 <div className="rounded-md bg-surface-container-low p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-secondary">Dự kiến</p>
+                  <p className="text-xs uppercase text-secondary">Dự kiến</p>
                   <p className="mt-1 text-2xl font-semibold tabular-nums">{formatAdminVnd(commissionPreview)}</p>
                 </div>
               </div>
@@ -783,7 +783,7 @@ function RoomFormModal({
               ) : null}
               {editingRoom?.images.length ? (
                 <div className="mt-4 space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Ảnh đang có</p>
+                  <p className="text-xs font-semibold uppercase text-secondary">Ảnh đang có</p>
                   {editingRoom.images.map((image, index) => (
                     <div className="flex items-center gap-3 rounded-md border border-primary/10 bg-surface-container-low p-2" key={image.id}>
                       {image.image_url || image.image ? (
@@ -881,7 +881,7 @@ function RoomFormModal({
 function Field({ children, label }: Readonly<{ children: ReactNode; label: string }>) {
   return (
     <label className="block">
-      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">{label}</span>
+      <span className="mb-2 block text-xs font-semibold uppercase text-secondary">{label}</span>
       {children}
     </label>
   );

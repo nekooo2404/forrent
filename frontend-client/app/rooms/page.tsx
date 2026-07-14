@@ -2,23 +2,17 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Bath,
-  BedDouble,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Droplets,
-  Minus,
-  Plus,
-  ReceiptText,
-  Ruler,
+  ImageOff,
   Search,
   ShieldCheck,
-  Zap,
+  X,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { SiteFooter } from "@/components/site-footer";
-import { SiteNav } from "@/components/site-nav";
+import { PublicShell } from "@/components/public-shell";
 import { ResponsiveFilter } from "@/components/responsive-filter";
 import { fastImageUrl } from "@/lib/image";
 import {
@@ -51,17 +45,19 @@ type RoomCardView = {
   period: string;
   deposit: string;
   depositLabel: string;
-  electricity: string;
-  water: string;
-  serviceFee: string;
   primaryMeta: string;
-  secondaryMeta: string;
   area: string;
   status: string;
   unavailable: boolean;
   featuredAmenities: string[];
   image: string | null;
   alt: string;
+};
+
+type ActiveFilter = {
+  key: string;
+  label: string;
+  value?: string;
 };
 
 type RoomsPageProps = {
@@ -89,8 +85,6 @@ const fallbackFilters: RoomFilters = {
 };
 
 function mapRoom(room: ApiRoom): RoomCardView {
-  const amenitiesCount = room.amenities?.length ?? 0;
-
   return {
     id: room.id,
     slug: room.slug,
@@ -100,11 +94,7 @@ function mapRoom(room: ApiRoom): RoomCardView {
     period: "/ tháng",
     deposit: formatOptionalVnd(room.deposit_amount),
     depositLabel: room.deposit_type_name || "Cọc",
-    electricity: formatOptionalVnd(room.electricity_price_per_kwh),
-    water: formatOptionalVnd(room.water_price_per_person),
-    serviceFee: formatOptionalVnd(room.service_fee),
     primaryMeta: roomTypeLabel(room.room_type),
-    secondaryMeta: amenitiesCount ? `${amenitiesCount} tiện ích` : "Tiện ích cơ bản",
     area: formatArea(room.actual_area),
     status: roomStatusLabel(room.status),
     unavailable: room.status !== "PUBLISHED",
@@ -132,6 +122,21 @@ function roomsHref(params: Record<string, string | string[] | undefined>, nextPa
   return `/rooms?${search.toString()}`;
 }
 
+function withoutFilterHref(params: Record<string, string | string[] | undefined>, filter: ActiveFilter) {
+  const search = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (key === "page" || value === undefined || value === "") return;
+    const values = Array.isArray(value) ? value : key === "amenities" ? value.split(",") : [value];
+    values.filter(Boolean).forEach((item) => {
+      if (key !== filter.key || (filter.value && item !== filter.value)) search.append(key, item);
+    });
+  });
+
+  const query = search.toString();
+  return query ? `/rooms?${query}` : "/rooms";
+}
+
 export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   const params = (await searchParams) ?? {};
   const page = firstParam(params.page);
@@ -145,6 +150,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   const maxPrice = firstParam(params.max_price);
   const ordering = firstParam(params.ordering) || "-created_at";
   const amenities = joinedParam(params.amenities);
+  const activeAmenities = amenities?.split(",").filter(Boolean) ?? [];
   const currentPage = Math.max(1, Number(page) || 1);
 
   const [roomsResponse, filtersResponse] = await Promise.all([
@@ -169,28 +175,31 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   const filters = filtersResponse ?? fallbackFilters;
   const totalCount = roomsResponse?.count ?? rooms.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / 12));
-  const activeFilterLabels = [
-    search ? `Từ khóa: ${search}` : null,
-    city ? filters.cities.find((item) => String(item.id) === city)?.name : null,
-    ward ? filters.wards.find((item) => String(item.id) === ward)?.name : null,
-    roomType ? roomTypeLabel(roomType) : null,
-    areaRange ? filters.area_ranges.find((item) => String(item.id) === areaRange)?.name : null,
-    status ? roomStatusLabel(status) : null,
-    minPrice ? `Từ ${formatVnd(minPrice)}` : null,
-    maxPrice ? `Đến ${formatVnd(maxPrice)}` : null,
-  ].filter((item): item is string => Boolean(item));
+  const activeFilterLabels: ActiveFilter[] = [
+    search ? { key: "search", label: `Từ khóa: ${search}` } : null,
+    city && filters.cities.length > 1 ? { key: "city", label: filters.cities.find((item) => String(item.id) === city)?.name || "Khu vực" } : null,
+    ward ? { key: "ward", label: filters.wards.find((item) => String(item.id) === ward)?.name || "Phường" } : null,
+    roomType ? { key: "room_type", label: roomTypeLabel(roomType) } : null,
+    areaRange ? { key: "area_range", label: filters.area_ranges.find((item) => String(item.id) === areaRange)?.name || "Diện tích" } : null,
+    status ? { key: "status", label: roomStatusLabel(status) } : null,
+    minPrice ? { key: "min_price", label: `Từ ${formatVnd(minPrice)}` } : null,
+    maxPrice ? { key: "max_price", label: `Đến ${formatVnd(maxPrice)}` } : null,
+    ...activeAmenities.map((value) => ({
+      key: "amenities",
+      label: filters.amenities.find((item) => String(item.id) === value)?.name || "Tiện ích",
+      value,
+    })),
+  ].filter((item): item is ActiveFilter => Boolean(item));
 
   return (
-    <main className="flex min-h-[100dvh] flex-col bg-surface text-on-surface">
-      <SiteNav active="rooms" />
-
+    <PublicShell active="rooms">
       <header className="border-b border-outline-variant/20 bg-surface-container-low px-margin-mobile pb-10 pt-24 md:px-margin-desktop md:pt-28">
         <div className="mx-auto flex w-full max-w-container-max flex-col justify-between gap-8 md:flex-row md:items-end">
           <div className="max-w-3xl">
             <p className="mb-3 font-label-caps text-label-caps uppercase text-secondary">
               Danh sách phòng Hà Nội
             </p>
-            <h1 className="mb-4 max-w-3xl text-[36px] font-extrabold leading-[1.12] text-primary md:text-[52px]">
+            <h1 className="mb-4 max-w-3xl text-[36px] font-extrabold leading-[1.12] text-on-surface md:text-[52px]">
               Chọn phòng đang trống, rõ giá trước khi đi xem
             </h1>
             <p className="max-w-2xl font-body-lg text-body-lg text-on-surface-variant">
@@ -213,22 +222,22 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
           activeRoomType={roomType}
           activeStatus={status}
           activeWard={ward}
-          activeAmenities={Array.isArray(params.amenities) ? params.amenities : params.amenities ? params.amenities.split(",") : []}
+          activeAmenities={activeAmenities}
           filters={filters}
           search={search}
         />
 
         <div className="flex min-w-0 flex-1 flex-col gap-8">
-          <ResultHeader activeFilters={activeFilterLabels} currentPage={currentPage} totalCount={totalCount} />
+          <ResultHeader activeFilters={activeFilterLabels} currentPage={currentPage} params={params} totalCount={totalCount} />
           {rooms.length ? (
-            <div className={`stagger-list grid w-full grid-cols-1 gap-gutter ${rooms.length > 1 ? "xl:grid-cols-2" : ""}`}>
+            <div className={`stagger-list grid w-full grid-cols-1 gap-gutter ${rooms.length > 1 ? "xl:grid-cols-2" : ""}`} data-room-grid>
               {rooms.map((room, index) => (
                 <RoomCard key={room.id} priority={index < 2} room={room} wide={rooms.length === 1} />
               ))}
             </div>
           ) : (
             <div className="urban-card rounded-lg p-8 text-center md:p-10">
-              <h2 className="font-headline-sm text-headline-sm text-primary">Chưa có phòng phù hợp</h2>
+              <h2 className="font-headline-sm text-headline-sm text-on-surface">Chưa có phòng phù hợp</h2>
               <p className="mt-3 font-body-md text-body-md text-on-surface-variant">
                 Thử xóa bớt bộ lọc hoặc gửi nhu cầu thuê phòng. Nhân viên tư vấn sẽ báo lại khi có phòng đúng khu vực và ngân sách.
               </p>
@@ -246,26 +255,27 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
         </div>
       </section>
 
-      <SiteFooter />
-    </main>
+    </PublicShell>
   );
 }
 
 function ResultHeader({
   activeFilters,
   currentPage,
+  params,
   totalCount,
 }: Readonly<{
-  activeFilters: string[];
+  activeFilters: ActiveFilter[];
   currentPage: number;
+  params: Record<string, string | string[] | undefined>;
   totalCount: number;
 }>) {
   return (
     <div className="border-b border-outline-variant/25 pb-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.1em] text-on-surface-variant">Phòng phù hợp</p>
-          <h2 className="mt-1 font-headline-sm text-headline-sm text-primary">
+          <p className="text-xs font-semibold uppercase text-on-surface-variant">Phòng phù hợp</p>
+          <h2 className="mt-1 font-headline-sm text-headline-sm text-on-surface">
             {totalCount} phòng phù hợp · trang {currentPage}
           </h2>
         </div>
@@ -276,10 +286,19 @@ function ResultHeader({
       {activeFilters.length ? (
         <div className="mt-4 flex flex-wrap gap-2">
           {activeFilters.map((filter) => (
-            <span className="rounded-md bg-primary/10 px-3 py-1 text-xs font-semibold text-secondary" key={filter}>
-              {filter}
-            </span>
+            <a
+              aria-label={`Bỏ lọc ${filter.label}`}
+              className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-sm font-semibold text-secondary transition-colors hover:bg-primary/15 hover:text-primary"
+              href={withoutFilterHref(params, filter)}
+              key={`${filter.key}-${filter.value ?? filter.label}`}
+            >
+              {filter.label}
+              <X aria-hidden="true" size={15} strokeWidth={2} />
+            </a>
           ))}
+          <Link className="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-secondary underline hover:text-primary" href="/rooms">
+            Xóa tất cả
+          </Link>
         </div>
       ) : null}
     </div>
@@ -302,7 +321,7 @@ function SortForm({
       })}
       <select
         aria-label="Sắp xếp"
-        className="w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-4 py-3 font-button text-button text-primary transition-colors focus:border-primary focus:ring-primary md:w-52"
+        className="min-w-0 flex-1 rounded-md border border-outline-variant/30 bg-surface-container-lowest px-4 py-3 font-button text-button text-primary transition-colors focus:border-primary focus:ring-primary md:w-52 md:flex-none"
         defaultValue={ordering}
         name="ordering"
       >
@@ -311,7 +330,7 @@ function SortForm({
         <option value="-price">Giá cao trước</option>
         <option value="-actual_area">Diện tích lớn trước</option>
       </select>
-      <button className="premium-button urban-cta rounded-md px-5 py-3 font-button text-button" type="submit">
+      <button className="premium-button urban-cta shrink-0 whitespace-nowrap rounded-md px-4 py-3 font-button text-button sm:px-5" type="submit">
         Áp dụng
       </button>
     </form>
@@ -341,215 +360,156 @@ function FilterSidebar({
   filters: RoomFilters;
   search?: string;
 }>) {
+  const singleCity = filters.cities.length === 1 ? String(filters.cities[0].id) : undefined;
+  const effectiveCity = activeCity || singleCity;
   const cityFilters = [{ id: "", name: "Tất cả khu vực", slug: "all", is_active: true }, ...filters.cities];
   const typeFilters = filters.room_types.length ? filters.room_types : fallbackFilters.room_types;
   const statusFilters = filters.statuses.length ? filters.statuses : fallbackFilters.statuses;
-  const visibleWards: RoomFilters["wards"] = [];
-  for (const ward of filters.wards) {
-    if (!activeCity || String(ward.city) === activeCity) {
-      visibleWards.push(ward);
-    }
-  }
+  const visibleWards = filters.wards.filter((ward) => !effectiveCity || String(ward.city) === effectiveCity);
+  const hasAdvancedFilters = Boolean(activeAreaRange || activeStatus || activeAmenities.length);
 
   return (
     <aside className="w-full flex-shrink-0 lg:w-[280px]">
       <ResponsiveFilter>
-      <form action="/rooms" className="urban-card mt-3 overflow-visible rounded-lg lg:mt-0">
-        <div className="p-4">
-          <div className="mb-4 flex items-center justify-between border-b border-outline-variant/20 pb-4">
-            <h2 className="font-headline-sm text-headline-sm text-primary">Bộ lọc</h2>
-            <Link className="font-button text-button text-secondary underline transition-colors hover:text-primary" href="/rooms">
-              Xóa tất cả
-            </Link>
-          </div>
-
-          <FilterSection title="Tìm kiếm" icon={<Search size={18} strokeWidth={1.8} />}>
-            <input
-              aria-label="Tìm kiếm phòng"
-              className="w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
-              defaultValue={search}
-              name="search"
-              placeholder="Tên phòng, địa chỉ..."
-              type="search"
-            />
-          </FilterSection>
-
-          <FilterSection title="Vị trí" icon={<Minus size={18} strokeWidth={1.8} />}>
-            <div className="space-y-3">
-              {cityFilters.map((item) => (
-                <label className="group flex cursor-pointer items-center gap-3" key={item.id || item.slug}>
-                  <input
-                    className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary"
-                    defaultChecked={(activeCity ?? "") === String(item.id)}
-                    name="city"
-                    type="radio"
-                    value={item.id}
-                  />
-                  <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-primary">
-                    {item.name}
-                  </span>
-                </label>
-              ))}
+        <form action="/rooms" className="urban-card mt-3 overflow-visible rounded-lg lg:mt-0">
+          <div className="p-4">
+            <div className="mb-4 flex items-center justify-between border-b border-outline-variant/20 pb-4">
+              <h2 className="font-headline-sm text-headline-sm text-on-surface">Bộ lọc</h2>
+              <Link className="font-button text-button text-secondary underline transition-colors hover:text-primary" href="/rooms">
+                Xóa tất cả
+              </Link>
             </div>
-          </FilterSection>
 
-          {filters.wards.length ? (
-            <FilterSection title="Phường" icon={<Minus size={18} strokeWidth={1.8} />}>
-              <select
-                aria-label="Chọn phường"
-                className="w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
-                defaultValue={activeWard ?? ""}
-                disabled={!activeCity}
-                name="ward"
-              >
-                <option value="">{activeCity ? "Tất cả phường" : "(Vui lòng chọn thành phố trước)"}</option>
-                {visibleWards.map((ward) => (
-                  <option key={ward.id} value={ward.id}>
-                    {ward.name}
-                  </option>
-                ))}
-              </select>
+            <FilterSection title="Tìm kiếm">
+              <div className="relative">
+                <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" size={18} strokeWidth={1.8} />
+                <input
+                  aria-label="Tìm kiếm phòng"
+                  className="min-h-11 w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest py-3 pl-10 pr-3 font-body-md text-on-surface focus:border-primary focus:ring-primary"
+                  defaultValue={search}
+                  name="search"
+                  placeholder="Tên phòng, địa chỉ..."
+                  type="search"
+                />
+              </div>
             </FilterSection>
-          ) : null}
 
-        <FilterSection title="Khoảng giá" icon={<Minus size={18} strokeWidth={1.8} />}>
-          <div className="grid grid-cols-1 gap-3">
-            <input
-              aria-label="Giá từ"
-              className="w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
-              defaultValue={activeMinPrice}
-              min="0"
-              name="min_price"
-              placeholder="Giá từ"
-              type="number"
-            />
-            <input
-              aria-label="Giá đến"
-              className="w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
-              defaultValue={activeMaxPrice}
-              min="0"
-              name="max_price"
-              placeholder="Giá đến"
-              type="number"
-            />
-          </div>
-        </FilterSection>
+            {singleCity ? <input name="city" type="hidden" value={singleCity} /> : null}
+            {!singleCity && filters.cities.length ? (
+              <FilterSection title="Vị trí">
+                <div className="space-y-1">
+                  {cityFilters.map((item) => (
+                    <label className="group flex min-h-11 cursor-pointer items-center gap-3 py-2" key={item.id || item.slug}>
+                      <input
+                        className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary"
+                        defaultChecked={(activeCity ?? "") === String(item.id)}
+                        name="city"
+                        type="radio"
+                        value={item.id}
+                      />
+                      <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-on-surface">{item.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </FilterSection>
+            ) : null}
 
-        <FilterSection title="Loại hình" icon={<Minus size={18} strokeWidth={1.8} />}>
-          <div className="space-y-3">
-            <label className="group flex cursor-pointer items-center gap-3">
-              <input
-                className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary"
-                defaultChecked={!activeRoomType}
-                name="room_type"
-                type="radio"
-                value=""
-              />
-              <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-primary">Tất cả loại phòng</span>
-            </label>
-            {typeFilters.map((item) => (
-              <label className="group flex cursor-pointer items-center gap-3" key={item.value}>
-                <input
-                  className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary"
-                  defaultChecked={item.value === activeRoomType}
-                  name="room_type"
-                  type="radio"
-                  value={item.value}
-                />
-                <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-primary">
-                  {roomTypeLabel(item.value) || item.label}
-                </span>
-              </label>
-            ))}
-          </div>
-        </FilterSection>
+            {filters.wards.length ? (
+              <FilterSection title="Phường">
+                <select
+                  aria-label="Chọn phường"
+                  className="min-h-11 w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-on-surface focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  defaultValue={activeWard ?? ""}
+                  disabled={!effectiveCity}
+                  name="ward"
+                >
+                  <option value="">{effectiveCity ? "Tất cả phường" : "Vui lòng chọn thành phố trước"}</option>
+                  {visibleWards.map((ward) => (
+                    <option key={ward.id} value={ward.id}>{ward.name}</option>
+                  ))}
+                </select>
+              </FilterSection>
+            ) : null}
 
-        {filters.area_ranges.length ? (
-          <FilterSection title="Diện tích" icon={<Minus size={18} strokeWidth={1.8} />}>
-            <div className="space-y-3">
-              {filters.area_ranges.map((item) => (
-                <label className="group flex cursor-pointer items-center gap-3" key={item.id}>
-                  <input
-                    className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary"
-                    defaultChecked={String(item.id) === activeAreaRange}
-                    name="area_range"
-                    type="radio"
-                    value={item.id}
-                  />
-                  <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-primary">
-                    {item.name}
-                  </span>
+            <FilterSection title="Khoảng giá">
+              <div className="grid grid-cols-1 gap-3">
+                <input aria-label="Giá từ" className="min-h-11 w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-on-surface focus:border-primary focus:ring-primary" defaultValue={activeMinPrice} min="0" name="min_price" placeholder="Giá từ" type="number" />
+                <input aria-label="Giá đến" className="min-h-11 w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-on-surface focus:border-primary focus:ring-primary" defaultValue={activeMaxPrice} min="0" name="max_price" placeholder="Giá đến" type="number" />
+              </div>
+            </FilterSection>
+
+            <FilterSection title="Loại hình">
+              <div className="space-y-1">
+                <label className="group flex min-h-11 cursor-pointer items-center gap-3 py-2">
+                  <input className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary" defaultChecked={!activeRoomType} name="room_type" type="radio" value="" />
+                  <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-on-surface">Tất cả loại phòng</span>
                 </label>
-              ))}
-            </div>
-          </FilterSection>
-        ) : null}
+                {typeFilters.map((item) => (
+                  <label className="group flex min-h-11 cursor-pointer items-center gap-3 py-2" key={item.value}>
+                    <input className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary" defaultChecked={item.value === activeRoomType} name="room_type" type="radio" value={item.value} />
+                    <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-on-surface">{roomTypeLabel(item.value) || item.label}</span>
+                  </label>
+                ))}
+              </div>
+            </FilterSection>
 
-        <FilterSection title="Trạng thái" icon={<Minus size={18} strokeWidth={1.8} />}>
-          <select
-            aria-label="Chọn trạng thái phòng"
-            className="w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-primary focus:border-primary focus:ring-primary"
-            defaultValue={activeStatus ?? ""}
-            name="status"
-          >
-            <option value="">Tất cả trạng thái</option>
-            {statusFilters.map((item) => (
-              <option key={item.value} value={item.value}>
-                {roomStatusLabel(item.value)}
-              </option>
-            ))}
-          </select>
-        </FilterSection>
+            <details className="group border-b border-outline-variant/20 py-3" open={hasAdvancedFilters}>
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between py-2 font-button text-button text-on-surface marker:content-none">
+                Bộ lọc thêm
+                <ChevronDown aria-hidden="true" className="transition-transform group-open:rotate-180" size={18} strokeWidth={1.8} />
+              </summary>
+              <div className="pt-1">
+                {filters.area_ranges.length ? (
+                  <FilterSection title="Diện tích">
+                    <div className="space-y-1">
+                      {filters.area_ranges.map((item) => (
+                        <label className="group flex min-h-11 cursor-pointer items-center gap-3 py-2" key={item.id}>
+                          <input className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary" defaultChecked={String(item.id) === activeAreaRange} name="area_range" type="radio" value={item.id} />
+                          <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-on-surface">{item.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </FilterSection>
+                ) : null}
 
-        <FilterSection title="Tiện ích" icon={<Plus size={18} strokeWidth={1.8} />}>
-          <div className="space-y-3">
-            {filters.amenities.slice(0, 5).map((item) => (
-              <label className="group flex cursor-pointer items-center gap-3" key={item.id}>
-                <input
-                  className="size-4 rounded border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary"
-                  defaultChecked={activeAmenities.includes(String(item.id))}
-                  name="amenities"
-                  type="checkbox"
-                  value={item.id}
-                />
-                <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-primary">
-                  {item.name}
-                </span>
-              </label>
-            ))}
+                <FilterSection title="Trạng thái">
+                  <select aria-label="Chọn trạng thái phòng" className="min-h-11 w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-on-surface focus:border-primary focus:ring-primary" defaultValue={activeStatus ?? ""} name="status">
+                    <option value="">Tất cả trạng thái</option>
+                    {statusFilters.map((item) => <option key={item.value} value={item.value}>{roomStatusLabel(item.value)}</option>)}
+                  </select>
+                </FilterSection>
+
+                {filters.amenities.length ? (
+                  <FilterSection title="Tiện ích">
+                    <div className="space-y-1">
+                      {filters.amenities.slice(0, 5).map((item) => (
+                        <label className="group flex min-h-11 cursor-pointer items-center gap-3 py-2" key={item.id}>
+                          <input className="size-4 rounded border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary" defaultChecked={activeAmenities.includes(String(item.id))} name="amenities" type="checkbox" value={item.id} />
+                          <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-on-surface">{item.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </FilterSection>
+                ) : null}
+              </div>
+            </details>
           </div>
-        </FilterSection>
-        </div>
 
-        {/* Sticky button at bottom on mobile */}
-        <div className="sticky bottom-0 border-t border-outline-variant/10 bg-surface-container-lowest/95 p-4 md:static md:border-none md:bg-transparent">
-          <button className="premium-button urban-cta w-full rounded-md px-4 py-3 font-button text-button" type="submit">
-            Áp dụng bộ lọc
-          </button>
-        </div>
-      </form>
+          <div className="sticky bottom-0 border-t border-outline-variant/10 bg-surface-container-lowest/95 p-4 lg:static lg:border-none lg:bg-transparent">
+            <button className="premium-button urban-cta min-h-11 w-full rounded-md px-4 py-3 font-button text-button" type="submit">Áp dụng bộ lọc</button>
+          </div>
+        </form>
       </ResponsiveFilter>
     </aside>
   );
 }
 
-function FilterSection({
-  title,
-  icon,
-  children,
-}: Readonly<{
-  title: string;
-  icon: ReactNode;
-  children: ReactNode;
-}>) {
+function FilterSection({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
   return (
-    <div className="border-b border-outline-variant/20 py-5 last:border-b-0">
-      <div className="mb-4 flex w-full items-center justify-between font-button text-button text-primary">
-        {title}
-        <span>{icon}</span>
-      </div>
-      {children}
-    </div>
+    <fieldset className="border-b border-outline-variant/20 py-4 last:border-b-0">
+      <legend className="font-button text-button text-on-surface">{title}</legend>
+      <div className="mt-3">{children}</div>
+    </fieldset>
   );
 }
 
@@ -564,7 +524,7 @@ function RoomCard({ priority = false, room, wide = false }: Readonly<{ priority?
       data-layout={wide ? "wide" : "standard"}
       data-room-card
     >
-      <div className={`relative h-[280px] overflow-hidden sm:h-[320px] ${wide ? "xl:h-full xl:min-h-[560px]" : ""} ${room.unavailable ? "grayscale-[30%]" : ""}`}>
+      <div className={`relative h-[260px] overflow-hidden sm:h-[280px] ${wide ? "xl:h-full xl:min-h-[420px]" : ""} ${room.unavailable ? "grayscale-[30%]" : ""}`}>
         <Link aria-label={`Xem chi tiết ${room.title}`} className="absolute inset-0" href={detailHref}>
           {room.image ? (
             <Image
@@ -582,89 +542,55 @@ function RoomCard({ priority = false, room, wide = false }: Readonly<{ priority?
             <ImagePlaceholder />
           )}
         </Link>
-        <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-inverse-surface/70 to-transparent" />
         <div className="absolute left-4 top-4">
           <span
-            className={`rounded-full px-3 py-1.5 font-label-caps text-label-caps uppercase tracking-wider shadow-sm backdrop-blur ${
+            className={`rounded-md px-3 py-1.5 font-label-caps text-label-caps uppercase shadow-sm ${
               room.unavailable ? "bg-surface-variant/95 text-on-surface" : "bg-success text-on-success"
             }`}
           >
             {room.unavailable ? room.status : "Còn trống"}
           </span>
         </div>
-        <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4 text-orange-50">
-          <div>
-            <p className="mb-1 text-sm font-medium text-orange-50/80">{room.primaryMeta} · {room.area}</p>
-            <p className="line-clamp-1 font-headline-sm text-xl">{room.location}</p>
-          </div>
-          <div className="rounded-xl bg-primary/20 px-3 py-2 text-right backdrop-blur">
-            <span className="block font-headline-sm text-xl">{room.price}</span>
-            <span className="text-xs text-orange-50/75">{room.period}</span>
-          </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-inverse-surface/80 px-4 py-3 text-inverse-on-surface">
+          <p className="line-clamp-1 text-lg font-semibold">{room.location}</p>
         </div>
       </div>
 
-      <div className="flex flex-grow flex-col p-6">
-        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <Link className="mb-1 block font-headline-sm text-headline-sm text-primary hover:text-secondary" href={detailHref}>
+      <div className="flex flex-grow flex-col p-5 md:p-6">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <Link className="block font-headline-sm text-xl leading-snug text-on-surface hover:text-primary" href={detailHref}>
               {room.title}
             </Link>
-            <p className="font-body-md text-body-md text-on-surface-variant">{room.secondaryMeta}</p>
+            <p className="mt-2 font-body-md text-sm text-on-surface-variant">{room.primaryMeta} · {room.area}</p>
           </div>
-          <div className="sm:text-right">
-            <span className="block text-xs font-semibold uppercase tracking-[0.08em] text-secondary">Giá tháng</span>
-            <span className="font-body-md text-sm text-on-surface-variant">{room.price}{room.period}</span>
+          <div className="shrink-0 text-right">
+            <span className="block whitespace-nowrap text-lg font-bold tabular-nums text-on-surface">{room.price}</span>
+            <span className="text-xs text-on-surface-variant">{room.period}</span>
           </div>
-        </div>
-        <div className="mb-5 grid grid-cols-2 gap-3 text-sm text-on-surface-variant">
-          <CostPill icon={<ShieldCheck size={17} strokeWidth={1.8} />} label={room.depositLabel} value={room.deposit} />
-          <CostPill icon={<ReceiptText size={17} strokeWidth={1.8} />} label="Phí DV" value={room.serviceFee} />
-          <CostPill icon={<Zap size={17} strokeWidth={1.8} />} label="Điện" value={room.electricity} />
-          <CostPill icon={<Droplets size={17} strokeWidth={1.8} />} label="Nước" value={room.water} />
         </div>
 
         {room.featuredAmenities.length ? (
-          <div className="mb-5 flex flex-wrap gap-2">
+          <div className="mb-4 flex flex-wrap gap-2">
             {room.featuredAmenities.map((amenity) => (
-              <span className="rounded-md bg-primary/10 px-3 py-1 text-xs font-medium text-secondary" key={amenity}>
+              <span className="rounded-md bg-tertiary-container px-3 py-1 text-xs font-medium text-on-tertiary-container" key={amenity}>
                 {amenity}
               </span>
             ))}
           </div>
         ) : null}
 
-        <div className="mt-auto flex flex-wrap items-center gap-5 border-t border-outline-variant/10 pt-6 text-on-surface-variant lg:gap-6">
-          <RoomMeta icon={<BedDouble size={20} strokeWidth={1.8} />} label={room.primaryMeta} />
-          <RoomMeta icon={<Bath size={20} strokeWidth={1.8} />} label={room.secondaryMeta} />
-          <RoomMeta icon={<Ruler size={20} strokeWidth={1.8} />} label={room.area} />
-          <Link className="premium-button urban-cta ml-auto rounded-md px-4 py-3 font-body-md text-sm" href={detailHref}>
+        <div className="mt-auto flex flex-wrap items-center gap-4 border-t border-outline-variant/15 pt-4 text-on-surface-variant">
+          <div className="flex min-w-0 items-center gap-2 text-sm">
+            <ShieldCheck aria-hidden="true" className="shrink-0 text-primary" size={18} strokeWidth={1.8} />
+            <span className="truncate"><span className="font-medium text-on-surface">{room.depositLabel}:</span> {room.deposit}</span>
+          </div>
+          <Link className="premium-button urban-cta ml-auto inline-flex min-h-11 items-center rounded-md px-4 py-3 font-body-md text-sm" href={detailHref}>
             Xem và đặt lịch
           </Link>
         </div>
       </div>
     </article>
-  );
-}
-
-function CostPill({ icon, label, value }: Readonly<{ icon: ReactNode; label: string; value: string }>) {
-  return (
-    <div className="rounded-md border border-outline-variant/20 bg-surface-container-low p-3">
-      <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase text-secondary">
-        {icon}
-        {label}
-      </div>
-      <p className="line-clamp-1 font-body-md text-sm font-semibold text-primary">{value}</p>
-    </div>
-  );
-}
-
-function RoomMeta({ icon, label }: Readonly<{ icon: ReactNode; label: string }>) {
-  return (
-    <div className="flex items-center gap-2">
-      {icon}
-      <span className="font-body-md text-body-md">{label}</span>
-    </div>
   );
 }
 
@@ -685,7 +611,7 @@ function Pagination({
       <Link
         aria-label="Trang trước"
         aria-disabled={currentPage <= 1}
-        className={`motion-chip flex size-10 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary ${
+        className={`motion-chip flex size-11 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary ${
           currentPage <= 1 ? "pointer-events-none opacity-45" : ""
         }`}
         href={roomsHref(params, Math.max(1, currentPage - 1))}
@@ -697,8 +623,8 @@ function Pagination({
           aria-label={`Trang ${page}`}
           className={
             page === currentPage
-              ? "motion-chip flex size-10 items-center justify-center rounded bg-primary text-on-primary"
-              : "motion-chip flex size-10 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary"
+              ? "motion-chip flex size-11 items-center justify-center rounded bg-primary text-on-primary"
+              : "motion-chip flex size-11 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary"
           }
           href={roomsHref(params, page)}
           key={page}
@@ -711,7 +637,7 @@ function Pagination({
           <span className="px-2 text-secondary">...</span>
           <Link
             aria-label={`Trang ${totalPages}`}
-            className="motion-chip flex size-10 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary"
+            className="motion-chip flex size-11 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary"
             href={roomsHref(params, totalPages)}
           >
             {totalPages}
@@ -721,7 +647,7 @@ function Pagination({
       <Link
         aria-label="Trang sau"
         aria-disabled={currentPage >= totalPages}
-        className={`motion-chip flex size-10 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary ${
+        className={`motion-chip flex size-11 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary ${
           currentPage >= totalPages ? "pointer-events-none opacity-45" : ""
         }`}
         href={roomsHref(params, Math.min(totalPages, currentPage + 1))}
@@ -734,8 +660,9 @@ function Pagination({
 
 function ImagePlaceholder() {
   return (
-    <div className="flex h-full w-full items-center justify-center bg-surface-container-low text-sm font-medium text-on-surface-variant">
-      Chưa có ảnh phòng
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-surface-container-low text-sm font-medium text-on-surface-variant">
+      <ImageOff aria-hidden="true" size={30} strokeWidth={1.6} />
+      Ảnh đang được cập nhật
     </div>
   );
 }

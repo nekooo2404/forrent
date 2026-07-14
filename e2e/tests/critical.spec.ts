@@ -78,7 +78,9 @@ test.describe('Public critical flows', () => {
     await expect(skipLink).toBeAttached();
     await expect(skipLink).toHaveAttribute('href', '#main-content');
     await expect(page.locator('#main-content')).toHaveAttribute('tabindex', '-1');
-    if (testInfo.project.name !== 'Mobile Safari') {
+    await expect(page.locator('main nav')).toHaveCount(0);
+    await expect(page.locator('main footer')).toHaveCount(0);
+    if (!['webkit', 'Mobile Safari'].includes(testInfo.project.name)) {
       await page.keyboard.press('Tab');
       await expect(skipLink).toBeFocused();
       await page.keyboard.press('Enter');
@@ -145,13 +147,54 @@ test.describe('Public critical flows', () => {
     await filterForm.locator('button[type="submit"]').click();
 
     await expect(page).toHaveURL(/search=test/);
+    const removeSearch = page.getByRole('link', { name: 'Bỏ lọc Từ khóa: test' });
+    await expect(removeSearch).toBeVisible();
+    await removeSearch.click();
+    await expect(page).not.toHaveURL(/search=test/);
   });
 
-  test('ward filter stays disabled until a city is selected', async ({ page }) => {
+  test('ward filter is immediately available when Hanoi is the only city', async ({ page }) => {
     await page.goto('/rooms');
 
     const wardSelect = page.locator('select[name="ward"]');
-    await expect(wardSelect).toBeDisabled();
+    await expect(wardSelect).toBeEnabled();
+    await expect(page.locator('input[type="hidden"][name="city"]')).toHaveValue('1');
+  });
+
+  test('advanced room filters use native progressive disclosure and touch-sized options', async ({ page }) => {
+    await page.goto('/rooms');
+    const filterForm = page.locator('form[action="/rooms"]').filter({ has: page.locator('input[name="search"]') });
+    if (!(await filterForm.isVisible())) await page.getByRole('button', { name: 'Bộ lọc phòng' }).click();
+
+    const advanced = filterForm.locator('details');
+    await expect(advanced).not.toHaveAttribute('open', '');
+    await advanced.locator('summary').click();
+    await expect(advanced).toHaveAttribute('open', '');
+
+    const amenityLabel = advanced.locator('label').first();
+    const box = await amenityLabel.boundingBox();
+    expect(box?.height ?? 0).toBeGreaterThanOrEqual(43.5);
+  });
+
+  test('room gallery adapts to zero, one, and multiple images', async ({ page }) => {
+    await page.goto('/rooms/e2e-room');
+    await expect(page.locator('[data-image-count="0"]')).toContainText('Ảnh phòng đang được cập nhật');
+    await expect(page.getByRole('button', { name: 'Ảnh tiếp theo' })).toHaveCount(0);
+
+    await page.goto('/rooms/e2e-room-one');
+    const oneImageGallery = page.locator('[data-image-count="1"]');
+    await expect(oneImageGallery).toHaveCount(1);
+    await expect(oneImageGallery).toBeVisible();
+    await page.getByRole('button', { name: /Xem .*ảnh chính/ }).click();
+    await expect(page.getByRole('button', { name: 'Ảnh tiếp theo' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Đóng xem ảnh' }).click();
+
+    await page.goto('/rooms/e2e-room-many');
+    const manyImageGallery = page.locator('[data-image-count="3"]');
+    await expect(manyImageGallery).toHaveCount(1);
+    await expect(manyImageGallery).toBeVisible();
+    await page.getByRole('button', { name: /Xem .*ảnh chính/ }).click();
+    await expect(page.getByRole('button', { name: 'Ảnh tiếp theo' })).toBeVisible();
   });
 
   test('contact form validates required and phone fields', async ({ page }) => {

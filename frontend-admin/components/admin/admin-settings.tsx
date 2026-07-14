@@ -385,7 +385,7 @@ function WardPanel(props: Readonly<{
         <form className="space-y-4" onSubmit={props.onSubmit}>
           <FormTitle editing={Boolean(props.form.id)} title="Phường" />
           <label className="block">
-            <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Thành phố</span>
+            <span className="mb-2 block text-xs font-semibold uppercase text-secondary">Thành phố</span>
             <select className={adminSelectClass} onChange={(event) => props.onFormChange({ ...props.form, city: event.target.value })} required value={props.form.city}>
               <option value="">Chọn thành phố</option>
               {props.cities.map((city) => (
@@ -753,7 +753,7 @@ function ResourceTable<T extends { id: number; is_active: boolean }>({
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-left text-sm">
-        <thead className="border-b border-primary/10 text-xs uppercase tracking-[0.16em] text-secondary">
+        <thead className="border-b border-primary/10 text-xs uppercase text-secondary">
           <tr>
             {columns.map((column) => (
               <th className="py-3 pr-5 font-semibold" key={column}>{column}</th>
@@ -814,7 +814,7 @@ function TextField({
 }>) {
   return (
     <label className="block">
-      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">{label}</span>
+      <span className="mb-2 block text-xs font-semibold uppercase text-secondary">{label}</span>
       <input className={adminInputClass} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required={required} type={type} value={value} />
     </label>
   );
@@ -832,7 +832,7 @@ function ActiveCheckbox({ checked, onChange }: Readonly<{ checked: boolean; onCh
 function ActivePill({ active }: Readonly<{ active: boolean }>) {
   return (
     <span className={`inline-flex rounded-md px-2.5 py-1 text-xs font-semibold ring-1 ${active ? "bg-success-container text-success ring-success/20" : "bg-error-container text-error ring-error/20"}`}>
-      {active ? "Active" : "Inactive"}
+      {active ? "Đang hoạt động" : "Đã tắt"}
     </span>
   );
 }
@@ -840,8 +840,8 @@ function ActivePill({ active }: Readonly<{ active: boolean }>) {
 function FormTitle({ editing, title }: Readonly<{ editing: boolean; title: string }>) {
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-secondary">{editing ? "Edit" : "Create"}</p>
-      <h2 className="font-headline-sm text-2xl text-primary">{title}</h2>
+      <p className="text-xs font-semibold uppercase text-secondary">{editing ? "Edit" : "Create"}</p>
+      <h2 className="font-headline-sm text-2xl text-on-surface">{title}</h2>
     </div>
   );
 }

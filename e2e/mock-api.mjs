@@ -7,6 +7,14 @@ const amenities = [
   { id: 2, name: 'May giat', icon: 'washing-machine', is_active: true },
 ];
 const areaRange = { id: 1, name: '20-30 m2', min_area: '20.00', max_area: '30.00', is_active: true };
+const imageDataUrl = (color) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="${color}"/><rect x="180" y="160" width="840" height="480" rx="24" fill="#fff7ed" opacity=".82"/></svg>`)}`;
+const roomImages = ['#9a5b31', '#3f7664', '#b78348'].map((color, index) => ({
+  id: index + 1,
+  image: null,
+  image_url: imageDataUrl(color),
+  sort_order: index,
+  created_at: '2026-07-01T08:00:00Z',
+}));
 const room = {
   id: 1,
   title: 'Can ho dich vu Nam Tu Liem',
@@ -65,11 +73,29 @@ const server = http.createServer((request, response) => {
     }));
     return;
   }
-  if (url.pathname === '/api/rooms/e2e-room/') {
-    sendJson(response, 200, envelope({ ...room, description: 'Can ho dich vu day du thong tin de dat lich xem.', images: [] }));
+  const roomDetailMatch = url.pathname.match(/^\/api\/rooms\/(e2e-room(?:-(?:one|many))?)\/$/);
+  if (roomDetailMatch) {
+    const slug = roomDetailMatch[1];
+    const images = slug.endsWith('-one') ? roomImages.slice(0, 1) : slug.endsWith('-many') ? roomImages : [];
+    sendJson(response, 200, envelope({ ...room, slug, description: 'Can ho dich vu day du thong tin de dat lich xem.', images }));
     return;
   }
   if (url.pathname === '/api/rooms/') {
+    const search = url.searchParams.get('search');
+    if (search === 'visual-empty') {
+      sendJson(response, 200, envelope({ count: 0, next: null, previous: null, results: [] }));
+      return;
+    }
+    if (search === 'visual-12') {
+      const rooms = Array.from({ length: 12 }, (_, index) => ({
+        ...room,
+        id: index + 1,
+        slug: `e2e-room-${index + 1}`,
+        title: `Can ho dich vu ${index + 1}`,
+      }));
+      sendJson(response, 200, envelope({ count: rooms.length, next: null, previous: null, results: rooms }));
+      return;
+    }
     sendJson(response, 200, envelope({ count: 1, next: null, previous: null, results: [room] }));
     return;
   }

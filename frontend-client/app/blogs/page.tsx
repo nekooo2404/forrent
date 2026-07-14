@@ -4,8 +4,7 @@ import Link from "next/link";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { BlogSubmitForm } from "@/components/blog-submit-form";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteNav } from "@/components/site-nav";
+import { PublicShell } from "@/components/public-shell";
 import { formatDate, getBlogs, resolveMediaUrl, type ApiBlog } from "@/lib/api";
 
 export const metadata: Metadata = {
@@ -60,14 +59,12 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
   const totalPages = Math.max(1, Math.ceil((blogsResponse?.count ?? posts.length) / 7));
 
   return (
-    <main className="min-h-[100dvh] bg-surface text-on-surface">
-      <SiteNav active="blogs" />
-
+    <PublicShell active="blogs">
       <header className="scroll-reveal mx-auto max-w-container-max px-margin-mobile pb-16 pt-36 text-center md:px-margin-desktop md:pb-20 md:pt-44">
-        <span className="mb-4 block font-label-caps text-label-caps uppercase tracking-widest text-on-primary-container">
+        <span className="mb-4 block font-label-caps text-label-caps uppercase text-on-primary-container">
           Kinh nghiệm thuê phòng
         </span>
-        <h1 className="mb-6 font-display-lg-mobile text-display-lg-mobile text-primary md:font-display-lg md:text-7xl">
+        <h1 className="mb-6 font-display-lg-mobile text-display-lg-mobile text-on-surface md:font-display-lg md:text-7xl">
           Blog ForRent
         </h1>
         <p className="mx-auto max-w-2xl font-body-lg text-body-lg leading-relaxed text-secondary">
@@ -99,7 +96,7 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
               <span className="mb-6 inline-block rounded-sm bg-surface-container-high px-3 py-1 font-label-caps text-label-caps uppercase text-on-primary-container">
                 {featuredPost.category}
               </span>
-              <h2 className="mb-6 font-display-lg-mobile text-display-lg-mobile text-primary transition-colors group-hover:text-primary/70 md:font-display-lg md:text-display-lg">
+              <h2 className="mb-6 font-display-lg-mobile text-display-lg-mobile text-on-surface transition-colors group-hover:text-primary/70 md:font-display-lg md:text-display-lg">
                 {featuredPost.title}
               </h2>
               <p className="mb-8 font-body-md text-body-md leading-relaxed text-secondary">{featuredPost.excerpt}</p>
@@ -113,7 +110,7 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
               </div>
 
               <Link
-                className="group/button flex items-center border-b border-primary pb-1 font-button text-button uppercase tracking-widest text-primary"
+                className="group/button flex items-center border-b border-primary pb-1 font-button text-button uppercase text-primary"
                 href={featuredPost.href ?? "/blogs"}
               >
                 Đọc thêm
@@ -125,7 +122,7 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
       ) : (
         <section className="mx-auto mb-24 max-w-3xl px-margin-mobile text-center md:px-margin-desktop">
           <div className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-8 shadow-soft md:p-10">
-            <h2 className="font-headline-sm text-headline-sm text-primary">Thư viện kinh nghiệm đang được biên tập</h2>
+            <h2 className="font-headline-sm text-headline-sm text-on-surface">Thư viện kinh nghiệm đang được biên tập</h2>
             <p className="mx-auto mt-3 max-w-xl font-body-md text-body-md leading-7 text-on-surface-variant">
               Trong lúc chờ bài mới, bạn có thể xem phòng đang trống hoặc gửi nhu cầu để được tư vấn theo khu vực và ngân sách.
             </p>
@@ -155,18 +152,17 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
 
       {posts.length ? <section className="mb-24 bg-surface-container px-margin-mobile py-24">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="mb-6 font-headline-md text-headline-md text-primary">Cần tư vấn phòng phù hợp?</h2>
+          <h2 className="mb-6 font-headline-md text-headline-md text-on-surface">Cần tư vấn phòng phù hợp?</h2>
           <p className="mb-10 font-body-md text-body-md text-secondary">
             Gửi nhu cầu thuê phòng, nhân viên tư vấn sẽ lọc phòng theo khu vực, giá và lịch xem.
           </p>
-          <Link className="premium-button inline-flex rounded bg-primary px-10 py-4 font-button text-button uppercase tracking-widest text-on-primary" href="/contact">
+          <Link className="premium-button inline-flex rounded bg-primary px-10 py-4 font-button text-button uppercase text-on-primary" href="/contact">
             Liên hệ tư vấn
           </Link>
         </div>
       </section> : null}
 
-      <SiteFooter />
-    </main>
+    </PublicShell>
   );
 }
 
@@ -191,7 +187,7 @@ function BlogCard({ post }: Readonly<{ post: BlogPostView }>) {
         </div>
         <div className="space-y-4">
           <span className="font-label-caps text-label-caps uppercase text-on-primary-container">{post.category}</span>
-          <h3 className="font-headline-sm text-headline-sm text-primary transition-colors group-hover:text-primary/70">
+          <h3 className="font-headline-sm text-headline-sm text-on-surface transition-colors group-hover:text-primary/70">
             {post.title}
           </h3>
           <p className="line-clamp-2 font-body-md text-body-md text-secondary">{post.excerpt}</p>
@@ -237,7 +233,7 @@ function Pagination({ currentPage, totalPages }: Readonly<{ currentPage: number;
       <Link
         aria-label="Trang trước"
         aria-disabled={currentPage <= 1}
-        className={`motion-chip flex size-10 items-center justify-center rounded-full border border-outline-variant/20 text-on-surface-variant transition-colors hover:border-primary hover:text-primary ${currentPage <= 1 ? "pointer-events-none opacity-45" : ""}`}
+        className={`motion-chip flex size-11 items-center justify-center rounded-full border border-outline-variant/20 text-on-surface-variant transition-colors hover:border-primary hover:text-primary ${currentPage <= 1 ? "pointer-events-none opacity-45" : ""}`}
         href={`/blogs?page=${Math.max(1, currentPage - 1)}`}
       >
         <ChevronLeft size={20} strokeWidth={1.8} />
@@ -247,8 +243,8 @@ function Pagination({ currentPage, totalPages }: Readonly<{ currentPage: number;
           aria-label={`Trang ${page}`}
           className={
             page === currentPage
-              ? "motion-chip flex size-10 items-center justify-center rounded-full bg-primary font-semibold text-on-primary"
-              : "motion-chip flex size-10 items-center justify-center rounded-full border border-outline-variant/20 text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
+              ? "motion-chip flex size-11 items-center justify-center rounded-full bg-primary font-semibold text-on-primary"
+              : "motion-chip flex size-11 items-center justify-center rounded-full border border-outline-variant/20 text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
           }
           href={`/blogs?page=${page}`}
           key={page}
@@ -261,7 +257,7 @@ function Pagination({ currentPage, totalPages }: Readonly<{ currentPage: number;
           <span className="text-on-surface-variant">...</span>
           <Link
             aria-label={`Trang ${totalPages}`}
-            className="motion-chip flex size-10 items-center justify-center rounded-full border border-outline-variant/20 text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
+            className="motion-chip flex size-11 items-center justify-center rounded-full border border-outline-variant/20 text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
             href={`/blogs?page=${totalPages}`}
           >
             {totalPages}
@@ -271,7 +267,7 @@ function Pagination({ currentPage, totalPages }: Readonly<{ currentPage: number;
       <Link
         aria-label="Trang sau"
         aria-disabled={currentPage >= totalPages}
-        className={`motion-chip flex size-10 items-center justify-center rounded-full border border-outline-variant/20 text-on-surface-variant transition-colors hover:border-primary hover:text-primary ${currentPage >= totalPages ? "pointer-events-none opacity-45" : ""}`}
+        className={`motion-chip flex size-11 items-center justify-center rounded-full border border-outline-variant/20 text-on-surface-variant transition-colors hover:border-primary hover:text-primary ${currentPage >= totalPages ? "pointer-events-none opacity-45" : ""}`}
         href={`/blogs?page=${Math.min(totalPages, currentPage + 1)}`}
       >
         <ChevronRight size={20} strokeWidth={1.8} />

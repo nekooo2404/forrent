@@ -79,8 +79,8 @@ export function ProfileMenu() {
   return (
     <div className="relative z-[60] ml-1" ref={profileMenuRef}>
       <button
+        aria-controls="profile-popover"
         aria-expanded={isProfileMenuOpen}
-        aria-haspopup="menu"
         aria-label="Tài khoản"
         className="premium-button inline-flex size-11 items-center justify-center rounded-full border border-outline-variant/30 bg-surface-container-lowest text-primary"
         onClick={() => setIsProfileMenuOpen((current) => !current)}
@@ -92,7 +92,7 @@ export function ProfileMenu() {
       {isProfileMenuOpen ? (
         <div
           className="glass-panel scroll-reveal absolute right-0 top-full z-[60] mt-3 w-52 overflow-hidden rounded-lg border py-2 text-left"
-          role="menu"
+          id="profile-popover"
         >
           {isLoggedIn ? (
             <>
@@ -100,7 +100,6 @@ export function ProfileMenu() {
                 className="block px-4 py-3 font-body-md text-body-md text-primary transition-colors hover:bg-surface-container"
                 href="/profile"
                 onClick={() => setIsProfileMenuOpen(false)}
-                role="menuitem"
               >
                 Thông tin người dùng
               </Link>
@@ -108,14 +107,12 @@ export function ProfileMenu() {
                 className="block px-4 py-3 font-body-md text-body-md text-primary transition-colors hover:bg-surface-container"
                 href="/forget-password"
                 onClick={() => setIsProfileMenuOpen(false)}
-                role="menuitem"
               >
                 Quên mật khẩu
               </Link>
               <button
                 className="block w-full px-4 py-3 text-left font-body-md text-body-md text-primary transition-colors hover:bg-surface-container"
                 onClick={handleLogout}
-                role="menuitem"
                 type="button"
               >
                 Đăng xuất
@@ -126,9 +123,8 @@ export function ProfileMenu() {
               className="block px-4 py-3 font-body-md text-body-md text-primary transition-colors hover:bg-surface-container"
               href="/log-in"
               onClick={() => setIsProfileMenuOpen(false)}
-              role="menuitem"
             >
-              Đăng nhập/ Đăng kí
+              Đăng nhập / Đăng ký
             </Link>
           )}
         </div>

@@ -19,7 +19,7 @@ export default function GlobalError({
       <body className="bg-surface text-on-surface">
         <main className="flex min-h-[100dvh] items-center justify-center px-6">
           <section className="max-w-md rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-6 text-center shadow-soft">
-            <p className="font-label-caps text-label-caps uppercase tracking-widest text-primary">ForRent Admin</p>
+            <p className="font-label-caps text-label-caps uppercase text-primary">ForRent Admin</p>
             <h1 className="mt-3 font-headline-sm text-headline-sm text-on-surface">Không tải được trang quản trị</h1>
             <p className="mt-3 text-sm leading-6 text-on-surface-variant">
               Hệ thống đã ghi nhận lỗi. Vui lòng thử lại sau ít phút.

@@ -152,7 +152,7 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
           <span className="mb-2 block font-headline-sm text-headline-sm text-primary">Đặt lịch xem phòng</span>
           {!disabled && (
             <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
-              <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary">
+              <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-on-surface">
                 <Info size={16} strokeWidth={1.8} />
                 Quy trình xem phòng
               </h3>
@@ -273,7 +273,7 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
             >
               <X size={20} strokeWidth={1.8} />
             </button>
-            <h3 className="mb-4 font-headline-sm text-headline-sm text-primary" id="confirm-modal-title">
+            <h3 className="mb-4 font-headline-sm text-headline-sm text-on-surface" id="confirm-modal-title">
               Xác nhận yêu cầu xem
             </h3>
             <p className="mb-4 font-body-md text-body-md text-on-surface-variant" id="confirm-modal-description">

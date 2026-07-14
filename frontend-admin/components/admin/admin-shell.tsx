@@ -54,11 +54,11 @@ type ApiResponse<T> = {
 const AdminAuthContext = createContext<AdminContextValue | null>(null);
 
 const navItems = [
-  { href: "/admin", label: "Dashboard", icon: BarChart3, exact: true },
+  { href: "/admin", label: "Tổng quan", icon: BarChart3, exact: true },
   { href: "/admin/rooms", label: "Quản lý phòng", icon: Building2 },
-  { href: "/admin/leads", label: "Quản lý lead", icon: UsersRound },
-  { href: "/admin/blogs", label: "Blog", icon: Newspaper },
-  { href: "/admin/contacts", label: "Liên hệ", icon: Mail },
+  { href: "/admin/leads", label: "Yêu cầu xem phòng", icon: UsersRound },
+  { href: "/admin/blogs", label: "Bài viết", icon: Newspaper },
+  { href: "/admin/contacts", label: "Hộp thư liên hệ", icon: Mail },
   { href: "/admin/commissions", label: "Hoa hồng", icon: WalletCards },
   { href: "/admin/users", label: "Người dùng", icon: UserCog },
   { href: "/admin/settings", label: "Cài đặt", icon: Settings },
@@ -170,7 +170,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
     <AdminAuthContext.Provider value={contextValue}>
       <div className="admin-surface min-h-[100dvh] bg-surface text-primary">
         <a
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-3 focus:text-on-primary"
+          className="admin-skip-link"
           href="#admin-main"
         >
           Bỏ qua điều hướng
@@ -211,7 +211,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
                 <div className="flex min-w-0 items-center gap-3">
                   <button
                     aria-label="Mở menu admin"
-                    className="inline-flex size-10 items-center justify-center rounded-md border border-primary/10 bg-surface-container-lowest text-primary shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 lg:hidden"
+                    className="inline-flex size-11 items-center justify-center rounded-md border border-primary/10 bg-surface-container-lowest text-primary shadow-sm transition hover:border-primary/30 lg:hidden"
                     onClick={() => setIsMobileOpen(true)}
                     type="button"
                   >
@@ -281,7 +281,7 @@ function SidebarContent({
               <span className="block truncate font-headline-sm text-xl uppercase leading-tight tracking-normal">
                 ForRent
               </span>
-              <span className="block text-xs font-semibold uppercase tracking-[0.2em] text-secondary">Admin Portal</span>
+              <span className="block text-xs font-semibold uppercase text-secondary">Trang quản trị</span>
             </span>
           ) : null}
         </Link>
@@ -289,7 +289,7 @@ function SidebarContent({
         {onToggle ? (
           <button
             aria-label={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
-            className="rounded-md p-2 text-secondary transition hover:bg-surface-container hover:text-primary"
+            className="inline-flex size-11 items-center justify-center rounded-md text-secondary transition hover:bg-surface-container hover:text-primary"
             onClick={onToggle}
             type="button"
           >
@@ -300,7 +300,7 @@ function SidebarContent({
         {onClose ? (
           <button
             aria-label="Đóng menu admin"
-            className="rounded-md p-2 text-secondary transition hover:bg-surface-container hover:text-primary"
+            className="inline-flex size-11 items-center justify-center rounded-md text-secondary transition hover:bg-surface-container hover:text-primary"
             onClick={onClose}
             type="button"
           >
@@ -318,7 +318,7 @@ function SidebarContent({
               className={`group flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition ${
                 isActive
                   ? "bg-primary text-on-primary shadow-soft"
-                  : "text-secondary hover:-translate-y-0.5 hover:bg-surface-container-lowest hover:text-primary"
+                  : "text-secondary hover:bg-surface-container-lowest hover:text-primary"
               } ${collapsed ? "justify-center" : ""}`}
               href={item.href}
               key={item.href}
@@ -343,7 +343,7 @@ function SidebarContent({
                 <p className="text-xs text-secondary">{user.email}</p>
               </div>
             </div>
-            <Link className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-secondary transition hover:text-primary" href="/admin/settings">
+            <Link className="inline-flex items-center gap-2 text-xs font-semibold uppercase text-secondary transition hover:text-primary" href="/admin/settings">
               Cập nhật thông tin
               <ChevronRight size={14} strokeWidth={1.8} />
             </Link>
@@ -415,11 +415,11 @@ function AdminGateMessage({
 
 function activeTitle(pathname: string) {
   if (pathname.startsWith("/admin/rooms")) return "Quản lý phòng";
-  if (pathname.startsWith("/admin/leads")) return "Quản lý lead";
-  if (pathname.startsWith("/admin/blogs")) return "Blog";
-  if (pathname.startsWith("/admin/contacts")) return "Liên hệ";
+  if (pathname.startsWith("/admin/leads")) return "Yêu cầu xem phòng";
+  if (pathname.startsWith("/admin/blogs")) return "Bài viết";
+  if (pathname.startsWith("/admin/contacts")) return "Hộp thư liên hệ";
   if (pathname.startsWith("/admin/commissions")) return "Hoa hồng";
   if (pathname.startsWith("/admin/users")) return "Người dùng";
   if (pathname.startsWith("/admin/settings")) return "Cài đặt";
-  return "Dashboard";
+  return "Tổng quan";
 }
