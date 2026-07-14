@@ -84,7 +84,7 @@ export function AdminDashboard() {
   const summary = state.summary;
   const commission = state.commission;
   const statusCounts = summary?.status_counts ?? {};
-  const totalLeadStatusCount = Math.max(summary?.total_viewing_requests ?? 0, 1);
+  const totalRequestStatusCount = Math.max(summary?.total_viewing_requests ?? 0, 1);
 
   return (
     <div>
@@ -92,7 +92,7 @@ export function AdminDashboard() {
         actions={
           <>
             <Link className={adminButtonSecondary} href="/admin/leads">
-              Xem lead
+              Xem yêu cầu
               <ArrowRight size={16} strokeWidth={1.8} />
             </Link>
             <Link className={adminButtonPrimary} href="/admin/rooms">
@@ -102,8 +102,8 @@ export function AdminDashboard() {
           </>
         }
         eyebrow={`Xin chào, ${user.full_name}`}
-        subtitle="Tổng quan vận hành từ phòng, lead xem phòng, trạng thái hoa hồng và các tác vụ cần xử lý trong ngày."
-        title="Tổng quan Dashboard"
+        subtitle="Dữ liệu hiện tại về phòng, yêu cầu xem phòng, hoa hồng và các tác vụ cần xử lý."
+        title="Tổng quan vận hành"
       />
 
       <AdminInlineMessage error={state.error} />
@@ -116,19 +116,19 @@ export function AdminDashboard() {
           value={summary?.total_rooms ?? 0}
         />
         <AdminStatCard
-          caption={`${summary?.total_new_leads ?? 0} lead mới đang chờ xử lý`}
+          caption={`${summary?.total_new_leads ?? 0} yêu cầu mới đang chờ xử lý`}
           icon={<UsersRound size={20} strokeWidth={1.8} />}
-          label="Lead xem phòng"
+          label="Yêu cầu xem phòng"
           value={summary?.total_viewing_requests ?? 0}
         />
         <AdminStatCard
-          caption={`${summary?.total_moved_in_leads ?? 0} lead đã chuyển vào`}
+          caption={`${summary?.total_moved_in_leads ?? 0} khách đã chuyển vào`}
           icon={<CircleDollarSign size={20} strokeWidth={1.8} />}
           label="Hoa hồng dự kiến"
           value={formatAdminVnd(summary?.total_estimated_commission ?? 0)}
         />
         <AdminStatCard
-          caption="Hoa hồng đã ghi nhận từ lead chuyển vào"
+          caption="Hoa hồng đã ghi nhận từ khách chuyển vào"
           icon={<Sparkles size={20} strokeWidth={1.8} />}
           label="Hoa hồng đã ghi nhận"
           value={formatAdminVnd(summary?.total_received_commission ?? 0)}
@@ -137,17 +137,17 @@ export function AdminDashboard() {
 
       <section className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
         <AdminPanel
-          title="Lead mới nhất"
+          title="Yêu cầu mới nhất"
           toolbar={
             <Link className="text-sm font-semibold text-secondary transition hover:text-primary" href="/admin/leads">
-              Mở bảng lead
+              Mở danh sách
             </Link>
           }
         >
           {summary?.latest_leads?.length ? (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-primary/10 text-xs uppercase tracking-[0.16em] text-secondary">
+                <thead className="border-b border-primary/10 text-xs uppercase text-secondary">
                   <tr>
                     <th className="py-3 pr-5 font-semibold">Khách hàng</th>
                     <th className="py-3 pr-5 font-semibold">Phòng</th>
@@ -184,16 +184,16 @@ export function AdminDashboard() {
             <AdminEmptyState
               action={<Link className={adminButtonSecondary} href="/admin/rooms">Kiểm tra phòng</Link>}
               description="Khi khách gửi yêu cầu xem phòng, dữ liệu sẽ xuất hiện tại đây cùng trạng thái xử lý."
-              title="Chưa có lead mới"
+              title="Chưa có yêu cầu mới"
             />
           )}
         </AdminPanel>
 
         <div className="space-y-6">
-          <AdminPanel title="Pipeline xử lý">
+          <AdminPanel title="Phân bổ trạng thái hiện tại">
             <div className="space-y-3">
               {[
-                ["NEW", "Lead mới"],
+                ["NEW", "Yêu cầu mới"],
                 ["CONTACTED", "Đã liên hệ"],
                 ["SCHEDULED", "Đã lên lịch"],
                 ["VIEWED", "Đã xem phòng"],
@@ -208,8 +208,8 @@ export function AdminDashboard() {
                     </div>
                     <progress
                       aria-label={`${label}: ${count}`}
-                      className="h-2 w-full overflow-hidden rounded-full accent-primary"
-                      max={totalLeadStatusCount}
+                      className="h-2 w-full overflow-hidden rounded-full accent-tertiary"
+                      max={totalRequestStatusCount}
                       value={count}
                     />
                   </div>
@@ -220,25 +220,25 @@ export function AdminDashboard() {
 
           <AdminPanel title="Nội dung & liên hệ">
             <div className="grid gap-3">
-              <Link className="group flex items-center justify-between rounded-lg border border-primary/10 bg-surface-container-lowest p-4 transition hover:-translate-y-0.5 hover:border-primary/25" href="/admin/blogs">
+              <Link className="group flex items-center justify-between rounded-lg border border-primary/10 bg-surface-container-lowest p-4 transition-colors hover:border-primary/25 hover:bg-surface-container-low" href="/admin/blogs">
                 <span className="flex items-center gap-3">
                   <span className="grid size-10 place-items-center rounded-md bg-surface-container text-primary">
                     <Newspaper size={18} strokeWidth={1.8} />
                   </span>
                   <span>
-                    <span className="block font-semibold text-primary">Blog Manager</span>
-                    <span className="block text-xs text-secondary">Publish bài viết ra public site</span>
+                    <span className="block font-semibold text-on-surface">Quản lý bài viết</span>
+                    <span className="block text-xs text-secondary">Biên tập và xuất bản nội dung</span>
                   </span>
                 </span>
                 <ArrowRight className="text-secondary transition group-hover:translate-x-1 group-hover:text-primary" size={17} strokeWidth={1.8} />
               </Link>
-              <Link className="group flex items-center justify-between rounded-lg border border-primary/10 bg-surface-container-lowest p-4 transition hover:-translate-y-0.5 hover:border-primary/25" href="/admin/contacts">
+              <Link className="group flex items-center justify-between rounded-lg border border-primary/10 bg-surface-container-lowest p-4 transition-colors hover:border-primary/25 hover:bg-surface-container-low" href="/admin/contacts">
                 <span className="flex items-center gap-3">
                   <span className="grid size-10 place-items-center rounded-md bg-surface-container text-primary">
                     <Mail size={18} strokeWidth={1.8} />
                   </span>
                   <span>
-                    <span className="block font-semibold text-primary">Contact Inbox</span>
+                    <span className="block font-semibold text-on-surface">Hộp thư liên hệ</span>
                     <span className="block text-xs text-secondary">Xử lý tin nhắn từ trang liên hệ</span>
                   </span>
                 </span>
@@ -263,7 +263,7 @@ export function AdminDashboard() {
                       <p className="font-semibold text-primary">{item.room__title}</p>
                       <p className="mt-1 flex items-center gap-2 text-xs text-secondary">
                         <CalendarClock size={14} strokeWidth={1.8} />
-                        {item.lead_count} lead · {item.moved_in_count} đã chuyển vào
+                        {item.lead_count} yêu cầu · {item.moved_in_count} đã chuyển vào
                       </p>
                     </div>
                     <div className="text-right">
@@ -274,7 +274,7 @@ export function AdminDashboard() {
                 ))}
               </div>
             ) : (
-              <AdminEmptyState description="Hoa hồng sẽ được tổng hợp tự động khi lead được xác nhận đã chuyển vào." title="Chưa có dữ liệu hoa hồng" />
+              <AdminEmptyState description="Hoa hồng sẽ được tổng hợp tự động khi khách được xác nhận đã chuyển vào." title="Chưa có dữ liệu hoa hồng" />
             )}
           </AdminPanel>
         </div>

@@ -240,7 +240,7 @@ export function SignUpForm() {
   return (
     <div className="w-full max-w-md rounded-xl bg-surface-container-lowest p-8 shadow-elevated md:p-10">
       <div className="mb-10 text-center">
-        <h1 className="mb-3 font-headline-md text-headline-md text-primary">Đăng ký tài khoản</h1>
+        <h1 className="mb-3 font-headline-md text-headline-md text-on-surface">Đăng ký tài khoản</h1>
         <p className="font-body-md text-body-md text-on-surface-variant">Tạo tài khoản để đặt lịch xem phòng và theo dõi yêu cầu của bạn.</p>
       </div>
 
@@ -335,7 +335,7 @@ export function SignUpForm() {
             <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-variant">
               <div className={`h-full transition-all duration-300 ${strength.className} ${strengthWidthClass(strength.width)}`} />
             </div>
-            <span className={`min-w-16 text-right text-[10px] uppercase tracking-wider ${strength.textClassName}`}>
+            <span className={`min-w-16 text-right text-[10px] uppercase ${strength.textClassName}`}>
               {strength.label}
             </span>
           </div>
@@ -382,7 +382,7 @@ function AuthInput({
 }: Readonly<InputHTMLAttributes<HTMLInputElement> & { error?: string; label: string }>) {
   return (
     <div className="relative">
-      <label className="mb-2 block font-label-caps text-label-caps uppercase tracking-widest text-primary" htmlFor={props.id}>
+      <label className="mb-2 block font-label-caps text-label-caps uppercase text-primary" htmlFor={props.id}>
         {label}
       </label>
       <div className="border-b border-outline-variant transition-colors focus-within:border-primary">

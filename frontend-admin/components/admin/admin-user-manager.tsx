@@ -160,8 +160,8 @@ export function AdminUserManager() {
             Làm mới
           </button>
         }
-        eyebrow="Users"
-        subtitle="Quản lý tài khoản nhân viên tư vấn, quản trị viên và người thuê. Hệ thống dùng hai nhóm quyền SALER và TENANT."
+        eyebrow="Tài khoản"
+        subtitle="Quản lý tài khoản nhân viên tư vấn và người thuê theo đúng phạm vi quyền được cấp."
         title="Quản lý người dùng"
       />
 
@@ -181,10 +181,10 @@ export function AdminUserManager() {
             <Field label="Email">
               <input className={adminInputClass} onChange={(event) => setForm({ ...form, email: event.target.value })} required type="email" value={form.email} />
             </Field>
-            <Field label="Role">
+            <Field label="Vai trò">
               <select className={adminSelectClass} onChange={(event) => setForm({ ...form, role: event.target.value as UserForm["role"] })} value={form.role}>
                 <option value="TENANT">Người thuê</option>
-                <option value="SALER">Nhân viên tư vấn/Quản trị viên</option>
+                <option value="SALER">Nhân viên tư vấn</option>
               </select>
             </Field>
             <Field label={form.id ? "Mật khẩu mới, để trống nếu không đổi" : "Mật khẩu"}>
@@ -198,7 +198,7 @@ export function AdminUserManager() {
                 value={form.current_password}
               />
             </Field>
-            <label className="flex cursor-pointer items-center gap-3 rounded-md bg-surface-container-low p-3 text-sm font-medium text-primary">
+            <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md bg-surface-container-low p-3 text-sm font-medium text-on-surface">
               <input checked={form.is_active} className="size-4 rounded border-primary/20 text-primary focus:ring-primary" onChange={(event) => setForm({ ...form, is_active: event.target.checked })} type="checkbox" />
               Đang hoạt động
             </label>
@@ -227,12 +227,12 @@ export function AdminUserManager() {
             >
               <label className="relative min-w-[260px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-secondary" size={17} strokeWidth={1.8} />
-                <input className={`${adminInputClass} pl-9`} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm tên, email, phone..." type="search" value={search} />
+                <input className={`${adminInputClass} pl-9`} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm tên, email, số điện thoại..." type="search" value={search} />
               </label>
               <select className={adminSelectClass} onChange={(event) => setRole(event.target.value)} value={role}>
-                <option value="">Tất cả role</option>
+                <option value="">Tất cả vai trò</option>
                 <option value="TENANT">Người thuê</option>
-                <option value="SALER">Nhân viên tư vấn/Quản trị viên</option>
+                <option value="SALER">Nhân viên tư vấn</option>
               </select>
               <button className={adminButtonSecondary} type="submit">Lọc</button>
             </form>
@@ -244,10 +244,10 @@ export function AdminUserManager() {
           ) : users.length ? (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-primary/10 text-xs uppercase tracking-[0.16em] text-secondary">
+                <thead className="border-b border-primary/10 text-xs uppercase text-secondary">
                   <tr>
                     <th className="py-3 pr-5 font-semibold">Người dùng</th>
-                    <th className="py-3 pr-5 font-semibold">Role</th>
+                    <th className="py-3 pr-5 font-semibold">Vai trò</th>
                     <th className="py-3 pr-5 font-semibold">Trạng thái</th>
                     <th className="py-3 pr-5 font-semibold">Tạo lúc</th>
                     <th className="py-3 text-right font-semibold">Thao tác</th>
@@ -263,13 +263,13 @@ export function AdminUserManager() {
                       <td className="py-4 pr-5 text-primary">{adminRoleLabel(user.role)}</td>
                       <td className="py-4 pr-5">
                         <span className={`inline-flex rounded-md px-2.5 py-1 text-xs font-semibold ring-1 ${user.is_active ? "bg-success-container text-success ring-success/20" : "bg-error-container text-error ring-error/20"}`}>
-                          {user.is_active ? "Active" : "Locked"}
+                          {user.is_active ? "Đang hoạt động" : "Bị khóa"}
                         </span>
                       </td>
                       <td className="py-4 pr-5 text-secondary">{formatAdminDate(user.created_at)}</td>
                       <td className="py-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <button className="rounded-md border border-primary/10 bg-surface-container-lowest p-2 text-secondary transition hover:border-primary/25 hover:text-primary" onClick={() => editUser(user)} type="button">
+                          <button aria-label={`Sửa ${user.full_name}`} className="inline-flex size-11 items-center justify-center rounded-md border border-primary/10 bg-surface-container-lowest text-secondary transition hover:border-primary/25 hover:text-primary" onClick={() => editUser(user)} type="button">
                             <Pencil size={16} strokeWidth={1.8} />
                           </button>
                           <button className={adminButtonSecondary} disabled={isSaving} onClick={() => toggleActive(user)} type="button">
@@ -297,7 +297,7 @@ export function AdminUserManager() {
 function Field({ children, label }: Readonly<{ children: React.ReactNode; label: string }>) {
   return (
     <label className="block">
-      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">{label}</span>
+      <span className="mb-2 block text-xs font-semibold uppercase text-secondary">{label}</span>
       {children}
     </label>
   );

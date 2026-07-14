@@ -9,6 +9,8 @@ const adminPaths = ['/log-in'];
 const themes = ['light', 'dark'] as const;
 const viewports = [
   { name: 'desktop', width: 1280, height: 900 },
+  { name: 'tablet-1024', width: 1024, height: 768 },
+  { name: 'tablet-768', width: 768, height: 1024 },
   { name: 'mobile', width: 390, height: 844 },
 ] as const;
 
@@ -63,7 +65,7 @@ for (const theme of themes) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await page.addInitScript((selectedTheme) => localStorage.setItem('forrent-admin-theme', selectedTheme), theme);
       await page.goto(new URL('/admin', adminBaseURL).toString());
-      await expect(page.locator('#admin-main')).toContainText('Dashboard');
+      await expect(page.locator('#admin-main')).toContainText('Tổng quan vận hành');
       await settleForAxe(page);
 
       const results = await new AxeBuilder({ page }).analyze();
@@ -82,7 +84,7 @@ test('axe accessibility audit passes on admin create room modal dark mobile', as
   const addRoom = page.getByRole('button', { name: 'Thêm phòng', exact: true });
   await expect(addRoom).toBeEnabled();
   await addRoom.click();
-  await expect(page.getByRole('dialog', { name: 'Create room' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Tạo phòng' })).toBeVisible();
   await settleForAxe(page);
 
   const results = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();

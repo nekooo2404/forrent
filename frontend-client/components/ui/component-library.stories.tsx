@@ -20,7 +20,7 @@ export const Showcase: Story = {
   render: () => (
     <div className="grid max-w-4xl gap-8 bg-surface p-6 text-on-surface">
       <section className="grid gap-3">
-        <h2 className="text-xl font-semibold text-primary">Buttons</h2>
+        <h2 className="text-xl font-semibold text-on-surface">Buttons</h2>
         <div className="flex flex-wrap gap-3">
           <Button icon={<Plus size={16} />}>Primary</Button>
           <Button variant="secondary">Secondary</Button>
@@ -33,7 +33,7 @@ export const Showcase: Story = {
       </section>
 
       <section className="grid max-w-md gap-3">
-        <h2 className="text-xl font-semibold text-primary">Form Field</h2>
+        <h2 className="text-xl font-semibold text-on-surface">Form Field</h2>
         <FormField helperText="Helper text uses the shared secondary token." label="Email" required>
           <input
             className="w-full rounded-md border border-outline-variant bg-surface-container-lowest px-3 py-2 text-on-surface"
@@ -51,7 +51,7 @@ export const Showcase: Story = {
       </section>
 
       <section className="grid gap-3">
-        <h2 className="text-xl font-semibold text-primary">Status Badges</h2>
+        <h2 className="text-xl font-semibold text-on-surface">Status Badges</h2>
         <div className="flex flex-wrap gap-3">
           <StatusBadge status="PUBLISHED" type="room" />
           <StatusBadge status="RENTED" type="room" />
@@ -63,7 +63,7 @@ export const Showcase: Story = {
       </section>
 
       <section className="grid gap-3">
-        <h2 className="text-xl font-semibold text-primary">Empty State</h2>
+        <h2 className="text-xl font-semibold text-on-surface">Empty State</h2>
         <EmptyState
           action={{ label: "Create listing", onClick: () => undefined }}
           description="Reusable empty state for lists, search results, and admin panels."

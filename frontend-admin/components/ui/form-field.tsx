@@ -13,7 +13,7 @@ interface FormFieldProps {
 export function FormField({ label, error, helperText, required, children, htmlFor }: Readonly<FormFieldProps>) {
   return (
     <div className="w-full">
-      <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary" htmlFor={htmlFor}>
+      <label className="mb-2 block text-xs font-semibold uppercase text-secondary" htmlFor={htmlFor}>
         {label}
         {required && <span className="ml-1 text-error">*</span>}
       </label>

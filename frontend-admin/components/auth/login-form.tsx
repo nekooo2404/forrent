@@ -85,7 +85,7 @@ export function LoginForm() {
   return (
     <div className="w-full max-w-md rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-gutter shadow-soft md:p-12">
       <div className="mb-12 text-center lg:text-left">
-        <h1 className="mb-2 font-headline-md text-headline-md text-primary">Chào mừng trở lại</h1>
+        <h1 className="mb-2 font-headline-md text-headline-md text-on-surface">Chào mừng trở lại</h1>
         <p className="font-body-md text-body-md text-on-surface-variant">
           Đăng nhập để truy cập bộ sưu tập tuyển chọn của bạn.
         </p>
@@ -176,7 +176,7 @@ export function LoginForm() {
         ) : null}
 
         <button
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded bg-primary px-4 py-4 font-button text-button uppercase tracking-widest text-on-primary transition-colors duration-300 hover:bg-surface-tint disabled:cursor-wait disabled:opacity-70"
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded bg-primary px-4 py-4 font-button text-button uppercase text-on-primary transition-colors duration-300 hover:bg-surface-tint disabled:cursor-wait disabled:opacity-70"
           disabled={isSubmitting}
           type="submit"
         >

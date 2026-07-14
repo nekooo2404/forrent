@@ -4,9 +4,8 @@ import Link from "next/link";
 import { ArrowRight, BedDouble, MapPin, ReceiptText, Search, ShieldCheck, ShowerHead } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { SiteFooter } from "@/components/site-footer";
-import { SiteNav } from "@/components/site-nav";
-import { MotionItem, MotionList, MotionPage, MotionSection } from "@/components/motion";
+import { MotionItem, MotionList, MotionSection } from "@/components/motion";
+import { PublicShell } from "@/components/public-shell";
 import { fastImageUrl } from "@/lib/image";
 import {
   formatArea,
@@ -108,16 +107,14 @@ export default async function Homepage() {
   const heroRoomImage = properties[0]?.image;
 
   return (
-    <MotionPage className="bg-surface text-on-surface">
-      <SiteNav active="home" />
-
+    <PublicShell active="home">
       <header className="relative px-margin-mobile pb-14 pt-24 md:px-margin-desktop md:pt-28">
         <div className="mx-auto grid w-full max-w-container-max items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
           <MotionSection className="text-reveal">
             <p className="mb-4 font-label-caps text-label-caps uppercase text-secondary">
               Phòng thuê theo tháng tại Hà Nội
             </p>
-            <h1 className="mb-6 max-w-4xl text-[40px] font-extrabold leading-[1.08] text-primary md:text-[64px]">
+            <h1 className="mb-6 max-w-4xl text-[40px] font-extrabold leading-[1.12] text-on-surface md:text-[52px]">
               Phòng đẹp, giá rõ, đặt lịch không vòng vo
             </h1>
             <p className="max-w-2xl font-body-lg text-body-lg font-medium text-on-surface-variant">
@@ -146,7 +143,7 @@ export default async function Homepage() {
                   src={fastImageUrl(heroRoomImage, 1200, 82)}
                 />
               ) : (
-                <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_28%_20%,rgb(var(--primary)_/_0.28),transparent_22rem),linear-gradient(135deg,rgb(var(--surface-container)),rgb(var(--surface-container-high)))] p-10">
+                <div className="flex h-full items-center justify-center bg-surface-container-high p-10">
                   <Image
                     alt="ForRent"
                     className="h-auto w-56 rounded-lg bg-inverse-surface p-3"
@@ -158,8 +155,12 @@ export default async function Homepage() {
                 </div>
               )}
               <div className="absolute bottom-4 left-4 right-4 rounded-md border border-outline-variant/30 bg-surface-container-lowest p-4 text-on-surface">
-                <p className="mb-1 text-sm font-semibold text-primary">Ảnh phòng thực tế</p>
-                <p className="text-sm leading-6 text-on-surface-variant">Xem giá thuê, mức cọc và tình trạng phòng trước khi đặt lịch.</p>
+                <p className="mb-1 text-sm font-semibold text-on-surface">{heroRoomImage ? "Ảnh phòng thực tế" : "Tìm phòng theo nhu cầu"}</p>
+                <p className="text-sm leading-6 text-on-surface-variant">
+                  {heroRoomImage
+                    ? "Xem giá thuê, mức cọc và tình trạng phòng trước khi đặt lịch."
+                    : "Phòng mới sẽ được cập nhật tại đây khi đã có đủ giá, cọc và thông tin cần thiết."}
+                </p>
               </div>
             </div>
           </MotionSection>
@@ -230,7 +231,7 @@ export default async function Homepage() {
         <div className="mx-auto max-w-container-max">
           <MotionSection className="mb-12 flex flex-col items-start justify-between md:flex-row md:items-end">
             <div>
-              <h2 className="mb-4 font-headline-md text-headline-md text-primary">Tìm đúng kiểu phòng bạn cần</h2>
+              <h2 className="mb-4 font-headline-md text-headline-md text-on-surface">Tìm đúng kiểu phòng bạn cần</h2>
               <p className="max-w-2xl font-body-lg text-body-lg text-on-surface-variant">
                 Chọn CCMN, căn hộ dịch vụ hoặc nhà nguyên căn, sau đó lọc tiếp theo khu vực, ngân sách và lịch xem.
               </p>
@@ -257,7 +258,7 @@ export default async function Homepage() {
                       {item.icon}
                     </span>
                     <span className="mb-2 font-label-caps text-label-caps text-secondary">{item.kicker}</span>
-                    <h3 className="mb-2 font-headline-sm text-headline-sm text-primary">{item.title}</h3>
+                    <h3 className="mb-2 font-headline-sm text-headline-sm text-on-surface">{item.title}</h3>
                     <p className="font-body-md text-body-md text-on-surface-variant">
                       {item.description}
                     </p>
@@ -272,8 +273,8 @@ export default async function Homepage() {
       <section className="bg-surface-container-low px-margin-mobile py-20 md:px-margin-desktop">
         <div className="mx-auto max-w-container-max">
           <MotionSection className="mb-16 text-center">
-            <span className="urban-badge mb-4 px-3 py-1 font-label-caps text-label-caps uppercase tracking-widest">Còn trống thật</span>
-            <h2 className="mb-4 font-headline-md text-headline-md text-primary">Phòng đang trống, quét nhanh để chọn</h2>
+            <span className="urban-badge mb-4 px-3 py-1 font-label-caps text-label-caps uppercase">Còn trống thật</span>
+            <h2 className="mb-4 font-headline-md text-headline-md text-on-surface">Phòng đang trống, quét nhanh để chọn</h2>
             <p className="mx-auto max-w-2xl font-body-lg text-body-lg text-on-surface-variant">
               Ưu tiên phòng còn trống, có giá tháng, cọc dự kiến, khu vực và tiện ích nổi bật để bạn quyết định nhanh.
             </p>
@@ -282,7 +283,7 @@ export default async function Homepage() {
             <MotionList
               className={`stagger-list grid w-full grid-cols-1 gap-gutter ${
                 properties.length === 1
-                  ? "mx-auto max-w-md"
+                  ? "mx-auto max-w-5xl"
                   : properties.length === 2
                     ? "mx-auto max-w-4xl md:grid-cols-2"
                     : "md:grid-cols-2 lg:grid-cols-3"
@@ -290,13 +291,13 @@ export default async function Homepage() {
             >
               {properties.map((property) => (
                 <MotionItem key={property.id}>
-                  <PropertyCard property={property} />
+                  <PropertyCard featured={properties.length === 1} property={property} />
                 </MotionItem>
               ))}
             </MotionList>
           ) : (
             <div className="rounded border border-outline-variant/20 bg-surface-container-lowest p-10 text-center shadow-soft">
-              <h3 className="font-headline-sm text-headline-sm text-primary">Chưa có phòng đang trống</h3>
+              <h3 className="font-headline-sm text-headline-sm text-on-surface">Chưa có phòng đang trống</h3>
               <p className="mt-3 font-body-md text-body-md text-on-surface-variant">
                 Bạn có thể quay lại sau hoặc gửi nhu cầu để nhân viên tư vấn báo khi có phòng phù hợp.
               </p>
@@ -342,17 +343,16 @@ export default async function Homepage() {
         </div>
       </section>
 
-      <SiteFooter />
-    </MotionPage>
+    </PublicShell>
   );
 }
 
-function PropertyCard({ property }: Readonly<{ property: PropertyCardView }>) {
+function PropertyCard({ featured = false, property }: Readonly<{ featured?: boolean; property: PropertyCardView }>) {
   const detailHref = property.slug ? `/rooms/${encodeURIComponent(property.slug)}` : "/rooms";
 
   return (
-    <article className="premium-card urban-card group overflow-hidden rounded-lg">
-      <div className="relative h-72 overflow-hidden">
+    <article className={`premium-card urban-card group overflow-hidden rounded-lg ${featured ? "md:grid md:grid-cols-[1.15fr_0.85fr]" : ""}`}>
+      <div className={`relative h-72 overflow-hidden ${featured ? "md:h-full md:min-h-[380px]" : ""}`}>
         <Link aria-label={`Xem chi tiết ${property.title}`} className="absolute inset-0" href={detailHref}>
           {property.image ? (
             <Image
@@ -380,10 +380,10 @@ function PropertyCard({ property }: Readonly<{ property: PropertyCardView }>) {
       </div>
       <div className="p-6">
         <div className="mb-3 flex items-start justify-between gap-4">
-          <Link className="line-clamp-2 font-headline-sm text-headline-sm text-primary hover:text-secondary" href={detailHref}>
+          <Link className="line-clamp-2 font-headline-sm text-headline-sm text-on-surface hover:text-primary" href={detailHref}>
             {property.title}
           </Link>
-          <span className="text-right font-headline-sm text-headline-sm text-primary">{property.price}</span>
+          <span className="shrink-0 whitespace-nowrap text-right font-headline-sm text-xl tabular-nums text-on-surface">{property.price}</span>
         </div>
         <p className="mb-4 font-body-md text-body-md text-on-surface-variant">
           {property.location} · {property.descriptor}

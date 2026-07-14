@@ -4,8 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, CalendarDays, UserRound } from "lucide-react";
 
-import { SiteFooter } from "@/components/site-footer";
-import { SiteNav } from "@/components/site-nav";
+import { PublicShell } from "@/components/public-shell";
 import { formatDate, getBlogs, getCachedBlogDetail, resolveMediaUrl, type ApiBlog } from "@/lib/api";
 import { shortDescription } from "@/lib/seo";
 
@@ -62,9 +61,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
     .filter(Boolean);
 
   return (
-    <main className="min-h-[100dvh] bg-surface text-on-surface">
-      <SiteNav active="blogs" />
-
+    <PublicShell active="blogs">
       <article>
         <header className="mx-auto max-w-[980px] px-margin-mobile pb-12 pt-32 md:px-margin-desktop md:pt-40">
           <Link
@@ -75,10 +72,10 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
             QUAY LẠI BLOG
           </Link>
 
-          <span className="mb-5 inline-flex rounded-sm bg-surface-container-high px-3 py-1 font-label-caps text-label-caps uppercase tracking-widest text-on-primary-container">
+          <span className="mb-5 inline-flex rounded-sm bg-surface-container-high px-3 py-1 font-label-caps text-label-caps uppercase text-on-primary-container">
             Blog ForRent
           </span>
-          <h1 className="font-display-lg-mobile text-display-lg-mobile leading-tight text-primary md:font-display-lg md:text-6xl">
+          <h1 className="font-display-lg-mobile text-display-lg-mobile leading-tight text-on-surface md:font-display-lg md:text-6xl">
             {post.title}
           </h1>
           <p className="mt-6 max-w-3xl font-body-lg text-body-lg leading-relaxed text-secondary">
@@ -118,9 +115,9 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
         <div className="mx-auto grid max-w-container-max gap-12 px-margin-mobile pb-24 md:grid-cols-12 md:px-margin-desktop">
           <aside className="md:col-span-3">
             <div className="sticky top-28 border-l border-primary pl-5">
-              <p className="font-label-caps text-label-caps uppercase tracking-widest text-secondary">Bài viết</p>
+              <p className="font-label-caps text-label-caps uppercase text-secondary">Gợi ý thực tế</p>
               <p className="mt-3 text-sm leading-6 text-on-surface-variant">
-                Nội dung được đồng bộ trực tiếp từ backend Django, chỉ hiển thị khi bài viết đang được publish.
+                Kiểm tra giá, cọc, phí và tình trạng phòng trực tiếp trước khi thanh toán hoặc ký thuê.
               </p>
             </div>
           </aside>
@@ -139,8 +136,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
 
       {relatedPosts.length ? <RelatedPosts posts={relatedPosts} /> : null}
 
-      <SiteFooter />
-    </main>
+    </PublicShell>
   );
 }
 
@@ -150,8 +146,8 @@ function RelatedPosts({ posts }: Readonly<{ posts: ApiBlog[] }>) {
       <div className="mx-auto max-w-container-max">
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="mb-2 font-label-caps text-label-caps uppercase tracking-widest text-secondary">Đọc tiếp</p>
-            <h2 className="font-headline-md text-headline-md text-primary">Bài viết liên quan</h2>
+            <p className="mb-2 font-label-caps text-label-caps uppercase text-secondary">Đọc tiếp</p>
+            <h2 className="font-headline-md text-headline-md text-on-surface">Bài viết liên quan</h2>
           </div>
           <Link className="inline-flex items-center gap-2 font-button text-button text-primary transition hover:text-gold" href="/blogs">
             Xem tất cả
@@ -183,7 +179,7 @@ function RelatedPosts({ posts }: Readonly<{ posts: ApiBlog[] }>) {
                     <ImagePlaceholder label="Chưa có ảnh bài viết" />
                   )}
                 </div>
-                <h3 className="line-clamp-2 font-headline-sm text-headline-sm text-primary">{post.title}</h3>
+                <h3 className="line-clamp-2 font-headline-sm text-headline-sm text-on-surface">{post.title}</h3>
                 <p className="mt-3 line-clamp-2 text-sm leading-6 text-secondary">{post.short_description}</p>
               </Link>
             );

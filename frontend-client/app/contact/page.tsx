@@ -3,8 +3,7 @@ import { CalendarCheck, Clock3, Mail, MapPin, Phone, ReceiptText } from "lucide-
 import type { ReactNode } from "react";
 
 import { ContactForm } from "@/components/contact-form";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteNav } from "@/components/site-nav";
+import { PublicShell } from "@/components/public-shell";
 import { CONTACT_EMAIL, CONTACT_PHONE, LEGAL_ADDRESS } from "@/lib/site-config";
 
 export const metadata: Metadata = {
@@ -36,12 +35,10 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
   const roomTitle = firstParam(params.room_title);
 
   return (
-    <main className="flex min-h-[100dvh] flex-col bg-surface text-on-surface antialiased">
-      <SiteNav active="contact" />
-
+    <PublicShell active="contact" className="antialiased">
       <section className="mx-auto w-full max-w-container-max flex-grow px-margin-mobile pb-24 pt-36 md:px-margin-desktop md:pb-margin-desktop">
         <div className="scroll-reveal mx-auto mb-20 max-w-2xl text-center md:mb-24">
-          <h1 className="mb-6 font-display-lg-mobile text-display-lg-mobile text-primary md:font-display-lg md:text-display-lg">
+          <h1 className="mb-6 font-display-lg-mobile text-display-lg-mobile text-on-surface md:font-display-lg md:text-display-lg">
             Gửi nhu cầu, nhận phòng phù hợp
           </h1>
           <p className="font-body-lg text-body-lg text-on-surface-variant">
@@ -52,7 +49,7 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
         <div className="grid grid-cols-1 gap-gutter md:grid-cols-12">
           <div className="col-span-1 space-y-8 md:col-span-5 md:space-y-16">
             <div className="rounded border border-outline-variant/20 bg-surface-container-lowest p-8 shadow-soft">
-              <h2 className="mb-6 border-b border-outline-variant/10 pb-4 font-headline-sm text-headline-sm text-primary">
+              <h2 className="mb-6 border-b border-outline-variant/10 pb-4 font-headline-sm text-headline-sm text-on-surface">
                 Thông tin liên hệ
               </h2>
               <ul className="space-y-6">
@@ -70,7 +67,7 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
             </div>
 
             <div className="rounded border border-outline-variant/20 bg-surface-container-lowest p-8 shadow-soft">
-              <h2 className="mb-6 border-b border-outline-variant/10 pb-4 font-headline-sm text-headline-sm text-primary">
+              <h2 className="mb-6 border-b border-outline-variant/10 pb-4 font-headline-sm text-headline-sm text-on-surface">
                 Khu vực hỗ trợ
               </h2>
               <div className="space-y-8">
@@ -78,7 +75,7 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
                   <div className="flex items-start gap-4" key={office.city}>
                     <MapPin className="mt-1 flex-shrink-0 text-on-surface-variant" size={22} strokeWidth={1.8} />
                     <div>
-                      <h3 className="mb-2 font-button text-button text-primary">{office.city}</h3>
+                      <h3 className="mb-2 font-button text-button text-on-surface">{office.city}</h3>
                       <p className="font-body-md text-body-md text-on-surface-variant">{office.address}</p>
                     </div>
                   </div>
@@ -87,7 +84,7 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
             </div>
 
             <div className="rounded border border-outline-variant/20 bg-surface-container-lowest p-8 shadow-soft">
-              <h2 className="mb-6 border-b border-outline-variant/10 pb-4 font-headline-sm text-headline-sm text-primary">
+              <h2 className="mb-6 border-b border-outline-variant/10 pb-4 font-headline-sm text-headline-sm text-on-surface">
                 Sau khi gửi yêu cầu
               </h2>
               <ol className="space-y-5">
@@ -106,15 +103,14 @@ export default async function ContactPage({ searchParams }: ContactPageProps) {
 
           <div className="col-span-1 md:col-span-7 md:col-start-7">
             <div className="rounded border border-outline-variant/20 bg-surface-container-lowest p-8 shadow-soft md:p-10 lg:p-12">
-              <h2 className="mb-8 font-headline-sm text-headline-sm text-primary">Gửi yêu cầu tư vấn</h2>
+              <h2 className="mb-8 font-headline-sm text-headline-sm text-on-surface">Gửi yêu cầu tư vấn</h2>
               <ContactForm roomId={Number.isInteger(roomId) && roomId > 0 ? roomId : null} roomTitle={roomTitle} />
             </div>
           </div>
         </div>
       </section>
 
-      <SiteFooter />
-    </main>
+    </PublicShell>
   );
 }
 
@@ -151,7 +147,7 @@ function ContactStep({
     <li className="flex gap-4">
       <span className="mt-1 text-secondary">{icon}</span>
       <div>
-        <h3 className="mb-1 font-label-caps text-label-caps text-primary">{title}</h3>
+        <h3 className="mb-1 font-label-caps text-label-caps text-on-surface">{title}</h3>
         <p className="font-body-md text-body-md leading-6 text-on-surface-variant">{children}</p>
       </div>
     </li>

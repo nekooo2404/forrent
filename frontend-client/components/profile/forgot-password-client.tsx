@@ -111,7 +111,7 @@ export function ForgotPasswordClient() {
   return (
     <div className="w-full max-w-md rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-8 shadow-elevated md:p-10">
       <div className="mb-10 text-center">
-        <h1 className="mb-3 font-headline-md text-headline-md text-primary">Quên mật khẩu</h1>
+        <h1 className="mb-3 font-headline-md text-headline-md text-on-surface">Quên mật khẩu</h1>
         <p className="font-body-md text-body-md text-on-surface-variant">
           Nhập email để nhận OTP, sau đó đặt lại mật khẩu.
         </p>

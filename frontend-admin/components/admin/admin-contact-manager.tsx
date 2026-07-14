@@ -156,10 +156,10 @@ export function AdminContactManager() {
         token,
         { method: "POST" },
       );
-      setMessage(`Đã chuyển liên hệ thành lead #${response.viewing_request_id}.`);
+      setMessage(`Đã chuyển liên hệ thành yêu cầu #${response.viewing_request_id}.`);
       await loadContacts();
     } catch (convertError) {
-      setError(adminMessageFrom(convertError, "Không thể chuyển liên hệ thành lead."));
+      setError(adminMessageFrom(convertError, "Không thể chuyển liên hệ thành yêu cầu."));
     } finally {
       setIsSaving(false);
     }
@@ -216,9 +216,9 @@ export function AdminContactManager() {
             Làm mới
           </button>
         }
-        eyebrow="Customer Inbox"
+        eyebrow="Tin nhắn khách hàng"
         subtitle="Theo dõi tin nhắn từ trang `/contact`, đổi trạng thái xử lý và dọn dữ liệu cũ trực tiếp qua backend Django."
-        title="Contact Inbox"
+        title="Hộp thư liên hệ"
       />
 
       <div className="mb-5 grid gap-3 md:grid-cols-3">
@@ -248,7 +248,7 @@ export function AdminContactManager() {
                   <input
                     className={`${adminInputClass} pl-9`}
                     onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Tìm tên, phone, email, nội dung..."
+                    placeholder="Tìm tên, số điện thoại, email, nội dung..."
                     type="search"
                     value={search}
                   />
@@ -348,7 +348,7 @@ export function AdminContactManager() {
               </div>
 
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Nội dung</p>
+                <p className="mb-2 text-xs font-semibold uppercase text-secondary">Nội dung</p>
                 <div className="rounded-lg border border-primary/10 bg-surface-container-lowest p-5 text-sm leading-7 text-primary">
                   {selectedContact.message}
                 </div>
@@ -356,7 +356,7 @@ export function AdminContactManager() {
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <label>
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Phòng quan tâm</span>
+                  <span className="mb-2 block text-xs font-semibold uppercase text-secondary">Phòng quan tâm</span>
                   <select
                     className={adminSelectClass}
                     disabled={isSaving || Boolean(selectedContact.converted_viewing_request_id)}
@@ -370,7 +370,7 @@ export function AdminContactManager() {
                   </select>
                 </label>
                 <label>
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Trạng thái</span>
+                  <span className="mb-2 block text-xs font-semibold uppercase text-secondary">Trạng thái</span>
                   <select
                     className={adminSelectClass}
                     disabled={isSaving}
@@ -396,7 +396,7 @@ export function AdminContactManager() {
               </div>
 
               <label className="block">
-                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Ghi chú admin</span>
+                <span className="mb-2 block text-xs font-semibold uppercase text-secondary">Ghi chú admin</span>
                 <textarea
                   className={`${adminInputClass} min-h-28`}
                   disabled={isSaving}
@@ -414,18 +414,18 @@ export function AdminContactManager() {
                     className={adminButtonPrimary}
                     href={`/admin/leads/${selectedContact.converted_viewing_request_id}`}
                   >
-                    Mở lead #{selectedContact.converted_viewing_request_id}
+                    Mở yêu cầu #{selectedContact.converted_viewing_request_id}
                     <ArrowUpRight size={16} strokeWidth={1.8} />
                   </Link>
                 ) : (
                   <button className={adminButtonPrimary} disabled={isSaving || !roomDraft || !selectedContact.email} onClick={convertToLead} type="button">
-                    Chuyển thành lead
+                    Chuyển thành yêu cầu
                     <ArrowUpRight size={16} strokeWidth={1.8} />
                   </button>
                 )}
                 {!selectedContact.email && !selectedContact.converted_viewing_request_id ? (
                   <p className="sm:col-span-2 text-xs leading-5 text-error">
-                    Liên hệ cần có email thật trước khi chuyển thành lead để người thuê có thể dùng tài khoản sau này.
+                    Liên hệ cần có email hợp lệ trước khi chuyển thành yêu cầu để người thuê có thể dùng tài khoản sau này.
                   </p>
                 ) : null}
               </div>
@@ -460,7 +460,7 @@ export function AdminContactManager() {
 function MiniMetric({ label, value }: Readonly<{ label: string; value: number }>) {
   return (
     <div className="rounded-xl border border-primary/10 bg-surface-container-lowest/90 p-4 shadow-soft">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-secondary">{label}</p>
+      <p className="text-xs font-semibold uppercase text-secondary">{label}</p>
       <p className="mt-2 text-2xl font-semibold tabular-nums text-primary">{value}</p>
     </div>
   );

@@ -19,7 +19,7 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const baseStyles = "inline-flex items-center justify-center gap-2 rounded-xl font-button text-button uppercase tracking-widest transition duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-70";
+  const baseStyles = "inline-flex items-center justify-center gap-2 rounded-xl font-button text-button uppercase transition duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-70";
 
   const variantStyles = {
     primary: "bg-primary text-on-primary hover:bg-surface-tint",

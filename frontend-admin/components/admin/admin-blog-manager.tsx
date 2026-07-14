@@ -225,7 +225,7 @@ export function AdminBlogManager() {
         }
         eyebrow="Content Operations"
         subtitle="Quản trị bài viết public `/blogs` và `/blogs/[slug]`. Dữ liệu ghi trực tiếp qua API admin Django, có trạng thái nháp, publish và ẩn."
-        title="Blog Manager"
+        title="Quản lý bài viết"
       />
 
       <div className="mb-5 grid gap-3 md:grid-cols-3">
@@ -274,7 +274,7 @@ export function AdminBlogManager() {
         ) : blogs.length ? (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-primary/10 text-xs uppercase tracking-[0.16em] text-secondary">
+              <thead className="border-b border-primary/10 text-xs uppercase text-secondary">
                 <tr>
                   <th className="py-3 pr-5 font-semibold">Bài viết</th>
                   <th className="py-3 pr-5 font-semibold">Trạng thái</th>
@@ -372,7 +372,7 @@ export function AdminBlogManager() {
 function MiniMetric({ label, value }: Readonly<{ label: string; value: number }>) {
   return (
     <div className="rounded-xl border border-primary/10 bg-surface-container-lowest/90 p-4 shadow-soft">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-secondary">{label}</p>
+      <p className="text-xs font-semibold uppercase text-secondary">{label}</p>
       <p className="mt-2 text-2xl font-semibold tabular-nums text-primary">{value}</p>
     </div>
   );
@@ -398,8 +398,8 @@ function BlogFormModal({
       <section className="admin-modal-panel max-h-[94dvh] w-full max-w-4xl overflow-y-auto rounded-t-2xl bg-surface shadow-elevated md:rounded-2xl">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-primary/10 bg-surface/95 px-5 py-4 backdrop-blur">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-secondary">{isEditing ? "Edit article" : "New article"}</p>
-            <h2 className="font-headline-sm text-2xl text-primary">{isEditing ? "Cập nhật bài viết" : "Tạo bài viết mới"}</h2>
+            <p className="text-xs font-semibold uppercase text-secondary">{isEditing ? "Sửa bài viết" : "Bài viết mới"}</p>
+            <h2 className="font-headline-sm text-2xl text-on-surface">{isEditing ? "Cập nhật bài viết" : "Tạo bài viết mới"}</h2>
           </div>
           <button className="rounded-md p-2 text-secondary transition hover:bg-surface-container hover:text-primary" onClick={onClose} type="button">
             <X size={22} strokeWidth={1.8} />
@@ -476,7 +476,7 @@ function BlogFormModal({
 function Field({ children, label }: Readonly<{ children: ReactNode; label: string }>) {
   return (
     <label className="block">
-      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">{label}</span>
+      <span className="mb-2 block text-xs font-semibold uppercase text-secondary">{label}</span>
       {children}
     </label>
   );

@@ -35,7 +35,7 @@ import {
 
 const leadStatuses = [
   { label: "Tất cả", value: "" },
-  { label: "Lead mới", value: "NEW" },
+  { label: "Yêu cầu mới", value: "NEW" },
   { label: "Đã liên hệ", value: "CONTACTED" },
   { label: "Đã lên lịch", value: "SCHEDULED" },
   { label: "Đã xem phòng", value: "VIEWED" },
@@ -99,7 +99,7 @@ export function AdminLeadManager() {
         if (refreshed) setSelectedLead(refreshed);
       }
     } catch (loadError) {
-      setError(adminMessageFrom(loadError, "Không thể tải danh sách lead."));
+      setError(adminMessageFrom(loadError, "Không thể tải danh sách yêu cầu."));
     } finally {
       setIsLoading(false);
     }
@@ -183,9 +183,9 @@ export function AdminLeadManager() {
       });
       setSelectedLead(updated);
       setLeads((current) => current.map((lead) => (lead.id === updated.id ? updated : lead)));
-      setMessage("Lead đã được cập nhật.");
+      setMessage("Yêu cầu đã được cập nhật.");
     } catch (updateError) {
-      setError(adminMessageFrom(updateError, "Không thể cập nhật lead."));
+      setError(adminMessageFrom(updateError, "Không thể cập nhật yêu cầu."));
     } finally {
       setIsSaving(false);
     }
@@ -205,10 +205,10 @@ export function AdminLeadManager() {
         body: JSON.stringify({ ids: selectedIds, status: bulkStatus }),
         method: "POST",
       });
-      setMessage(`Đã cập nhật ${selectedIds.length} lead.`);
+      setMessage(`Đã cập nhật ${selectedIds.length} yêu cầu.`);
       await loadLeads();
     } catch (bulkError) {
-      setError(adminMessageFrom(bulkError, "Không thể cập nhật hàng loạt lead."));
+      setError(adminMessageFrom(bulkError, "Không thể cập nhật hàng loạt yêu cầu."));
     } finally {
       setIsSaving(false);
     }
@@ -224,7 +224,7 @@ export function AdminLeadManager() {
       await adminRequest<Record<string, unknown>>(`viewing-requests/${selectedLead.id}/confirm-moved-in`, token, {
         method: "POST",
       });
-      setMessage("Lead đã được xác nhận chuyển vào và hoa hồng đã được ghi nhận.");
+      setMessage("Khách đã được xác nhận chuyển vào và hoa hồng đã được ghi nhận.");
       await loadLeads();
     } catch (confirmError) {
       setError(adminMessageFrom(confirmError, "Không thể xác nhận chuyển vào."));
@@ -271,9 +271,9 @@ export function AdminLeadManager() {
             Làm mới
           </button>
         }
-        eyebrow="Lead operations"
+        eyebrow="Vận hành yêu cầu"
         subtitle="Theo dõi yêu cầu xem phòng, cập nhật trạng thái xử lý và xác nhận chuyển vào để backend tự ghi nhận hoa hồng."
-        title="Quản lý Lead xem phòng"
+        title="Quản lý yêu cầu xem phòng"
       />
 
       <div className="mb-5 space-y-3">
@@ -282,7 +282,7 @@ export function AdminLeadManager() {
 
       <section className="mb-6 grid gap-4 md:grid-cols-4">
         {[
-          ["NEW", "Lead mới"],
+          ["NEW", "Yêu cầu mới"],
           ["CONTACTED", "Đã liên hệ"],
           ["SCHEDULED", "Đã lên lịch"],
           ["VIEWED", "Đã xem"],
@@ -367,14 +367,14 @@ export function AdminLeadManager() {
               ) : null}
             </>
           }
-          title={`Danh sách lead (${count})`}
+          title={`Danh sách yêu cầu (${count})`}
         >
           {isLoading ? (
             <AdminTableSkeleton />
           ) : leads.length ? (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-primary/10 text-xs uppercase tracking-[0.16em] text-secondary">
+                <thead className="border-b border-primary/10 text-xs uppercase text-secondary">
                   <tr>
                     <th className="py-3 pr-3">
                       <span className="sr-only">Chọn</span>
@@ -435,7 +435,7 @@ export function AdminLeadManager() {
               </table>
             </div>
           ) : (
-            <AdminEmptyState description="Không có lead phù hợp với bộ lọc hiện tại." title="Chưa có lead" />
+            <AdminEmptyState description="Không có yêu cầu phù hợp với bộ lọc hiện tại." title="Chưa có yêu cầu" />
           )}
           {!isLoading && count > pageSize ? (
             <AdminPagination count={count} onPageChange={(nextPage) => loadLeads(search, status, nextPage)} page={page} pageSize={pageSize} />
@@ -446,8 +446,8 @@ export function AdminLeadManager() {
           {selectedLead ? (
             <form className="space-y-5" onSubmit={handleUpdateLead}>
               <div className="rounded-lg bg-surface-container-low p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-secondary">Lead #{selectedLead.id}</p>
-                <h3 className="mt-1 font-headline-sm text-2xl text-primary">{selectedLead.full_name}</h3>
+                <p className="text-xs uppercase text-secondary">Yêu cầu #{selectedLead.id}</p>
+                <h3 className="mt-1 font-headline-sm text-2xl text-on-surface">{selectedLead.full_name}</h3>
                 <p className="mt-2 text-sm text-secondary">{selectedLead.email} · {selectedLead.phone}</p>
               </div>
 
@@ -464,7 +464,7 @@ export function AdminLeadManager() {
               </div>
 
               <label className="block">
-                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Trạng thái</span>
+                <span className="mb-2 block text-xs font-semibold uppercase text-secondary">Trạng thái</span>
                 <select className={adminSelectClass} onChange={(event) => setStatusDraft(event.target.value)} value={statusDraft}>
                   {selectedLead.status === "CONVERTED" ? <option value="CONVERTED">Đã chốt thuê</option> : null}
                   {selectedLeadStatusOptions.map((item) => (
@@ -475,7 +475,7 @@ export function AdminLeadManager() {
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Nhân viên phụ trách</span>
+                  <span className="mb-2 block text-xs font-semibold uppercase text-secondary">Nhân viên phụ trách</span>
                   <select className={adminSelectClass} onChange={(event) => setAssignedToDraft(event.target.value)} value={assignedToDraft}>
                     <option value="">Chưa gán</option>
                     {salers.map((saler) => (
@@ -484,13 +484,13 @@ export function AdminLeadManager() {
                   </select>
                 </label>
                 <label className="block">
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Hẹn follow-up</span>
+                  <span className="mb-2 block text-xs font-semibold uppercase text-secondary">Hẹn follow-up</span>
                   <input className={adminInputClass} onChange={(event) => setFollowUpDraft(event.target.value)} type="datetime-local" value={followUpDraft} />
                 </label>
               </div>
 
               <div className="rounded-lg border border-primary/10 bg-surface-container-lowest p-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Lịch xem đã chốt</p>
+                <p className="mb-3 text-xs font-semibold uppercase text-secondary">Lịch xem đã chốt</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <input className={adminInputClass} onChange={(event) => setAppointmentDateDraft(event.target.value)} type="date" value={appointmentDateDraft} />
                   <select className={adminSelectClass} onChange={(event) => setAppointmentSlotDraft(event.target.value)} value={appointmentSlotDraft}>
@@ -511,7 +511,7 @@ export function AdminLeadManager() {
               </div>
 
               <label className="block">
-                <span className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-secondary">
+                <span className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-secondary">
                   <MessageSquareText size={14} strokeWidth={1.8} />
                   Ghi chú tư vấn
                 </span>
@@ -534,7 +534,7 @@ export function AdminLeadManager() {
               </div>
             </form>
           ) : (
-            <AdminEmptyState description="Chọn một lead trong bảng để cập nhật trạng thái, ghi chú hoặc xác nhận chuyển vào." title="Chưa chọn lead" />
+            <AdminEmptyState description="Chọn một yêu cầu trong bảng để cập nhật trạng thái, ghi chú hoặc xác nhận chuyển vào." title="Chưa chọn yêu cầu" />
           )}
         </AdminPanel>
       </section>

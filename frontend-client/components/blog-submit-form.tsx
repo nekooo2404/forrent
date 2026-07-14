@@ -88,7 +88,7 @@ export function BlogSubmitForm() {
       <details className="group rounded-lg border border-outline-variant/15 bg-surface-container-lowest shadow-soft">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-6 md:p-8">
           <div>
-            <h2 className="font-headline-sm text-headline-sm text-primary">Đăng bài chia sẻ</h2>
+            <h2 className="font-headline-sm text-headline-sm text-on-surface">Đăng bài chia sẻ</h2>
             <p className="mt-2 font-body-md text-body-md text-on-surface-variant">Người thuê có thể gửi kinh nghiệm, bài viết sẽ được duyệt trước khi hiển thị.</p>
           </div>
           <ChevronDown className="shrink-0 text-outline transition-transform group-open:rotate-180" size={22} strokeWidth={1.8} />

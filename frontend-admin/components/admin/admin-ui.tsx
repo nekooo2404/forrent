@@ -19,8 +19,8 @@ export function AdminPageHeader({
   return (
     <section className="mb-6 flex flex-col gap-4 border-b border-primary/10 pb-6 lg:flex-row lg:items-end lg:justify-between">
       <div className="max-w-3xl">
-        {eyebrow ? <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-secondary">{eyebrow}</p> : null}
-        <h1 className="font-headline-md text-3xl leading-tight text-primary md:text-[40px]">{title}</h1>
+        {eyebrow ? <p className="mb-2 text-xs font-semibold uppercase text-secondary">{eyebrow}</p> : null}
+        <h1 className="font-headline-md text-3xl leading-tight text-on-surface md:text-[40px]">{title}</h1>
         {subtitle ? <p className="mt-3 max-w-2xl text-sm leading-6 text-secondary md:text-base">{subtitle}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-3">{actions}</div> : null}
@@ -43,7 +43,7 @@ export function AdminPanel({
     <section className={`admin-spotlight rounded-lg border border-primary/10 bg-surface-container-lowest p-5 shadow-soft md:p-6 ${className}`}>
       {title || toolbar ? (
         <div className="mb-5 flex flex-col gap-3 border-b border-primary/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
-          {title ? <h2 className="font-headline-sm text-xl text-primary md:text-2xl">{title}</h2> : <span />}
+          {title ? <h2 className="font-headline-sm text-xl text-on-surface md:text-2xl">{title}</h2> : <span />}
           {toolbar ? <div className="flex flex-wrap items-center gap-2">{toolbar}</div> : null}
         </div>
       ) : null}
@@ -69,7 +69,7 @@ export function AdminStatCard({
         <p className="text-sm font-medium text-secondary">{label}</p>
         <span className="grid size-10 place-items-center rounded-md bg-surface-container text-primary">{icon}</span>
       </div>
-      <div className="font-body-md text-3xl font-semibold tabular-nums tracking-normal text-primary">{value}</div>
+      <div className="font-body-md text-3xl font-semibold tabular-nums text-on-surface">{value}</div>
       {caption ? <p className="mt-2 text-xs leading-5 text-secondary">{caption}</p> : null}
     </article>
   );
@@ -152,7 +152,7 @@ export function AdminEmptyState({
   return (
     <div className="rounded-lg border border-dashed border-primary/20 bg-surface-container-low/60 p-8 text-center">
       {icon && <div className="mb-4 flex justify-center text-secondary opacity-50">{icon}</div>}
-      <h3 className="font-headline-sm text-xl text-primary">{title}</h3>
+      <h3 className="font-headline-sm text-xl text-on-surface">{title}</h3>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-secondary">{description}</p>
       {action ? <div className="mt-5 flex justify-center">{action}</div> : null}
     </div>

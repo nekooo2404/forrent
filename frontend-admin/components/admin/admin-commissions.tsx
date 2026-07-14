@@ -95,7 +95,7 @@ export function AdminCommissions() {
           </button>
         }
         eyebrow="Commission control"
-        subtitle="Tổng hợp hoa hồng dự kiến và đã ghi nhận từ lead xem phòng. Backend chỉ ghi nhận hoa hồng khi lead được xác nhận đã chuyển vào."
+        subtitle="Tổng hợp hoa hồng dự kiến và đã ghi nhận từ các yêu cầu xem phòng. Hoa hồng chỉ được ghi nhận khi khách đã chuyển vào."
         title="Hoa hồng"
       />
 
@@ -105,25 +105,25 @@ export function AdminCommissions() {
 
       <section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <AdminStatCard
-          caption="Tổng hoa hồng từ các lead chưa bị hủy"
+          caption="Tổng hoa hồng từ các yêu cầu chưa bị hủy"
           icon={<WalletCards size={20} strokeWidth={1.8} />}
           label="Dự kiến"
           value={formatAdminVnd(summary?.total_estimated_commission ?? 0)}
         />
         <AdminStatCard
-          caption="Đã ghi nhận khi lead chuyển vào"
+          caption="Đã ghi nhận khi khách chuyển vào"
           icon={<CircleDollarSign size={20} strokeWidth={1.8} />}
           label="Đã ghi nhận"
           value={formatAdminVnd(summary?.total_received_commission ?? 0)}
         />
         <AdminStatCard
-          caption="Lead đã được xác nhận chuyển vào"
+          caption="Khách đã được xác nhận chuyển vào"
           icon={<UsersRound size={20} strokeWidth={1.8} />}
           label="Đã chuyển vào"
           value={summary?.total_moved_in_leads ?? 0}
         />
         <AdminStatCard
-          caption="Lead đang trong pipeline xử lý"
+          caption="Yêu cầu đang được xử lý"
           icon={<TrendingUp size={20} strokeWidth={1.8} />}
           label="Đang xử lý"
           value={summary?.total_pending_leads ?? 0}
@@ -135,9 +135,9 @@ export function AdminCommissions() {
           {payouts.length ? (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-primary/10 text-xs uppercase tracking-[0.16em] text-secondary">
+                <thead className="border-b border-primary/10 text-xs uppercase text-secondary">
                   <tr>
-                    <th className="py-3 pr-5 font-semibold">Lead</th>
+                    <th className="py-3 pr-5 font-semibold">Yêu cầu</th>
                     <th className="py-3 pr-5 font-semibold">Phòng</th>
                     <th className="py-3 pr-5 font-semibold">Số tiền</th>
                     <th className="py-3 pr-5 font-semibold">Trạng thái</th>
@@ -149,7 +149,7 @@ export function AdminCommissions() {
                     <tr className="transition hover:bg-surface-container-low/70" key={payout.id}>
                       <td className="py-4 pr-5">
                         <p className="font-semibold text-primary">{payout.tenant_name}</p>
-                        <p className="mt-1 text-xs text-secondary">Lead #{payout.viewing_request}</p>
+                        <p className="mt-1 text-xs text-secondary">Yêu cầu #{payout.viewing_request}</p>
                       </td>
                       <td className="py-4 pr-5 text-secondary">{payout.room_title}</td>
                       <td className="py-4 pr-5 tabular-nums text-primary">{formatAdminVnd(payout.amount)}</td>
@@ -186,7 +186,7 @@ export function AdminCommissions() {
               </table>
             </div>
           ) : (
-            <AdminEmptyState description="Khi lead được xác nhận chuyển vào, payout PENDING sẽ xuất hiện tại đây." title="Chưa có payout" />
+            <AdminEmptyState description="Khi khách được xác nhận chuyển vào, khoản hoa hồng chờ duyệt sẽ xuất hiện tại đây." title="Chưa có khoản hoa hồng" />
           )}
         </AdminPanel>
 
@@ -194,10 +194,10 @@ export function AdminCommissions() {
           {summary?.by_room?.length ? (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-primary/10 text-xs uppercase tracking-[0.16em] text-secondary">
+                <thead className="border-b border-primary/10 text-xs uppercase text-secondary">
                   <tr>
                     <th className="py-3 pr-5 font-semibold">Phòng</th>
-                    <th className="py-3 pr-5 font-semibold">Lead</th>
+                    <th className="py-3 pr-5 font-semibold">Yêu cầu</th>
                     <th className="py-3 pr-5 font-semibold">Đã chuyển vào</th>
                     <th className="py-3 pr-5 font-semibold">Dự kiến</th>
                     <th className="py-3 text-right font-semibold">Đã ghi nhận</th>
@@ -217,7 +217,7 @@ export function AdminCommissions() {
               </table>
             </div>
           ) : (
-            <AdminEmptyState description="Khi có lead xem phòng, hệ thống sẽ bắt đầu tổng hợp hoa hồng theo từng phòng." title="Chưa có dữ liệu theo phòng" />
+            <AdminEmptyState description="Khi có yêu cầu xem phòng, hệ thống sẽ bắt đầu tổng hợp hoa hồng theo từng phòng." title="Chưa có dữ liệu theo phòng" />
           )}
         </AdminPanel>
 
@@ -228,7 +228,7 @@ export function AdminCommissions() {
                 <div className="rounded-lg bg-surface-container-low p-4" key={item.month ?? "unknown"}>
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <p className="font-semibold text-primary">{formatAdminDateOnly(item.month)}</p>
-                    <span className="rounded-md bg-surface-container-lowest px-2.5 py-1 text-xs font-semibold text-secondary">{item.lead_count} lead</span>
+                    <span className="rounded-md bg-surface-container-lowest px-2.5 py-1 text-xs font-semibold text-secondary">{item.lead_count} yêu cầu</span>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Metric label="Dự kiến" value={formatAdminVnd(item.total_estimated_commission ?? 0)} />
@@ -238,7 +238,7 @@ export function AdminCommissions() {
               ))}
             </div>
           ) : (
-            <AdminEmptyState description="Báo cáo theo tháng sẽ xuất hiện sau khi có lead đầu tiên." title="Chưa có dữ liệu theo tháng" />
+            <AdminEmptyState description="Báo cáo theo tháng sẽ xuất hiện sau khi có yêu cầu đầu tiên." title="Chưa có dữ liệu theo tháng" />
           )}
         </AdminPanel>
       </section>

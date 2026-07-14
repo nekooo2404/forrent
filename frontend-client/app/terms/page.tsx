@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
-import { SiteFooter } from "@/components/site-footer";
-import { SiteNav } from "@/components/site-nav";
+import { PublicShell } from "@/components/public-shell";
 import { CONTACT_EMAIL, LEGAL_ADDRESS, LEGAL_NAME } from "@/lib/site-config";
 
 export const metadata: Metadata = {
@@ -13,11 +12,10 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <main className="flex min-h-[100dvh] flex-col bg-surface text-on-surface">
-      <SiteNav />
+    <PublicShell>
       <article className="mx-auto w-full max-w-4xl flex-grow px-margin-mobile pb-24 pt-32 md:px-margin-desktop md:pt-40">
-        <p className="font-label-caps text-label-caps uppercase tracking-widest text-secondary">Pháp lý</p>
-        <h1 className="mt-3 font-headline-md text-headline-md text-primary">Điều khoản sử dụng</h1>
+        <p className="font-label-caps text-label-caps uppercase text-secondary">Pháp lý</p>
+        <h1 className="mt-3 font-headline-md text-headline-md text-on-surface">Điều khoản sử dụng</h1>
         <p className="mt-4 text-sm text-on-surface-variant">Cập nhật ngày 12/07/2026</p>
 
         <div className="mt-10 space-y-10 text-base leading-7 text-on-surface-variant">
@@ -41,8 +39,7 @@ export default function TermsPage() {
           </LegalSection>
         </div>
       </article>
-      <SiteFooter />
-    </main>
+    </PublicShell>
   );
 }
 

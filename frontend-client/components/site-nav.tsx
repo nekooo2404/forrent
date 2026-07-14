@@ -9,7 +9,7 @@ import { ProfileMenu } from "@/components/profile-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 
-type NavKey = "home" | "rooms" | "blogs" | "contact";
+export type NavKey = "home" | "rooms" | "blogs" | "contact";
 
 const navItems: Array<{ key: NavKey; label: string; href: string }> = [
   { key: "home", label: "Trang chủ", href: "/homepage" },
@@ -70,8 +70,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
   }, [isMobileMenuOpen]);
 
   return (
-    <>
-      <nav aria-label="Điều hướng chính" data-ready={mounted ? "true" : "false"} data-testid="site-nav" className={`fixed top-0 z-50 w-full transition-colors duration-200 ${
+    <nav aria-label="Điều hướng chính" data-ready={mounted ? "true" : "false"} data-testid="site-nav" className={`fixed top-0 z-50 w-full transition-colors duration-200 ${
         scrolled
           ? "site-navbar-scrolled"
           : "site-navbar"
@@ -105,7 +104,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
               href={item.href}
               key={item.key}
             >
-              <span className="relative z-10 font-body-md text-sm font-semibold tracking-wide">
+              <span className="relative z-10 font-body-md text-sm font-semibold">
                 {item.label}
               </span>
             </Link>
@@ -200,8 +199,6 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
             </div>
           </div>
       ) : null}
-      </nav>
-      <div className="h-0 scroll-mt-20" id="main-content" tabIndex={-1} />
-    </>
+    </nav>
   );
 }

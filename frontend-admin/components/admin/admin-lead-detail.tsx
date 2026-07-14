@@ -31,7 +31,7 @@ import {
 } from "./admin-ui";
 
 const statuses = [
-  { label: "Lead mới", value: "NEW" },
+  { label: "Yêu cầu mới", value: "NEW" },
   { label: "Đã liên hệ", value: "CONTACTED" },
   { label: "Đã lên lịch", value: "SCHEDULED" },
   { label: "Đã xem phòng", value: "VIEWED" },
@@ -68,7 +68,7 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
       setAppointmentDate(data.appointment_date || data.preferred_viewing_date || "");
       setAppointmentTimeSlot(data.appointment_time_slot || data.preferred_viewing_time_slot || "");
     } catch (loadError) {
-      setError(adminMessageFrom(loadError, "Không thể tải chi tiết lead."));
+      setError(adminMessageFrom(loadError, "Không thể tải chi tiết yêu cầu."));
     } finally {
       setIsLoading(false);
     }
@@ -99,9 +99,9 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
         method: "PATCH",
       });
       setLead(updated);
-      setMessage("Lead đã được cập nhật.");
+      setMessage("Yêu cầu đã được cập nhật.");
     } catch (updateError) {
-      setError(adminMessageFrom(updateError, "Không thể cập nhật lead."));
+      setError(adminMessageFrom(updateError, "Không thể cập nhật yêu cầu."));
     } finally {
       setIsSaving(false);
     }
@@ -172,7 +172,7 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
   }
 
   if (isLoading) {
-    return <AdminLoadingState label="Đang tải chi tiết lead..." />;
+    return <AdminLoadingState label="Đang tải chi tiết yêu cầu..." />;
   }
 
   if (!lead) {
@@ -181,8 +181,8 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
         <AdminInlineMessage error={error} />
         <AdminEmptyState
           action={<Link className={adminButtonSecondary} href="/admin/leads">Quay lại danh sách</Link>}
-          description="Lead này có thể đã bị xóa hoặc tài khoản không có quyền xem."
-          title="Không tìm thấy lead"
+          description="Yêu cầu này có thể đã bị xóa hoặc tài khoản không có quyền xem."
+          title="Không tìm thấy yêu cầu"
         />
       </>
     );
@@ -194,10 +194,10 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
         actions={
           <Link className={adminButtonSecondary} href="/admin/leads">
             <ArrowLeft size={16} strokeWidth={1.8} />
-            Danh sách lead
+            Danh sách yêu cầu
           </Link>
         }
-        eyebrow={`Lead #${lead.id}`}
+        eyebrow={`Yêu cầu #${lead.id}`}
         subtitle={`${lead.room_title} · ${lead.ward_name}, ${lead.city_name}`}
         title={lead.full_name}
       />
@@ -214,7 +214,7 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
                 <UserRound size={28} strokeWidth={1.8} />
               </span>
               <div className="min-w-0">
-                <h2 className="font-headline-sm text-2xl text-primary">{lead.full_name}</h2>
+                <h2 className="font-headline-sm text-2xl text-on-surface">{lead.full_name}</h2>
                 <div className="mt-4 space-y-3 text-sm text-secondary">
                   <ContactLine icon={<Phone size={16} strokeWidth={1.8} />} value={lead.phone} />
                   <ContactLine icon={<Mail size={16} strokeWidth={1.8} />} value={lead.email} />
@@ -227,7 +227,7 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
           <AdminPanel title="Phòng quan tâm">
             <div className="space-y-4">
               <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-secondary">Room</p>
+                <p className="text-xs uppercase text-secondary">Room</p>
                 <p className="mt-1 font-headline-sm text-2xl text-primary">{lead.room_title}</p>
               </div>
               <ContactLine icon={<MapPin size={16} strokeWidth={1.8} />} value={`${lead.ward_name}, ${lead.city_name}`} />
@@ -255,7 +255,7 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
               </div>
 
               <label className="block">
-                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Cập nhật trạng thái</span>
+                <span className="mb-2 block text-xs font-semibold uppercase text-secondary">Cập nhật trạng thái</span>
                 <select className={adminSelectClass} onChange={(event) => setStatus(event.target.value)} value={status}>
                   {lead.status === "CONVERTED" ? <option value="CONVERTED">Đã chốt thuê</option> : null}
                   {statuses.filter((item) => canManuallyTransitionLead(lead.status, item.value)).map((item) => (
@@ -266,7 +266,7 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Nhân viên phụ trách</span>
+                  <span className="mb-2 block text-xs font-semibold uppercase text-secondary">Nhân viên phụ trách</span>
                   <select className={adminSelectClass} onChange={(event) => setAssignedTo(event.target.value)} value={assignedTo}>
                     <option value="">Chưa gán</option>
                     {salers.map((saler) => (
@@ -275,13 +275,13 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
                   </select>
                 </label>
                 <label className="block">
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Hẹn follow-up</span>
+                  <span className="mb-2 block text-xs font-semibold uppercase text-secondary">Hẹn follow-up</span>
                   <input className={adminInputClass} onChange={(event) => setNextFollowUpAt(event.target.value)} type="datetime-local" value={nextFollowUpAt} />
                 </label>
               </div>
 
               <div className="rounded-lg border border-primary/10 bg-surface-container-lowest p-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Xác nhận lịch xem riêng</p>
+                <p className="mb-3 text-xs font-semibold uppercase text-secondary">Xác nhận lịch xem riêng</p>
                 <div className="grid gap-3 md:grid-cols-2">
                   <input className={adminInputClass} onChange={(event) => setAppointmentDate(event.target.value)} type="date" value={appointmentDate} />
                   <select className={adminSelectClass} onChange={(event) => setAppointmentTimeSlot(event.target.value)} value={appointmentTimeSlot}>
@@ -302,7 +302,7 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
               </div>
 
               <label className="block">
-                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Ghi chú tư vấn</span>
+                <span className="mb-2 block text-xs font-semibold uppercase text-secondary">Ghi chú tư vấn</span>
                 <textarea className={`${adminInputClass} min-h-40`} onChange={(event) => setNote(event.target.value)} value={note} />
               </label>
 
@@ -344,7 +344,7 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
 
           <AdminPanel title="Timeline">
             <div className="space-y-4">
-              <TimelineItem label="Lead được tạo" value={formatAdminDate(lead.created_at)} />
+              <TimelineItem label="Yêu cầu được tạo" value={formatAdminDate(lead.created_at)} />
               <TimelineItem label="Lịch xem được xác nhận" value={formatAdminDate(lead.appointment_confirmed_at)} />
               <TimelineItem label="Cập nhật gần nhất" value={formatAdminDate(lead.updated_at)} />
               <TimelineItem label="Chuyển vào" value={formatAdminDate(lead.moved_in_at)} />
@@ -384,7 +384,7 @@ function Info({
 }>) {
   return (
     <div className="rounded-lg bg-surface-container-low p-4">
-      <p className="text-xs uppercase tracking-[0.16em] text-secondary">{label}</p>
+      <p className="text-xs uppercase text-secondary">{label}</p>
       <div className="mt-2 font-semibold text-primary">{customValue ?? value}</div>
     </div>
   );
