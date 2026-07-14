@@ -187,7 +187,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
             </nav>
 
             <div className="site-mobile-profile">
-              <div className="site-profile-card">
+              <div className="site-profile-card w-full">
                 <ProfileMenu />
               </div>
             </div>

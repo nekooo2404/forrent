@@ -53,6 +53,42 @@ test.describe('Public critical flows', () => {
     }
   });
 
+  test('homepage uses a stable brand hero independent of room imagery', async ({ page }) => {
+    await page.goto('/homepage');
+
+    const hero = page.getByTestId('homepage-hero');
+    await expect(hero).toBeVisible();
+    await expect(hero.locator('img')).toHaveAttribute('src', /forrent-hero-old-quarter/);
+    await expect.poll(() => hero.locator('img').evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+    await expect(hero.locator('[aria-hidden="true"]').first()).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(hero.getByRole('button', { name: 'Tìm phòng' })).toBeVisible();
+    await expect(page.getByText('Phòng mới sẽ được cập nhật tại đây')).toHaveCount(0);
+  });
+
+  test('anonymous desktop navigation exposes no-wrap account actions', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/homepage');
+
+    const account = page.getByTestId('public-account-actions');
+    const login = account.getByRole('link', { name: 'Đăng nhập', exact: true });
+    const signup = account.getByRole('link', { name: 'Đăng ký', exact: true });
+    await expect(login).toBeVisible();
+    await expect(signup).toBeVisible();
+    await expect(login).toHaveCSS('white-space', 'nowrap');
+    await expect(signup).toHaveCSS('white-space', 'nowrap');
+  });
+
+  test('authenticated navigation keeps the account menu', async ({ page }) => {
+    await page.route('**/api/auth/session', (route) => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, message: 'Success', data: { authenticated: true } }),
+    }));
+    await page.goto('/homepage');
+
+    await expect(page.getByRole('button', { name: 'Tài khoản' })).toBeVisible();
+    await expect(page.getByTestId('public-account-actions')).toHaveCount(0);
+  });
+
   test('homepage starts with readable content and touch-sized controls', async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 320, height: 700 });
     await page.goto('/homepage');
@@ -118,6 +154,9 @@ test.describe('Public critical flows', () => {
     await expect(page.getByRole('navigation', { name: 'Điều hướng chính' })).toBeVisible();
     await expect(page.getByRole('navigation', { name: 'Điều hướng trên thiết bị di động' })).toBeVisible();
     await expect(page.locator('.site-mobile-menu a[href="/rooms"]')).toBeVisible();
+    const mobileAccount = page.locator('.site-mobile-menu').getByTestId('public-account-actions');
+    await expect(mobileAccount.getByRole('link', { name: 'Đăng nhập', exact: true })).toBeVisible();
+    await expect(mobileAccount.getByRole('link', { name: 'Đăng ký', exact: true })).toBeVisible();
 
     await page.locator('.site-close-button').click();
     await expect(page.locator('.site-mobile-menu')).toBeHidden();
