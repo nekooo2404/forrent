@@ -6,7 +6,7 @@ import { mockAdminDashboard, mockAdminRoomInventory } from './admin-mocks';
 const adminBaseURL = process.env.ADMIN_BASE_URL || 'http://localhost:3001';
 const publicPaths = ['/homepage', '/rooms', '/blogs', '/contact', '/privacy', '/terms', '/log-in', '/sign-up', '/forget-password'];
 const adminPaths = ['/log-in'];
-const themes = ['light', 'dark'] as const;
+const adminThemes = ['light', 'dark'] as const;
 const viewports = [
   { name: 'desktop', width: 1280, height: 900 },
   { name: 'tablet-1024', width: 1024, height: 768 },
@@ -20,26 +20,23 @@ async function settleForAxe(page: Page) {
 }
 
 for (const path of publicPaths) {
-  for (const theme of themes) {
-    for (const viewport of viewports) {
-      test(`axe accessibility audit passes on ${path} ${theme} ${viewport.name}`, async ({ page }, testInfo) => {
-        test.skip(testInfo.project.name !== 'chromium', 'Run axe once in the desktop Chromium project; viewports are set inside the test.');
+  for (const viewport of viewports) {
+    test(`axe accessibility audit passes on ${path} light ${viewport.name}`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'chromium', 'Run axe once in the desktop Chromium project; viewports are set inside the test.');
 
-        await page.setViewportSize({ width: viewport.width, height: viewport.height });
-        await page.addInitScript((selectedTheme) => localStorage.setItem('theme', selectedTheme), theme);
-        await page.goto(path);
-        await settleForAxe(page);
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.goto(path);
+      await settleForAxe(page);
 
-        const results = await new AxeBuilder({ page }).analyze();
+      const results = await new AxeBuilder({ page }).analyze();
 
-        expect(results.violations).toEqual([]);
-      });
-    }
+      expect(results.violations).toEqual([]);
+    });
   }
 }
 
 for (const path of adminPaths) {
-  for (const theme of themes) {
+  for (const theme of adminThemes) {
     for (const viewport of viewports) {
       test(`axe accessibility audit passes on admin ${path} ${theme} ${viewport.name}`, async ({ page }, testInfo) => {
         test.skip(testInfo.project.name !== 'chromium', 'Run axe once in the desktop Chromium project; viewports are set inside the test.');
@@ -56,7 +53,7 @@ for (const path of adminPaths) {
   }
 }
 
-for (const theme of themes) {
+for (const theme of adminThemes) {
   for (const viewport of viewports) {
     test(`axe accessibility audit passes on admin dashboard ${theme} ${viewport.name}`, async ({ page }, testInfo) => {
       test.skip(testInfo.project.name !== 'chromium', 'Run axe once in the desktop Chromium project; viewports are set inside the test.');
@@ -94,7 +91,6 @@ test('axe accessibility audit passes on admin create room modal dark mobile', as
 test('axe accessibility audit passes on room detail', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Run axe once in the desktop Chromium project.');
 
-  await page.addInitScript(() => localStorage.setItem('theme', 'dark'));
   await page.goto('/rooms/e2e-room');
   await settleForAxe(page);
   await expect(page.getByRole('complementary', { name: 'Tư vấn và đặt lịch xem phòng' })).toBeVisible();

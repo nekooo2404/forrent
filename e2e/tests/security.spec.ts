@@ -68,6 +68,22 @@ test.describe('Security headers and origin guard', () => {
     expect(homepageEntry).not.toContain('<lastmod>');
   });
 
+  test('room pages expose valid structured data', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', 'Run SEO regression once.');
+
+    await page.goto('/rooms');
+    const listData = JSON.parse(await page.locator('script[type="application/ld+json"]').textContent() || '{}');
+    expect(listData['@type']).toBe('ItemList');
+    expect(listData.itemListElement[0]).toMatchObject({ '@type': 'ListItem', name: 'Can ho dich vu Nam Tu Liem' });
+
+    await page.goto('/rooms/ph%C3%B2ng-%C4%91%E1%BA%B9p-h%C3%A0-n%E1%BB%99i');
+    const detailData = JSON.parse(await page.locator('script[type="application/ld+json"]').textContent() || '{}');
+    expect(detailData['@graph']).toEqual(expect.arrayContaining([
+      expect.objectContaining({ '@type': 'Offer' }),
+      expect.objectContaining({ '@type': 'BreadcrumbList' }),
+    ]));
+  });
+
   test('strict CSP does not block client or admin UI styles', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'Run CSP browser regression once.');
     const violations: string[] = [];

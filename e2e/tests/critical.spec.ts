@@ -15,49 +15,32 @@ test.describe('Public critical flows', () => {
     expect(refreshRequests).toEqual([]);
   });
 
-  test('homepage nav, theme toggle, and scroll state work', async ({ page }) => {
+  test('homepage nav stays light-only and scroll state works', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('theme', 'dark'));
     await page.goto('/homepage');
 
     await expect(page).toHaveTitle(/ForRent/);
     await expect(page.getByTestId('site-nav')).toBeVisible();
     await expect(page.getByTestId('site-nav')).toHaveAttribute('data-ready', 'true');
+    await expect(page.locator('html')).toHaveClass('light');
+    await expect(page.getByTestId('theme-toggle')).toHaveCount(0);
+    await expect(page.getByTestId('theme-compact-toggle')).toHaveCount(0);
 
     const initialNavHeight = await page.getByTestId('site-nav').evaluate((element) => element.getBoundingClientRect().height);
     expect(initialNavHeight).toBeLessThanOrEqual(82);
 
     const viewport = page.viewportSize();
     if (viewport && viewport.width < 768) {
-      await expect(page.getByTestId('theme-compact-toggle')).toBeHidden();
       await expect(page.getByTestId('site-nav').getByRole('button', { name: 'Tài khoản' })).toBeHidden();
       await expect(page.locator('.site-menu-button')).toBeVisible();
       await page.locator('.site-menu-button').click();
       await expect(page.locator('.site-mobile-menu')).toBeVisible();
-      await expect(page.locator('.site-mobile-menu').getByTestId('theme-toggle')).toBeVisible();
-      await page.locator('.site-mobile-menu').getByTestId('theme-dark').click();
-      await expect(page.locator('html')).toHaveClass(/dark/);
-
-      await page.locator('.site-mobile-menu').getByTestId('theme-light').click();
-      await expect(page.locator('html')).toHaveClass(/light/);
-
-      await page.locator('.site-mobile-menu').getByTestId('theme-system').click();
-      await expect(page.locator('html')).toHaveClass(/(light|dark)/);
-
       await page.locator('.site-close-button').click();
       await expect(page.locator('.site-mobile-menu')).toBeHidden();
     } else {
       await expect(page.locator('a[href="/rooms"]').first()).toBeVisible();
       await expect(page.locator('a[href="/blogs"]').first()).toBeVisible();
       await expect(page.locator('a[href="/contact"]').first()).toBeVisible();
-      await expect(page.getByTestId('theme-toggle')).toBeVisible();
-
-      await page.getByTestId('theme-dark').click();
-      await expect(page.locator('html')).toHaveClass(/dark/);
-
-      await page.getByTestId('theme-light').click();
-      await expect(page.locator('html')).toHaveClass(/light/);
-
-      await page.getByTestId('theme-system').click();
-      await expect(page.locator('html')).toHaveClass(/(light|dark)/);
     }
 
     await page.evaluate(() => window.scrollTo(0, 120));
@@ -115,7 +98,12 @@ test.describe('Public critical flows', () => {
     expect(manifest.ok()).toBeTruthy();
     expect(await manifest.json()).toMatchObject({ name: 'ForRent', display: 'standalone' });
     expect(serviceWorker.ok()).toBeTruthy();
-    expect(await serviceWorker.text()).toContain('forrent-static');
+    const serviceWorkerSource = await serviceWorker.text();
+    expect(serviceWorkerSource).toContain('forrent-static');
+    expect(serviceWorkerSource).toContain('navigationWithOfflineFallback');
+    expect(serviceWorkerSource).not.toContain('networkFirst');
+    expect(serviceWorkerSource).not.toContain('theme-init');
+    expect((await request.get('/theme-init.js')).status()).toBe(404);
     expect(offline.ok()).toBeTruthy();
   });
 
@@ -137,11 +125,12 @@ test.describe('Public critical flows', () => {
 
   test('rooms filters submit stable query params', async ({ page }) => {
     await page.goto('/rooms');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('[data-testid="site-nav"]:visible').first()).toHaveAttribute('data-ready', 'true', { timeout: 15_000 });
 
     const filterForm = page.locator('form[action="/rooms"]').filter({ has: page.locator('input[name="search"]') });
-    if (!(await filterForm.isVisible())) {
-      await page.getByText('Bộ lọc phòng', { exact: true }).click();
-    }
+    const filterToggle = page.getByRole('button', { name: 'Bộ lọc phòng' });
+    if (await filterToggle.isVisible()) await filterToggle.click();
     await expect(filterForm).toBeVisible();
     await filterForm.locator('input[name="search"]').fill('test');
     await filterForm.locator('button[type="submit"]').click();
@@ -163,13 +152,20 @@ test.describe('Public critical flows', () => {
 
   test('advanced room filters use native progressive disclosure and touch-sized options', async ({ page }) => {
     await page.goto('/rooms');
+    await page.waitForLoadState('networkidle');
+    await expect(page.locator('[data-testid="site-nav"]:visible').first()).toHaveAttribute('data-ready', 'true', { timeout: 15_000 });
     const filterForm = page.locator('form[action="/rooms"]').filter({ has: page.locator('input[name="search"]') });
-    if (!(await filterForm.isVisible())) await page.getByRole('button', { name: 'Bộ lọc phòng' }).click();
+    const filterToggle = page.getByRole('button', { name: 'Bộ lọc phòng' });
+    if (await filterToggle.isVisible()) await filterToggle.click();
+    await expect(filterForm).toBeVisible();
 
     const advanced = filterForm.locator('details');
     await expect(advanced).not.toHaveAttribute('open', '');
+    await expect(filterForm.getByRole('button', { name: 'Tìm phòng' })).toBeVisible();
+    await expect(filterForm.locator('select[name="status"]')).toHaveCount(0);
     await advanced.locator('summary').click();
     await expect(advanced).toHaveAttribute('open', '');
+    await expect(advanced.locator('input[name="room_type"]')).not.toHaveCount(0);
 
     const amenityLabel = advanced.locator('label').first();
     const box = await amenityLabel.boundingBox();
@@ -195,6 +191,15 @@ test.describe('Public critical flows', () => {
     await expect(manyImageGallery).toBeVisible();
     await page.getByRole('button', { name: /Xem .*ảnh chính/ }).click();
     await expect(page.getByRole('button', { name: 'Ảnh tiếp theo' })).toBeVisible();
+  });
+
+  test('room detail resolves an encoded Vietnamese slug', async ({ page }) => {
+    await page.goto('/rooms/ph%C3%B2ng-%C4%91%E1%BA%B9p-h%C3%A0-n%E1%BB%99i');
+
+    await expect(page.getByRole('heading', { name: 'Phòng đẹp Hà Nội', level: 1 })).toBeVisible();
+    await expect(page).toHaveTitle(/Phòng đẹp Hà Nội/);
+    expect(await page.title()).not.toContain('🎉');
+    await expect(page.getByText('Phòng này hiện không còn hiển thị')).toHaveCount(0);
   });
 
   test('contact form validates required and phone fields', async ({ page }) => {

@@ -1,11 +1,10 @@
-const CACHE_NAME = "forrent-static-v1";
+const CACHE_NAME = "forrent-static-v3";
 const OFFLINE_URL = "/offline";
 const PRECACHE = [
   OFFLINE_URL,
   "/brand/forrent-logo.png",
   "/brand/forrent-icon-192.png",
   "/brand/forrent-icon-512.png",
-  "/theme-init.js",
 ];
 
 self.addEventListener("install", (event) => {
@@ -25,14 +24,11 @@ function isPublicNavigation(url) {
   return exact.includes(url.pathname) || url.pathname.startsWith("/rooms/") || url.pathname.startsWith("/blogs/");
 }
 
-async function networkFirst(request) {
-  const cache = await caches.open(CACHE_NAME);
+async function navigationWithOfflineFallback(request) {
   try {
-    const response = await fetch(request);
-    if (response.ok) await cache.put(request, response.clone());
-    return response;
+    return await fetch(request);
   } catch {
-    return (await cache.match(request)) || (await cache.match(OFFLINE_URL));
+    return caches.match(OFFLINE_URL);
   }
 }
 
@@ -53,11 +49,11 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin || url.pathname.startsWith("/api/") || url.pathname.startsWith("/admin")) return;
 
   if (request.mode === "navigate" && isPublicNavigation(url)) {
-    event.respondWith(networkFirst(request));
+    event.respondWith(navigationWithOfflineFallback(request));
     return;
   }
 
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/brand/") || url.pathname === "/theme-init.js") {
+  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/brand/")) {
     event.respondWith(cacheFirst(request));
   }
 });
