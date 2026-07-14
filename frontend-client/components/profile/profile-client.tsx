@@ -25,6 +25,7 @@ import {
   type ApiUser,
   type MyViewingRequest,
 } from "@/lib/api";
+import { cleanRoomTitle } from "@/lib/seo";
 
 type ApiResponse<T> = {
   success: boolean;
@@ -421,7 +422,7 @@ function ViewingRequestsSummary({
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="line-clamp-1 font-body-md font-semibold text-primary">
-                    {request.room.title}
+                    {cleanRoomTitle(request.room.title, [request.room.ward?.name, request.room.city?.name])}
                   </p>
                   <p className="mt-1 flex items-center gap-1 text-xs text-on-surface-variant">
                     <MapPin size={13} strokeWidth={1.8} />

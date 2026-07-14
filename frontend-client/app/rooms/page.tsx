@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ImageOff,
+  MessageCircle,
   Search,
   ShieldCheck,
   X,
@@ -14,6 +15,7 @@ import type { ReactNode } from "react";
 
 import { PublicShell } from "@/components/public-shell";
 import { ResponsiveFilter } from "@/components/responsive-filter";
+import { StructuredData } from "@/components/structured-data";
 import { fastImageUrl } from "@/lib/image";
 import {
   formatArea,
@@ -27,12 +29,18 @@ import {
   type ApiRoom,
   type RoomFilters,
 } from "@/lib/api";
+import { absoluteUrl, cleanRoomTitle } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Danh sách phòng thuê Hà Nội",
-  description: "Danh sách phòng thuê theo tháng, lọc theo khu vực, giá, diện tích, loại phòng và tiện ích.",
+  description: "Tìm phòng thuê đang trống tại Hà Nội, xem rõ giá tháng, tiền cọc, diện tích và tiện ích trước khi đặt lịch xem.",
   alternates: {
     canonical: "/rooms",
+  },
+  openGraph: {
+    title: "Phòng thuê đang trống tại Hà Nội",
+    description: "Lọc phòng theo khu vực, ngân sách, diện tích và tiện ích; xem giá và đặt lịch trực tiếp với ForRent.",
+    url: "/rooms",
   },
 };
 
@@ -85,10 +93,11 @@ const fallbackFilters: RoomFilters = {
 };
 
 function mapRoom(room: ApiRoom): RoomCardView {
+  const title = cleanRoomTitle(room.title, [room.ward?.name, room.city?.name]);
   return {
     id: room.id,
     slug: room.slug,
-    title: room.title,
+    title,
     location: [room.ward?.name, room.city?.name].filter(Boolean).join(", ") || room.address,
     price: formatVnd(room.price),
     period: "/ tháng",
@@ -100,7 +109,7 @@ function mapRoom(room: ApiRoom): RoomCardView {
     unavailable: room.status !== "PUBLISHED",
     featuredAmenities: room.amenities.slice(0, 3).map((amenity) => amenity.name),
     image: resolveMediaUrl(room.thumbnail_url),
-    alt: room.short_description || room.title,
+    alt: room.short_description || title,
   };
 }
 
@@ -175,6 +184,22 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   const filters = filtersResponse ?? fallbackFilters;
   const totalCount = roomsResponse?.count ?? rooms.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / 12));
+  const roomListStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Phòng thuê đang trống tại Hà Nội",
+    numberOfItems: totalCount,
+    itemListElement: rooms.flatMap((room, index) =>
+      room.slug
+        ? [{
+            "@type": "ListItem",
+            position: (currentPage - 1) * 12 + index + 1,
+            name: room.title,
+            url: absoluteUrl(`/rooms/${encodeURIComponent(room.slug)}`),
+          }]
+        : [],
+    ),
+  };
   const activeFilterLabels: ActiveFilter[] = [
     search ? { key: "search", label: `Từ khóa: ${search}` } : null,
     city && filters.cities.length > 1 ? { key: "city", label: filters.cities.find((item) => String(item.id) === city)?.name || "Khu vực" } : null,
@@ -193,13 +218,14 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
 
   return (
     <PublicShell active="rooms">
-      <header className="border-b border-outline-variant/20 bg-surface-container-low px-margin-mobile pb-10 pt-24 md:px-margin-desktop md:pt-28">
+      <StructuredData data={roomListStructuredData} />
+      <header className="border-b border-outline-variant/25 bg-surface-container-low px-margin-mobile pb-8 pt-24 md:px-margin-desktop md:pt-28">
         <div className="mx-auto flex w-full max-w-container-max flex-col justify-between gap-8 md:flex-row md:items-end">
           <div className="max-w-3xl">
             <p className="mb-3 font-label-caps text-label-caps uppercase text-secondary">
               Danh sách phòng Hà Nội
             </p>
-            <h1 className="mb-4 max-w-3xl text-[36px] font-extrabold leading-[1.12] text-on-surface md:text-[52px]">
+            <h1 className="mb-4 max-w-3xl text-[34px] font-extrabold leading-[1.15] text-on-surface md:text-[44px]">
               Chọn phòng đang trống, rõ giá trước khi đi xem
             </h1>
             <p className="max-w-2xl font-body-lg text-body-lg text-on-surface-variant">
@@ -213,14 +239,13 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
         </div>
       </header>
 
-      <section className="mx-auto flex w-full max-w-container-max flex-grow flex-col gap-gutter px-margin-mobile py-12 md:px-margin-desktop lg:flex-row">
+      <section className="mx-auto flex w-full max-w-container-max flex-grow flex-col gap-gutter px-margin-mobile py-10 md:px-margin-desktop lg:flex-row">
         <FilterSidebar
           activeAreaRange={areaRange}
           activeCity={city}
           activeMaxPrice={maxPrice}
           activeMinPrice={minPrice}
           activeRoomType={roomType}
-          activeStatus={status}
           activeWard={ward}
           activeAmenities={activeAmenities}
           filters={filters}
@@ -279,8 +304,9 @@ function ResultHeader({
             {totalCount} phòng phù hợp · trang {currentPage}
           </h2>
         </div>
-        <Link className="premium-button rounded-md border border-primary/30 px-4 py-3 text-sm font-semibold text-primary" href="/contact">
-          Không thấy phòng hợp? Gửi nhu cầu
+        <Link className="inline-flex min-h-11 items-center gap-2 rounded-md px-2 py-2 text-sm font-semibold text-secondary transition-colors hover:text-primary" href="/contact">
+          <MessageCircle aria-hidden="true" size={18} strokeWidth={1.8} />
+          Cần hỗ trợ? Gửi nhu cầu
         </Link>
       </div>
       {activeFilters.length ? (
@@ -330,7 +356,7 @@ function SortForm({
         <option value="-price">Giá cao trước</option>
         <option value="-actual_area">Diện tích lớn trước</option>
       </select>
-      <button className="premium-button urban-cta shrink-0 whitespace-nowrap rounded-md px-4 py-3 font-button text-button sm:px-5" type="submit">
+      <button className="premium-button shrink-0 whitespace-nowrap rounded-md border border-primary/35 bg-surface-container-lowest px-4 py-3 font-button text-button text-primary sm:px-5" type="submit">
         Áp dụng
       </button>
     </form>
@@ -344,7 +370,6 @@ function FilterSidebar({
   activeMaxPrice,
   activeMinPrice,
   activeRoomType,
-  activeStatus,
   activeWard,
   filters,
   search,
@@ -355,7 +380,6 @@ function FilterSidebar({
   activeMaxPrice?: string;
   activeMinPrice?: string;
   activeRoomType?: string;
-  activeStatus?: string;
   activeWard?: string;
   filters: RoomFilters;
   search?: string;
@@ -364,14 +388,13 @@ function FilterSidebar({
   const effectiveCity = activeCity || singleCity;
   const cityFilters = [{ id: "", name: "Tất cả khu vực", slug: "all", is_active: true }, ...filters.cities];
   const typeFilters = filters.room_types.length ? filters.room_types : fallbackFilters.room_types;
-  const statusFilters = filters.statuses.length ? filters.statuses : fallbackFilters.statuses;
   const visibleWards = filters.wards.filter((ward) => !effectiveCity || String(ward.city) === effectiveCity);
-  const hasAdvancedFilters = Boolean(activeAreaRange || activeStatus || activeAmenities.length);
+  const hasAdvancedFilters = Boolean(activeRoomType || activeAreaRange || activeAmenities.length);
 
   return (
-    <aside className="w-full flex-shrink-0 lg:w-[280px]">
+    <aside className="w-full flex-shrink-0 lg:sticky lg:top-24 lg:w-[280px] lg:self-start">
       <ResponsiveFilter>
-        <form action="/rooms" className="urban-card mt-3 overflow-visible rounded-lg lg:mt-0">
+        <form action="/rooms" className="mt-3 overflow-visible rounded-lg border border-outline-variant/40 bg-surface-container-lowest shadow-sm lg:mt-0">
           <div className="p-4">
             <div className="mb-4 flex items-center justify-between border-b border-outline-variant/20 pb-4">
               <h2 className="font-headline-sm text-headline-sm text-on-surface">Bộ lọc</h2>
@@ -438,27 +461,27 @@ function FilterSidebar({
               </div>
             </FilterSection>
 
-            <FilterSection title="Loại hình">
-              <div className="space-y-1">
-                <label className="group flex min-h-11 cursor-pointer items-center gap-3 py-2">
-                  <input className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary" defaultChecked={!activeRoomType} name="room_type" type="radio" value="" />
-                  <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-on-surface">Tất cả loại phòng</span>
-                </label>
-                {typeFilters.map((item) => (
-                  <label className="group flex min-h-11 cursor-pointer items-center gap-3 py-2" key={item.value}>
-                    <input className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary" defaultChecked={item.value === activeRoomType} name="room_type" type="radio" value={item.value} />
-                    <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-on-surface">{roomTypeLabel(item.value) || item.label}</span>
-                  </label>
-                ))}
-              </div>
-            </FilterSection>
-
             <details className="group border-b border-outline-variant/20 py-3" open={hasAdvancedFilters}>
               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between py-2 font-button text-button text-on-surface marker:content-none">
-                Bộ lọc thêm
+                Loại phòng và bộ lọc thêm
                 <ChevronDown aria-hidden="true" className="transition-transform group-open:rotate-180" size={18} strokeWidth={1.8} />
               </summary>
               <div className="pt-1">
+                <FilterSection title="Loại hình">
+                  <div className="space-y-1">
+                    <label className="group flex min-h-11 cursor-pointer items-center gap-3 py-2">
+                      <input className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary" defaultChecked={!activeRoomType} name="room_type" type="radio" value="" />
+                      <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-on-surface">Tất cả loại phòng</span>
+                    </label>
+                    {typeFilters.map((item) => (
+                      <label className="group flex min-h-11 cursor-pointer items-center gap-3 py-2" key={item.value}>
+                        <input className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary" defaultChecked={item.value === activeRoomType} name="room_type" type="radio" value={item.value} />
+                        <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-on-surface">{roomTypeLabel(item.value) || item.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </FilterSection>
+
                 {filters.area_ranges.length ? (
                   <FilterSection title="Diện tích">
                     <div className="space-y-1">
@@ -471,13 +494,6 @@ function FilterSidebar({
                     </div>
                   </FilterSection>
                 ) : null}
-
-                <FilterSection title="Trạng thái">
-                  <select aria-label="Chọn trạng thái phòng" className="min-h-11 w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-on-surface focus:border-primary focus:ring-primary" defaultValue={activeStatus ?? ""} name="status">
-                    <option value="">Tất cả trạng thái</option>
-                    {statusFilters.map((item) => <option key={item.value} value={item.value}>{roomStatusLabel(item.value)}</option>)}
-                  </select>
-                </FilterSection>
 
                 {filters.amenities.length ? (
                   <FilterSection title="Tiện ích">
@@ -496,7 +512,10 @@ function FilterSidebar({
           </div>
 
           <div className="sticky bottom-0 border-t border-outline-variant/10 bg-surface-container-lowest/95 p-4 lg:static lg:border-none lg:bg-transparent">
-            <button className="premium-button urban-cta min-h-11 w-full rounded-md px-4 py-3 font-button text-button" type="submit">Áp dụng bộ lọc</button>
+            <button className="premium-button urban-cta flex min-h-11 w-full items-center justify-center gap-2 rounded-md px-4 py-3 font-button text-button" type="submit">
+              <Search aria-hidden="true" size={18} strokeWidth={1.9} />
+              Tìm phòng
+            </button>
           </div>
         </form>
       </ResponsiveFilter>
@@ -518,13 +537,13 @@ function RoomCard({ priority = false, room, wide = false }: Readonly<{ priority?
 
   return (
     <article
-      className={`premium-card urban-card group flex flex-col overflow-hidden rounded-lg ${wide ? "xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(0,1.08fr)]" : ""} ${
+      className={`premium-card group flex flex-col overflow-hidden rounded-lg border border-outline-variant/45 bg-surface-container-low shadow-sm ${wide ? "xl:grid xl:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)]" : ""} ${
         room.unavailable ? "opacity-80" : ""
       }`}
       data-layout={wide ? "wide" : "standard"}
       data-room-card
     >
-      <div className={`relative h-[260px] overflow-hidden sm:h-[280px] ${wide ? "xl:h-full xl:min-h-[420px]" : ""} ${room.unavailable ? "grayscale-[30%]" : ""}`}>
+      <div className={`relative h-[260px] overflow-hidden sm:h-[280px] ${wide ? "xl:h-full xl:min-h-[350px]" : ""} ${room.unavailable ? "grayscale-[30%]" : ""}`}>
         <Link aria-label={`Xem chi tiết ${room.title}`} className="absolute inset-0" href={detailHref}>
           {room.image ? (
             <Image
@@ -545,7 +564,7 @@ function RoomCard({ priority = false, room, wide = false }: Readonly<{ priority?
         <div className="absolute left-4 top-4">
           <span
             className={`rounded-md px-3 py-1.5 font-label-caps text-label-caps uppercase shadow-sm ${
-              room.unavailable ? "bg-surface-variant/95 text-on-surface" : "bg-success text-on-success"
+              room.unavailable ? "bg-surface-variant/95 text-on-surface" : "border border-primary/30 bg-primary-container text-on-primary-container"
             }`}
           >
             {room.unavailable ? room.status : "Còn trống"}
@@ -559,31 +578,31 @@ function RoomCard({ priority = false, room, wide = false }: Readonly<{ priority?
       <div className="flex flex-grow flex-col p-5 md:p-6">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <Link className="block font-headline-sm text-xl leading-snug text-on-surface hover:text-primary" href={detailHref}>
+            <Link className="line-clamp-2 block font-headline-sm text-xl leading-snug text-on-surface hover:text-primary" href={detailHref}>
               {room.title}
             </Link>
-            <p className="mt-2 font-body-md text-sm text-on-surface-variant">{room.primaryMeta} · {room.area}</p>
+            <p className="mt-2 font-body-md text-base font-medium text-on-surface-variant">{room.primaryMeta} · {room.area}</p>
           </div>
           <div className="shrink-0 text-right">
-            <span className="block whitespace-nowrap text-lg font-bold tabular-nums text-on-surface">{room.price}</span>
-            <span className="text-xs text-on-surface-variant">{room.period}</span>
+            <span className="block whitespace-nowrap text-xl font-bold tabular-nums text-on-surface">{room.price}</span>
+            <span className="text-sm font-medium text-on-surface-variant">{room.period}</span>
           </div>
         </div>
 
         {room.featuredAmenities.length ? (
           <div className="mb-4 flex flex-wrap gap-2">
             {room.featuredAmenities.map((amenity) => (
-              <span className="rounded-md bg-tertiary-container px-3 py-1 text-xs font-medium text-on-tertiary-container" key={amenity}>
+              <span className="rounded-md border border-primary/20 bg-primary-container/70 px-3 py-1.5 text-sm font-medium text-on-primary-container" key={amenity}>
                 {amenity}
               </span>
             ))}
           </div>
         ) : null}
 
-        <div className="mt-auto flex flex-wrap items-center gap-4 border-t border-outline-variant/15 pt-4 text-on-surface-variant">
-          <div className="flex min-w-0 items-center gap-2 text-sm">
-            <ShieldCheck aria-hidden="true" className="shrink-0 text-primary" size={18} strokeWidth={1.8} />
-            <span className="truncate"><span className="font-medium text-on-surface">{room.depositLabel}:</span> {room.deposit}</span>
+        <div className="mt-auto flex flex-wrap items-center gap-4 border-t border-outline-variant/25 pt-5 text-on-surface-variant">
+          <div className="flex min-w-0 items-center gap-2 text-base">
+            <ShieldCheck aria-hidden="true" className="shrink-0 text-primary" size={20} strokeWidth={1.8} />
+            <span><span className="font-semibold text-on-surface">{room.depositLabel}:</span> {room.deposit}</span>
           </div>
           <Link className="premium-button urban-cta ml-auto inline-flex min-h-11 items-center rounded-md px-4 py-3 font-body-md text-sm" href={detailHref}>
             Xem và đặt lịch

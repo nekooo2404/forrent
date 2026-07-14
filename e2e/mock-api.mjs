@@ -52,6 +52,12 @@ function sendJson(response, status, body) {
 
 const server = http.createServer((request, response) => {
   const url = new URL(request.url ?? '/', 'http://127.0.0.1');
+  let decodedPathname = url.pathname;
+  try {
+    decodedPathname = decodeURIComponent(url.pathname);
+  } catch {
+    // Keep the encoded path so malformed input falls through to the 404 response.
+  }
 
   if (request.method === 'OPTIONS') {
     response.writeHead(204).end();
@@ -73,11 +79,20 @@ const server = http.createServer((request, response) => {
     }));
     return;
   }
-  const roomDetailMatch = url.pathname.match(/^\/api\/rooms\/(e2e-room(?:-(?:one|many))?)\/$/);
+  const roomDetailMatch = decodedPathname.match(
+    /^\/api\/rooms\/(e2e-room(?:-(?:one|many))?|phòng-đẹp-hà-nội)\/$/,
+  );
   if (roomDetailMatch) {
     const slug = roomDetailMatch[1];
     const images = slug.endsWith('-one') ? roomImages.slice(0, 1) : slug.endsWith('-many') ? roomImages : [];
-    sendJson(response, 200, envelope({ ...room, slug, description: 'Can ho dich vu day du thong tin de dat lich xem.', images }));
+    sendJson(response, 200, envelope({
+      ...room,
+      slug,
+      title: slug === 'phòng-đẹp-hà-nội' ? '🎉 PHÒNG ĐẸP HÀ NỘI 🎉' : room.title,
+      city: slug === 'phòng-đẹp-hà-nội' ? { ...city, name: 'Hà Nội' } : city,
+      description: 'Can ho dich vu day du thong tin de dat lich xem.',
+      images,
+    }));
     return;
   }
   if (url.pathname === '/api/rooms/') {

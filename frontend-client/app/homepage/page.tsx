@@ -16,7 +16,7 @@ import {
   roomTypeLabel,
   type ApiRoom,
 } from "@/lib/api";
-import { SITE_DESCRIPTION } from "@/lib/seo";
+import { cleanRoomTitle, SITE_DESCRIPTION } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Thuê phòng theo tháng tại Hà Nội",
@@ -81,10 +81,11 @@ type PropertyCardView = {
 };
 
 function mapProperty(room: ApiRoom, index: number): PropertyCardView {
+  const title = cleanRoomTitle(room.title, [room.ward?.name, room.city?.name]);
   return {
     id: room.id,
     slug: room.slug,
-    title: room.title,
+    title,
     price: `${formatVnd(room.price)}/tháng`,
     deposit: formatOptionalVnd(room.deposit_amount),
     depositLabel: room.deposit_type_name || "Cọc",
@@ -97,7 +98,7 @@ function mapProperty(room: ApiRoom, index: number): PropertyCardView {
     label: index === 0 ? "MỚI LÊN SÀN" : undefined,
     labelClassName: index === 0 ? "bg-surface/90 text-primary backdrop-blur" : undefined,
     image: resolveMediaUrl(room.thumbnail_url),
-    alt: room.short_description || room.title,
+    alt: room.short_description || title,
   };
 }
 
@@ -121,7 +122,7 @@ export default async function Homepage() {
               Lọc phòng còn trống theo khu vực, giá tháng, cọc, phí và tiện ích. Chọn phòng xong, ForRent gọi lại xác nhận trước khi bạn đi xem.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link className="premium-button urban-cta inline-flex rounded-xl px-6 py-4 font-button text-button" href="/rooms?status=PUBLISHED">
+              <Link className="premium-button urban-cta inline-flex rounded-xl px-6 py-4 font-button text-button" href="/rooms">
                 Xem phòng trống
               </Link>
               <Link className="premium-button inline-flex rounded-xl border border-primary/20 bg-surface-container-lowest px-6 py-4 font-button text-button text-primary" href="/contact">
@@ -320,7 +321,7 @@ export default async function Homepage() {
       <section className="urban-band px-margin-mobile py-16 md:px-margin-desktop">
         <div className="mx-auto grid max-w-container-max gap-gutter md:grid-cols-[1.2fr_2fr] md:items-center">
           <MotionSection>
-            <span className="mb-4 block font-label-caps text-label-caps uppercase text-on-primary/75 dark:text-secondary">Đi xem không mất thời gian</span>
+            <span className="mb-4 block font-label-caps text-label-caps uppercase text-on-primary/75">Đi xem không mất thời gian</span>
             <h2 className="font-headline-md text-headline-md">Trước khi đi, mọi thứ quan trọng đã được xác nhận.</h2>
           </MotionSection>
           <MotionList className="grid gap-4 md:grid-cols-3">
@@ -351,8 +352,8 @@ function PropertyCard({ featured = false, property }: Readonly<{ featured?: bool
   const detailHref = property.slug ? `/rooms/${encodeURIComponent(property.slug)}` : "/rooms";
 
   return (
-    <article className={`premium-card urban-card group overflow-hidden rounded-lg ${featured ? "md:grid md:grid-cols-[1.15fr_0.85fr]" : ""}`}>
-      <div className={`relative h-72 overflow-hidden ${featured ? "md:h-full md:min-h-[380px]" : ""}`}>
+    <article className={`premium-card group overflow-hidden rounded-lg border border-outline-variant/45 bg-surface-container-low shadow-sm ${featured ? "md:grid md:grid-cols-[1.05fr_0.95fr]" : ""}`}>
+      <div className={`relative h-72 overflow-hidden ${featured ? "md:h-full md:min-h-[350px]" : ""}`}>
         <Link aria-label={`Xem chi tiết ${property.title}`} className="absolute inset-0" href={detailHref}>
           {property.image ? (
             <Image
@@ -374,7 +375,7 @@ function PropertyCard({ featured = false, property }: Readonly<{ featured?: bool
             {property.label}
           </div>
         ) : null}
-        <div className="absolute right-4 top-4 rounded-md bg-success px-3 py-1 font-label-caps text-label-caps uppercase text-on-success">
+        <div className="absolute right-4 top-4 rounded-md border border-primary/30 bg-primary-container px-3 py-1 font-label-caps text-label-caps uppercase text-on-primary-container">
           Còn trống
         </div>
       </div>
@@ -388,7 +389,7 @@ function PropertyCard({ featured = false, property }: Readonly<{ featured?: bool
         <p className="mb-4 font-body-md text-body-md text-on-surface-variant">
           {property.location} · {property.descriptor}
         </p>
-        <div className="mb-4 grid grid-cols-2 gap-2 text-xs text-on-surface-variant">
+        <div className="mb-4 grid grid-cols-2 gap-2 text-sm text-on-surface-variant">
           <div className="rounded-md bg-surface-container-low p-3">
             <div className="mb-1 flex items-center gap-1 font-semibold uppercase text-secondary">
               <ShieldCheck size={15} strokeWidth={1.8} />
@@ -431,10 +432,10 @@ function PropertyCard({ featured = false, property }: Readonly<{ featured?: bool
 
 function UrbanStep({ children, icon, title }: Readonly<{ children: ReactNode; icon: ReactNode; title: string }>) {
   return (
-    <div className="h-full rounded-lg border border-on-primary/20 bg-on-primary/5 p-5 dark:border-outline-variant/30 dark:bg-surface-container">
-      <div className="mb-4 inline-flex rounded-md bg-on-primary/10 p-3 text-on-primary dark:bg-primary/10 dark:text-primary">{icon}</div>
-      <h3 className="mb-2 font-headline-sm text-xl text-on-primary dark:text-primary">{title}</h3>
-      <p className="font-body-md text-sm leading-6 text-on-primary dark:text-on-surface-variant">{children}</p>
+    <div className="h-full rounded-lg border border-on-primary/20 bg-on-primary/5 p-5">
+      <div className="mb-4 inline-flex rounded-md bg-on-primary/10 p-3 text-on-primary">{icon}</div>
+      <h3 className="mb-2 font-headline-sm text-xl text-on-primary">{title}</h3>
+      <p className="font-body-md text-sm leading-6 text-on-primary">{children}</p>
     </div>
   );
 }

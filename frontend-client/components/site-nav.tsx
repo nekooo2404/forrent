@@ -6,7 +6,6 @@ import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { ProfileMenu } from "@/components/profile-menu";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 export type NavKey = "home" | "rooms" | "blogs" | "contact";
@@ -75,7 +74,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
           ? "site-navbar-scrolled"
           : "site-navbar"
       }`}>
-      <div className={`relative mx-auto flex max-w-container-max items-center justify-between px-margin-mobile transition-[height] duration-200 md:px-margin-desktop ${scrolled ? "h-16" : "h-16 lg:h-20"}`}>
+      <div className={`relative mx-auto flex max-w-container-max items-center justify-between px-margin-mobile transition-[height] duration-200 md:px-margin-desktop lg:grid lg:grid-cols-[1fr_auto_1fr] ${scrolled ? "h-16" : "h-16 lg:h-20"}`}>
         <Link
           aria-label="ForRent - Trang chủ"
           className={`site-logo-container group relative z-10 inline-flex shrink-0 items-center transition-[width,height] duration-200 ${scrolled ? "h-10 w-32" : "h-10 w-32 lg:h-11 lg:w-[142px]"}`}
@@ -111,11 +110,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
           ))}
         </div>
 
-        <div className="flex items-center gap-3 md:gap-4">
-          <div className="site-button-shell hidden lg:block">
-            <ThemeToggle />
-          </div>
-
+        <div className="flex items-center gap-3 md:gap-4 lg:justify-self-end">
           <button
             aria-expanded={isMobileMenuOpen}
             aria-label="Menu"
@@ -192,7 +187,6 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
             </nav>
 
             <div className="site-mobile-profile">
-              <ThemeToggle />
               <div className="site-profile-card">
                 <ProfileMenu />
               </div>

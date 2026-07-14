@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  ArrowLeft,
   AlertTriangle,
   Building2,
   Car,
   CalendarCheck,
+  ChevronRight,
   Droplets,
   Dumbbell,
   Mail,
@@ -29,6 +29,7 @@ import type { ReactNode } from "react";
 import { LazyViewingRequestPanel } from "@/components/lazy-viewing-request-panel";
 import { RoomGallery } from "@/components/room-gallery";
 import { PublicShell } from "@/components/public-shell";
+import { StructuredData } from "@/components/structured-data";
 import {
   formatDate,
   formatArea,
@@ -41,12 +42,20 @@ import {
   type ApiAmenity,
   type ApiRoomDetail,
 } from "@/lib/api";
-import { shortDescription } from "@/lib/seo";
+import { absoluteUrl, cleanRoomTitle, shortDescription, SITE_NAME } from "@/lib/seo";
 import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/site-config";
 
 type RoomSlugPageProps = {
   params: Promise<{ slug: string }>;
 };
+
+function decodeRouteSlug(slug: string) {
+  try {
+    return decodeURIComponent(slug);
+  } catch {
+    return slug;
+  }
+}
 
 type DetailView = {
   id: number;
@@ -71,7 +80,7 @@ type DetailView = {
 };
 
 export async function generateMetadata({ params }: RoomSlugPageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const slug = decodeRouteSlug((await params).slug);
 
   const room = await getCachedRoomDetail(slug).catch(() => null);
   if (!room) {
@@ -85,20 +94,21 @@ export async function generateMetadata({ params }: RoomSlugPageProps): Promise<M
   }
 
   const location = [room.ward?.name, room.city?.name].filter(Boolean).join(", ");
+  const title = cleanRoomTitle(room.title, [room.ward?.name, room.city?.name]);
   const description = shortDescription(
-    `${room.short_description || room.description || room.title}. Giá ${formatVnd(room.price)}/tháng, diện tích ${formatArea(room.actual_area)}${location ? ` tại ${location}` : ""}.`,
+    `${room.short_description || room.description || title}. Giá ${formatVnd(room.price)}/tháng, diện tích ${formatArea(room.actual_area)}${location ? ` tại ${location}` : ""}.`,
   );
   const image = galleryFor(room)[0];
   const canonical = `/rooms/${encodeURIComponent(room.slug)}`;
 
   return {
-    title: `${room.title}${location ? ` - ${location}` : ""}`,
+    title: `${title}${location ? ` - ${location}` : ""}`,
     description,
     alternates: {
       canonical,
     },
     openGraph: {
-      title: room.title,
+      title,
       description,
       url: canonical,
       images: image ? [image] : undefined,
@@ -119,6 +129,7 @@ function galleryFor(room: ApiRoomDetail) {
 
 function mapDetail(room: ApiRoomDetail): DetailView {
   const location = [room.address, room.ward?.name, room.city?.name].filter(Boolean).join(", ");
+  const title = cleanRoomTitle(room.title, [room.ward?.name, room.city?.name]);
   const description =
     room.description ||
     room.short_description ||
@@ -126,7 +137,7 @@ function mapDetail(room: ApiRoomDetail): DetailView {
 
   return {
     id: room.id,
-    title: room.title,
+    title,
     collection: roomTypeLabel(room.room_type),
     price: `${formatVnd(room.price)} / tháng`,
     deposit: formatOptionalVnd(room.deposit_amount),
@@ -144,8 +155,63 @@ function mapDetail(room: ApiRoomDetail): DetailView {
       "Phòng thuê theo tháng với tiện ích thiết yếu, phù hợp lịch sinh hoạt ổn định và nhu cầu xem phòng trực tiếp.",
     amenities: room.amenities,
     gallery: galleryFor(room),
-    alt: room.short_description || room.title,
+    alt: room.short_description || title,
     updatedAt: formatDate(room.updated_at),
+  };
+}
+
+function roomStructuredData(room: ApiRoomDetail) {
+  const title = cleanRoomTitle(room.title, [room.ward?.name, room.city?.name]);
+  const description = shortDescription(room.short_description || room.description || title);
+  const url = absoluteUrl(`/rooms/${encodeURIComponent(room.slug)}`);
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Offer",
+        price: room.price,
+        priceCurrency: "VND",
+        availability: "https://schema.org/InStock",
+        url,
+        seller: {
+          "@type": "Organization",
+          name: SITE_NAME,
+          url: absoluteUrl("/homepage"),
+        },
+        itemOffered: {
+          "@type": "Apartment",
+          name: title,
+          description,
+          image: galleryFor(room),
+          floorSize: {
+            "@type": "QuantitativeValue",
+            value: Number(room.actual_area),
+            unitCode: "MTK",
+          },
+          address: {
+            "@type": "PostalAddress",
+            streetAddress: room.address,
+            addressLocality: room.ward?.name,
+            addressRegion: room.city?.name,
+            addressCountry: "VN",
+          },
+          amenityFeature: room.amenities.map((amenity) => ({
+            "@type": "LocationFeatureSpecification",
+            name: amenity.name,
+            value: true,
+          })),
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Trang chủ", item: absoluteUrl("/homepage") },
+          { "@type": "ListItem", position: 2, name: "Phòng thuê", item: absoluteUrl("/rooms") },
+          { "@type": "ListItem", position: 3, name: title, item: url },
+        ],
+      },
+    ],
   };
 }
 
@@ -166,11 +232,13 @@ function iconForAmenity(icon: string) {
 }
 
 export default async function RoomSlugPage({ params }: RoomSlugPageProps) {
-  const { slug } = await params;
-  const detail = await getCachedRoomDetail(slug).then(mapDetail).catch(() => null);
+  const slug = decodeRouteSlug((await params).slug);
+  const room = await getCachedRoomDetail(slug).catch(() => null);
+  const detail = room ? mapDetail(room) : null;
 
   return (
     <PublicShell active="rooms">
+      {room ? <StructuredData data={roomStructuredData(room)} /> : null}
       <div className="mx-auto w-full max-w-container-max flex-grow px-margin-mobile pb-24 pt-28 md:px-margin-desktop md:pt-32">
         {!detail ? (
           <section className="urban-card flex min-h-[420px] flex-col items-center justify-center rounded-lg p-8 text-center md:p-10">
@@ -189,13 +257,13 @@ export default async function RoomSlugPage({ params }: RoomSlugPageProps) {
           </section>
         ) : (
           <>
-        <Link
-          className="mb-8 inline-flex items-center gap-2 font-button text-button text-secondary transition-colors hover:text-primary"
-          href="/rooms"
-        >
-          <ArrowLeft size={16} strokeWidth={1.8} />
-           QUAY LẠI DANH SÁCH
-          </Link>
+        <nav aria-label="Đường dẫn trang" className="mb-8 flex flex-wrap items-center gap-2 text-sm font-medium text-on-surface-variant">
+          <Link className="transition-colors hover:text-primary" href="/homepage">Trang chủ</Link>
+          <ChevronRight aria-hidden="true" size={15} strokeWidth={1.8} />
+          <Link className="transition-colors hover:text-primary" href="/rooms">Phòng thuê</Link>
+          <ChevronRight aria-hidden="true" size={15} strokeWidth={1.8} />
+          <span aria-current="page" className="max-w-full truncate text-on-surface">{detail.title}</span>
+        </nav>
 
         <MobileListingSummary detail={detail} />
         <div className="mb-5 hidden md:block">
@@ -386,12 +454,12 @@ function ContactCard({ detail }: Readonly<{ detail: DetailView }>) {
 
 function SafetyNote() {
   return (
-    <section className="rounded-lg border border-warning/30 bg-warning-container/25 p-4 text-sm leading-6 text-warning">
-      <h2 className="mb-2 flex items-center gap-2 font-semibold">
+    <section className="rounded-lg border border-warning/35 bg-warning-container/25 p-4 text-sm leading-6">
+      <h2 className="mb-2 flex items-center gap-2 font-semibold text-secondary">
         <AlertTriangle size={18} strokeWidth={1.8} />
         Lưu ý an toàn
       </h2>
-      <p>Không chuyển cọc khi chưa xem phòng hoặc chưa xác nhận rõ chủ nhà, phí và điều kiện thuê.</p>
+      <p className="text-on-surface-variant">Không chuyển cọc khi chưa xem phòng hoặc chưa xác nhận rõ chủ nhà, phí và điều kiện thuê.</p>
     </section>
   );
 }

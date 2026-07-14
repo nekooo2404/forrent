@@ -11,3 +11,25 @@ export function shortDescription(value?: string | null, fallback = SITE_DESCRIPT
   const text = (value || fallback).replace(/\s+/g, " ").trim();
   return text.length > maxLength ? `${text.slice(0, maxLength - 1).trim()}…` : text;
 }
+
+export function cleanRoomTitle(value?: string | null, properNouns: Array<string | null | undefined> = []) {
+  const title = (value || "")
+    .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}\uFE0F\u200D]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!title) return "Phòng cho thuê";
+
+  const letters = title.match(/\p{L}/gu)?.join("") || "";
+  if (!letters || letters !== letters.toLocaleUpperCase("vi-VN")) return title;
+
+  const sentenceCase = title.toLocaleLowerCase("vi-VN");
+  let result = `${sentenceCase.charAt(0).toLocaleUpperCase("vi-VN")}${sentenceCase.slice(1)}`.replace(
+    /\b(ccmn|ccdv|wifi)\b/gi,
+    (acronym) => acronym.toUpperCase(),
+  );
+  for (const properNoun of properNouns.filter((item): item is string => Boolean(item))) {
+    const escaped = properNoun.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    result = result.replace(new RegExp(escaped, "giu"), properNoun);
+  }
+  return result;
+}
