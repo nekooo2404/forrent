@@ -9,7 +9,7 @@ export default function OfflinePage() {
         <p className="mt-4 leading-7 text-on-surface-variant">
           Kiểm tra kết nối rồi tải lại trang. Những trang bạn đã mở trước đó vẫn có thể xem từ bộ nhớ thiết bị.
         </p>
-        <Link className="premium-button mt-6 inline-flex min-h-11 items-center rounded-md bg-primary px-5 py-3 font-semibold text-on-primary" href="/homepage">
+        <Link className="premium-button mt-6 inline-flex min-h-11 items-center rounded-md bg-primary px-5 py-3 font-semibold text-on-primary" href="/">
           Thử lại
         </Link>
       </section>

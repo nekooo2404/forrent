@@ -8,7 +8,7 @@ test('homepage visual regression', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Screenshot baseline is tracked for the desktop Chromium project only.');
 
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto('/homepage');
+  await page.goto('/');
   await expect(page.locator('main')).toHaveScreenshot('homepage-light.png', {
     maxDiffPixelRatio: 0.01,
     threshold: 0.2,
@@ -19,7 +19,7 @@ test('homepage mobile hero visual regression', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Screenshot baseline is tracked for the desktop Chromium project only.');
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/homepage');
+  await page.goto('/');
 
   const hero = page.getByTestId('homepage-hero');
   await expect.poll(() => hero.locator('img').evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
@@ -32,7 +32,7 @@ test('homepage mobile hero visual regression', async ({ page }, testInfo) => {
 test('desktop navbar visual regression', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Screenshot baseline is tracked for the desktop Chromium project only.');
 
-  await page.goto('/homepage');
+  await page.goto('/');
   await expect(page.getByTestId('site-nav')).toHaveAttribute('data-ready', 'true');
   await expect(page.getByTestId('site-nav')).toHaveScreenshot('desktop-navbar-light.png', {
     maxDiffPixelRatio: 0.01,
@@ -44,7 +44,7 @@ test('mobile menu visual regression', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Screenshot baseline is tracked for the desktop Chromium project only.');
 
   await page.setViewportSize({ width: 375, height: 667 });
-  await page.goto('/homepage');
+  await page.goto('/');
   await page.locator('.site-menu-button').click();
   await expect(page.locator('.site-mobile-menu')).toBeVisible();
   await expect(page.locator('.site-mobile-menu')).toHaveScreenshot('mobile-menu-light.png', {

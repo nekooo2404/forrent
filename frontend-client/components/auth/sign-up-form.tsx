@@ -169,7 +169,7 @@ export function SignUpForm() {
 
       if (loginResponse.ok && loginPayload.success && loginPayload.data) {
         saveAuthSession(loginPayload.data);
-        router.replace("/homepage");
+        router.replace("/");
         router.refresh();
         return;
       }

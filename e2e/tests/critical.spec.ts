@@ -7,7 +7,7 @@ test.describe('Public critical flows', () => {
       if (new URL(request.url()).pathname === '/api/auth/refresh') refreshRequests.push(request.url());
     });
 
-    for (const path of ['/homepage', '/rooms', '/contact', '/blogs', '/log-in']) {
+    for (const path of ['/', '/rooms', '/contact', '/blogs', '/log-in']) {
       await page.goto(path);
       await page.waitForLoadState('networkidle');
     }
@@ -17,7 +17,7 @@ test.describe('Public critical flows', () => {
 
   test('homepage nav stays light-only and scroll state works', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('theme', 'dark'));
-    await page.goto('/homepage');
+    await page.goto('/');
 
     await expect(page).toHaveTitle(/ForRent/);
     await expect(page.getByTestId('site-nav')).toBeVisible();
@@ -54,7 +54,7 @@ test.describe('Public critical flows', () => {
   });
 
   test('homepage uses a stable brand hero independent of room imagery', async ({ page }) => {
-    await page.goto('/homepage');
+    await page.goto('/');
 
     const hero = page.getByTestId('homepage-hero');
     await expect(hero).toBeVisible();
@@ -67,7 +67,7 @@ test.describe('Public critical flows', () => {
 
   test('anonymous desktop navigation exposes no-wrap account actions', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto('/homepage');
+    await page.goto('/');
 
     const account = page.getByTestId('public-account-actions');
     const login = account.getByRole('link', { name: 'Đăng nhập', exact: true });
@@ -83,7 +83,7 @@ test.describe('Public critical flows', () => {
       contentType: 'application/json',
       body: JSON.stringify({ success: true, message: 'Success', data: { authenticated: true } }),
     }));
-    await page.goto('/homepage');
+    await page.goto('/');
 
     await expect(page.getByRole('button', { name: 'Tài khoản' })).toBeVisible();
     await expect(page.getByTestId('public-account-actions')).toHaveCount(0);
@@ -91,7 +91,7 @@ test.describe('Public critical flows', () => {
 
   test('homepage starts with readable content and touch-sized controls', async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 320, height: 700 });
-    await page.goto('/homepage');
+    await page.goto('/');
 
     const skipLink = page.getByRole('link', { name: 'Bỏ qua điều hướng' });
     await expect(skipLink).toBeAttached();
@@ -145,7 +145,7 @@ test.describe('Public critical flows', () => {
 
   test('mobile menu opens and closes', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/homepage');
+    await page.goto('/');
     await expect(page.getByTestId('site-nav')).toHaveAttribute('data-ready', 'true');
     await expect(page.locator('.site-menu-button')).toBeVisible();
 
@@ -281,7 +281,7 @@ test.describe('Public critical flows', () => {
 
 test.describe('Accessibility basics', () => {
   test('homepage visible buttons meet 44px touch target', async ({ page }) => {
-    await page.goto('/homepage');
+    await page.goto('/');
 
     const buttons = page.locator('button');
     const count = await buttons.count();
@@ -296,7 +296,7 @@ test.describe('Accessibility basics', () => {
   });
 
   test('focus is visible on keyboard navigation', async ({ page }) => {
-    await page.goto('/homepage');
+    await page.goto('/');
     await page.keyboard.press('Tab');
 
     await expect(page.locator(':focus')).toBeVisible();

@@ -19,15 +19,15 @@ import {
 import { cleanRoomTitle, SITE_DESCRIPTION } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Thuê phòng theo tháng tại Hà Nội",
+  title: "Thuê phòng theo tháng tại Hà Nội | ForRent",
   description: SITE_DESCRIPTION,
   alternates: {
-    canonical: "/homepage",
+    canonical: "/",
   },
   openGraph: {
     title: "ForRent - Thuê phòng theo tháng tại Hà Nội",
     description: SITE_DESCRIPTION,
-    url: "/homepage",
+    url: "/",
   },
 };
 
