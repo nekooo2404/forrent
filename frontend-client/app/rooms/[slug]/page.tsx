@@ -177,7 +177,7 @@ function roomStructuredData(room: ApiRoomDetail) {
         seller: {
           "@type": "Organization",
           name: SITE_NAME,
-          url: absoluteUrl("/homepage"),
+          url: absoluteUrl("/"),
         },
         itemOffered: {
           "@type": "Apartment",
@@ -206,7 +206,7 @@ function roomStructuredData(room: ApiRoomDetail) {
       {
         "@type": "BreadcrumbList",
         itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Trang chủ", item: absoluteUrl("/homepage") },
+          { "@type": "ListItem", position: 1, name: "Trang chủ", item: absoluteUrl("/") },
           { "@type": "ListItem", position: 2, name: "Phòng thuê", item: absoluteUrl("/rooms") },
           { "@type": "ListItem", position: 3, name: title, item: url },
         ],
@@ -258,7 +258,7 @@ export default async function RoomSlugPage({ params }: RoomSlugPageProps) {
         ) : (
           <>
         <nav aria-label="Đường dẫn trang" className="mb-8 flex flex-wrap items-center gap-2 text-sm font-medium text-on-surface-variant">
-          <Link className="transition-colors hover:text-primary" href="/homepage">Trang chủ</Link>
+          <Link className="transition-colors hover:text-primary" href="/">Trang chủ</Link>
           <ChevronRight aria-hidden="true" size={15} strokeWidth={1.8} />
           <Link className="transition-colors hover:text-primary" href="/rooms">Phòng thuê</Link>
           <ChevronRight aria-hidden="true" size={15} strokeWidth={1.8} />

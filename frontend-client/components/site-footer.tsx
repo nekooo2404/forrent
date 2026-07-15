@@ -17,7 +17,7 @@ export function SiteFooter() {
     <footer className="scroll-reveal w-full border-t border-outline-variant/20 bg-surface-container-highest pb-8 pt-14">
       <div className="mx-auto grid max-w-container-max grid-cols-1 gap-gutter px-margin-mobile md:grid-cols-4 md:px-margin-desktop">
         <div className="mb-8 md:col-span-1 md:mb-0">
-          <Link className="mb-6 block font-headline-md text-headline-md uppercase text-primary" href="/homepage">
+          <Link className="mb-6 block font-headline-md text-headline-md uppercase text-primary" href="/">
             FORRENT
           </Link>
           <p className="mb-6 max-w-xs font-body-md text-body-md text-secondary">

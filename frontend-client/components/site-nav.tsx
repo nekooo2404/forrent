@@ -11,7 +11,7 @@ import { useFocusTrap } from "@/hooks/use-focus-trap";
 export type NavKey = "home" | "rooms" | "blogs" | "contact";
 
 const navItems: Array<{ key: NavKey; label: string; href: string }> = [
-  { key: "home", label: "Trang chủ", href: "/homepage" },
+  { key: "home", label: "Trang chủ", href: "/" },
   { key: "rooms", label: "Danh sách phòng", href: "/rooms" },
   { key: "blogs", label: "Blog", href: "/blogs" },
   { key: "contact", label: "Liên hệ", href: "/contact" },
@@ -78,7 +78,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
         <Link
           aria-label="ForRent - Trang chủ"
           className={`site-logo-container group relative z-10 inline-flex shrink-0 items-center transition-[width,height] duration-200 ${scrolled ? "h-10 w-32" : "h-10 w-32 lg:h-11 lg:w-[142px]"}`}
-          href="/homepage"
+          href="/"
         >
           <div className="relative">
             <Image
@@ -140,7 +140,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
               <Link
                 aria-label="ForRent - Trang chủ"
                 className="site-logo-container inline-flex h-10 w-32 shrink-0 items-center"
-                href="/homepage"
+                href="/"
                 onClick={() => closeMenu({ restoreFocus: false })}
               >
                 <Image

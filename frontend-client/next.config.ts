@@ -48,6 +48,10 @@ const nextConfig: NextConfig = {
     removeConsole: isProduction ? { exclude: ['error', 'warn'] } : false,
   },
 
+  async redirects() {
+    return [{ source: "/homepage", destination: "/", permanent: true }];
+  },
+
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },

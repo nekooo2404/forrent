@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "ForRent",
     short_name: "ForRent",
     description: "Tìm phòng thuê theo tháng tại Hà Nội, rõ giá, cọc, phí và lịch xem.",
-    start_url: "/homepage",
+    start_url: "/",
     display: "standalone",
     background_color: "#f7f3ef",
     theme_color: "#7c3f18",

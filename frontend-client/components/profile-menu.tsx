@@ -77,7 +77,7 @@ export function ProfileMenu() {
     clearAuthSession();
     setAuthState("anonymous");
     setIsProfileMenuOpen(false);
-    window.location.assign("/homepage");
+    window.location.assign("/");
   }
 
   if (authState === "loading") {

@@ -4,7 +4,7 @@ set -eu
 SHA="${1:-}"
 COMPOSE_FILE="${COMPOSE_FILE:-backend/docker-compose.yml}"
 STEP_TIMEOUT="${STEP_TIMEOUT:-300}"
-PUBLIC_URLS="${PUBLIC_URLS:-https://forrent.io.vn/homepage https://admin.forrent.io.vn/log-in https://api.forrent.io.vn/api/health/}"
+PUBLIC_URLS="${PUBLIC_URLS:-https://forrent.io.vn/ https://admin.forrent.io.vn/log-in https://api.forrent.io.vn/api/health/}"
 REPO_SLUG="${GITHUB_REPOSITORY:-nekooo2404/forrent}"
 REQUIRED_CI_WORKFLOW="${REQUIRED_CI_WORKFLOW:-CI}"
 REQUIRED_SECURITY_WORKFLOW="${REQUIRED_SECURITY_WORKFLOW:-Container Security}"
@@ -29,7 +29,7 @@ check_production_hardening() {
     fi
   done
 
-  headers="$(curl --fail --silent --show-error --head --max-time 20 https://forrent.io.vn/homepage | tr -d '\r')"
+  headers="$(curl --fail --silent --show-error --head --max-time 20 https://forrent.io.vn/ | tr -d '\r')"
   server="$(printf '%s\n' "$headers" | awk -F': ' 'tolower($1) == "server" { print $2; exit }')"
   case "$server" in
     */*)

@@ -22,7 +22,7 @@ test.describe('Security headers and origin guard', () => {
   test('serves strict CSP without unsafe-inline', async ({ request }, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'Run header security regression once.');
 
-    const response = await request.get('/homepage');
+    const response = await request.get('/');
     const csp = response.headers()['content-security-policy'] ?? '';
 
     expect(response.ok()).toBeTruthy();
@@ -32,6 +32,39 @@ test.describe('Security headers and origin guard', () => {
     expect(csp).not.toContain("'unsafe-inline'");
     expect(csp).not.toContain('supabase');
     expect(csp).not.toContain('googleusercontent');
+  });
+
+  test('uses the site root as the canonical homepage', async ({ request }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', 'Run SEO regression once.');
+
+    const legacy = await request.get('/homepage', { maxRedirects: 0 });
+    expect(legacy.status()).toBe(308);
+    expect(legacy.headers().location).toBe('/');
+
+    const root = await request.get('/');
+    expect(root.ok()).toBeTruthy();
+    const canonical = (await root.text()).match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? '';
+    expect(canonical).not.toBe('');
+    expect(new URL(canonical).pathname).toBe('/');
+  });
+
+  test('caches public pages without caching session endpoints', async ({ request }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', 'Run cache regression once.');
+
+    for (const path of ['/', '/rooms', '/blogs', '/contact']) {
+      const response = await request.get(path);
+      const cacheControl = response.headers()['cache-control'] ?? '';
+
+      expect(response.ok()).toBeTruthy();
+      expect(cacheControl).toContain('public');
+      expect(cacheControl).toContain('max-age=30');
+      expect(cacheControl).toContain('s-maxage=60');
+    }
+
+    for (const path of ['/api/auth/session', '/log-in']) {
+      const response = await request.get(path);
+      expect(response.headers()['cache-control'] ?? '').not.toContain('public');
+    }
   });
 
   test('refresh without a session is a no-op', async ({ request }, testInfo) => {
@@ -61,10 +94,11 @@ test.describe('Security headers and origin guard', () => {
 
     const response = await request.get('/sitemap.xml');
     const xml = await response.text();
-    const homepageEntry = xml.match(/<url>\s*<loc>[^<]*\/homepage<\/loc>([\s\S]*?)<\/url>/)?.[1] ?? '';
+    const homepageEntry = xml.match(/<url>\s*<loc>https?:\/\/[^<]+\/<\/loc>([\s\S]*?)<\/url>/)?.[1] ?? '';
 
     expect(response.ok()).toBeTruthy();
     expect(xml).not.toContain('/room-details');
+    expect(xml).not.toContain('/homepage');
     expect(homepageEntry).not.toContain('<lastmod>');
   });
 
@@ -92,7 +126,7 @@ test.describe('Security headers and origin guard', () => {
     });
 
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/homepage');
+    await page.goto('/');
     await page.locator('.site-menu-button').click();
     await expect(page.locator('.site-mobile-menu')).toBeVisible();
     await page.goto('/rooms');

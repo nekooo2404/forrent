@@ -21,7 +21,7 @@ sh deploy/ops/deploy-sha.sh <ci-green-commit-sha>
 ```
 
 Script sẽ từ chối dirty worktree, kiểm tra SHA thuộc `origin/main`, bắt buộc `RELEASE_NOTE_PATH` trỏ tới file release note local không rỗng, rebuild container, chạy migration/check và smoke các URL trong `PUBLIC_URLS`.
-Mặc định `PUBLIC_URLS` gồm client `/homepage`, admin `/log-in` và API `/api/health/`.
+Mặc định `PUBLIC_URLS` gồm client `/`, admin `/log-in` và API `/api/health/`.
 Script cũng bắt buộc `main` đang được branch protection và tìm thấy cả workflow `CI` lẫn `Container Security` thành công cho SHA đó qua GitHub CLI:
 
 ```bash
@@ -54,7 +54,7 @@ Mỗi deploy phải có release note ngắn theo `docs/releases/release-note-tem
 
 GitHub Actions cron chỉ là smoke check phụ. Production cần monitor ngoài hạ tầng GitHub với alert SLA:
 
-- URLs: `https://forrent.io.vn/homepage`, `https://admin.forrent.io.vn/log-in`, `https://api.forrent.io.vn/api/health/`.
+- URLs: `https://forrent.io.vn/`, `https://admin.forrent.io.vn/log-in`, `https://api.forrent.io.vn/api/health/`.
 - Interval: 1 phút cho API health, 5 phút cho client/admin.
 - Alert sau 2 lần fail liên tiếp.
 - Người nhận: owner kỹ thuật và vận hành.

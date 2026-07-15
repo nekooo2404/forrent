@@ -4,7 +4,7 @@ set -eu
 SHA="${1:-}"
 COMPOSE_FILE="${COMPOSE_FILE:-backend/docker-compose.yml}"
 STEP_TIMEOUT="${STEP_TIMEOUT:-300}"
-PUBLIC_URLS="${PUBLIC_URLS:-https://forrent.io.vn/homepage https://admin.forrent.io.vn/log-in https://api.forrent.io.vn/api/health/}"
+PUBLIC_URLS="${PUBLIC_URLS:-https://forrent.io.vn/ https://admin.forrent.io.vn/log-in https://api.forrent.io.vn/api/health/}"
 REPO_SLUG="${GITHUB_REPOSITORY:-nekooo2404/forrent}"
 REQUIRED_CI_WORKFLOW="${REQUIRED_CI_WORKFLOW:-CI}"
 REQUIRED_SECURITY_WORKFLOW="${REQUIRED_SECURITY_WORKFLOW:-Container Security}"

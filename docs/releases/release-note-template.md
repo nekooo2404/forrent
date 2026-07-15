@@ -17,7 +17,7 @@
 ## Verification
 
 - Backend health: `https://api.forrent.io.vn/api/health/`
-- Client smoke: `https://forrent.io.vn/homepage`
+- Client smoke: `https://forrent.io.vn/`
 - Admin smoke: `https://admin.forrent.io.vn/log-in`
 - Sentry checked:
 - External uptime monitor checked:

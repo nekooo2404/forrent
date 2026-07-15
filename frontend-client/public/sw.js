@@ -20,7 +20,7 @@ self.addEventListener("activate", (event) => {
 });
 
 function isPublicNavigation(url) {
-  const exact = ["/", "/homepage", "/rooms", "/blogs", "/contact", "/privacy", "/terms", OFFLINE_URL];
+  const exact = ["/", "/rooms", "/blogs", "/contact", "/privacy", "/terms", OFFLINE_URL];
   return exact.includes(url.pathname) || url.pathname.startsWith("/rooms/") || url.pathname.startsWith("/blogs/");
 }
 

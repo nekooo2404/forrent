@@ -80,7 +80,7 @@ export function LoginForm() {
       }
 
       saveAuthSession(payload.data);
-      router.replace("/homepage");
+      router.replace("/");
       router.refresh();
     } catch {
       toast({

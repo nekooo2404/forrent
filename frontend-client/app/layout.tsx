@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "vi_VN",
     siteName: SITE_NAME,
-    url: "/homepage",
+    url: "/",
     title: "ForRent - Thuê phòng theo tháng tại Hà Nội",
     description: SITE_DESCRIPTION,
   },
