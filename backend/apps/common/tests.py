@@ -1,14 +1,17 @@
+import json
 from unittest import mock
 
 import cloudinary.exceptions
 import pytest
 from django.core.files.base import ContentFile
+from django.core.mail import EmailMessage
 from django.http import HttpResponse
 from django.test import RequestFactory
 from django.test import SimpleTestCase, override_settings
 
 from apps.common.middleware import RequestIDMiddleware
 from apps.common.audit import audit_event
+from apps.common.email import SendifyEmailBackend
 from apps.common.storage import CloudinaryMediaStorage
 
 
@@ -71,6 +74,41 @@ class RequestIDMiddlewareTests(SimpleTestCase):
         assert payload["path"] == "/api/test/"
         assert payload["duration_ms"] >= 0
 
+
+@override_settings(
+    SENDIFY_API_KEY="sfy_test_key",
+    SENDIFY_API_URL="https://sendify.example/api/emails",
+    SENDIFY_API_TIMEOUT=9,
+)
+class SendifyEmailBackendTests(SimpleTestCase):
+    def test_sends_django_email_through_sendify_api(self):
+        response = mock.MagicMock()
+        response.status = 202
+        response.__enter__.return_value = response
+
+        with mock.patch("apps.common.email.urlopen", return_value=response) as urlopen:
+            sent = SendifyEmailBackend().send_messages(
+                [
+                    EmailMessage(
+                        subject="Ma OTP ForRent",
+                        body="Ma xac thuc: 123456",
+                        from_email="ForRent <noreply@forrent.io.vn>",
+                        to=["tenant@example.com"],
+                    )
+                ]
+            )
+
+        assert sent == 1
+        request = urlopen.call_args.args[0]
+        assert request.full_url == "https://sendify.example/api/emails"
+        assert request.get_header("Authorization") == "Bearer sfy_test_key"
+        assert json.loads(request.data) == {
+            "from": "ForRent <noreply@forrent.io.vn>",
+            "to": "tenant@example.com",
+            "subject": "Ma OTP ForRent",
+            "text": "Ma xac thuc: 123456",
+        }
+        assert urlopen.call_args.kwargs["timeout"] == 9
 
 @override_settings(
     CLOUDINARY_CLOUD_NAME="demo",
