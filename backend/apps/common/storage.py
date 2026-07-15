@@ -1,4 +1,5 @@
 import uuid
+from pathlib import Path
 
 import cloudinary
 import cloudinary.api
@@ -42,21 +43,27 @@ class CloudinaryMediaStorage(Storage):
         filename = stem if dot else filename
         return f"{folder}/{filename}" if folder else filename
 
+    def _resource_type(self, name, content=None):
+        content_type = (getattr(content, "content_type", "") or "").lower()
+        return "video" if content_type.startswith("video/") or Path(name).suffix.lower() in {".mp4", ".webm", ".mov"} else "image"
+
     def _save(self, name, content):
         name = self._clean_name(name)
         if hasattr(content, "seek"):
             content.seek(0)
+        resource_type = self._resource_type(name, content)
         upload_options = {
             "public_id": self._public_id(name),
-            "resource_type": "image",
+            "resource_type": resource_type,
             "overwrite": False,
-            "eager": [
+        }
+        if resource_type == "image":
+            upload_options["eager"] = [
                 {"width": 640, "crop": "limit", "fetch_format": "auto", "quality": "auto:eco"},
                 {"width": 1200, "crop": "limit", "fetch_format": "auto", "quality": "auto:good"},
-            ],
-        }
-        if settings.CLOUDINARY_UPLOAD_MODERATION:
-            upload_options["moderation"] = settings.CLOUDINARY_UPLOAD_MODERATION
+            ]
+            if settings.CLOUDINARY_UPLOAD_MODERATION:
+                upload_options["moderation"] = settings.CLOUDINARY_UPLOAD_MODERATION
         cloudinary.uploader.upload(content, **upload_options)
         return name
 
@@ -73,18 +80,21 @@ class CloudinaryMediaStorage(Storage):
 
     def exists(self, name):
         try:
-            cloudinary.api.resource(self._public_id(name), resource_type="image")
+            cloudinary.api.resource(self._public_id(name), resource_type=self._resource_type(name))
             return True
         except cloudinary.exceptions.NotFound:
             return False
 
     def delete(self, name):
-        cloudinary.uploader.destroy(self._public_id(name), resource_type="image", invalidate=True)
+        cloudinary.uploader.destroy(self._public_id(name), resource_type=self._resource_type(name), invalidate=True)
 
     def url(self, name):
+        resource_type = self._resource_type(name)
+        video_format = Path(name).suffix.removeprefix(".") if resource_type == "video" else None
         url, _ = cloudinary.utils.cloudinary_url(
             self._public_id(name),
-            resource_type="image",
+            resource_type=resource_type,
+            format=video_format,
             secure=True,
         )
         return url

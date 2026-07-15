@@ -77,7 +77,7 @@ export function middleware(request: NextRequest) {
   const apiOrigin = origin(process.env.NEXT_PUBLIC_API_BASE_URL);
   const sentryOrigin = optionalOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN);
   const localApiSources = isProduction ? [] : ["http://localhost:8000", "http://127.0.0.1:8000", "http://backend:8000"];
-  const scriptSources = [`'self'`, `'nonce-${requestNonce}'`, "'strict-dynamic'", ...(!isProduction ? ["'unsafe-eval'"] : [])].join(" ");
+  const scriptSources = [`'self'`, `'nonce-${requestNonce}'`, ...(!isProduction ? ["'unsafe-eval'"] : [])].join(" ");
   const csp = [
     "default-src 'self'",
     `script-src ${scriptSources}`,
@@ -85,6 +85,7 @@ export function middleware(request: NextRequest) {
     `style-src-attr ${styleAttributeSources}`,
     "font-src 'self' https://fonts.gstatic.com",
     `img-src 'self' data: blob: https://${cloudinaryHost} ${apiOrigin} ${localApiSources.join(" ")}`,
+    `media-src 'self' blob: https://${cloudinaryHost} ${apiOrigin} ${localApiSources.join(" ")}`,
     `connect-src 'self' ${apiOrigin} ${sentryOrigin} ${localApiSources.join(" ")}`,
     "object-src 'none'",
     "base-uri 'self'",

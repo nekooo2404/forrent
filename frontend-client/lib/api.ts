@@ -89,7 +89,9 @@ export type ApiRoom = {
   deposit_type_name: string;
   deposit_amount: string;
   electricity_price_per_kwh: string;
+  water_billing_type: "PER_PERSON" | "PER_CUBIC_METER";
   water_price_per_person: string;
+  water_price_per_cubic_meter: string;
   service_fee: string;
   actual_area: string;
   area_range: ApiAreaRange;
@@ -106,6 +108,7 @@ export type ApiRoomImage = {
   id: number;
   image: string | null;
   image_url: string;
+  media_type: "IMAGE" | "VIDEO";
   sort_order: number;
   created_at: string;
 };

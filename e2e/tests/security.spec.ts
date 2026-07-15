@@ -29,9 +29,14 @@ test.describe('Security headers and origin guard', () => {
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("style-src-attr 'unsafe-hashes'");
+    expect(csp).toContain("media-src 'self' blob: https://res.cloudinary.com");
     expect(csp).not.toContain("'unsafe-inline'");
+    expect(csp).not.toContain("'strict-dynamic'");
     expect(csp).not.toContain('supabase');
     expect(csp).not.toContain('googleusercontent');
+
+    const adminResponse = await request.get(new URL('/log-in', adminBaseURL).toString());
+    expect(adminResponse.headers()['content-security-policy'] ?? '').not.toContain("'strict-dynamic'");
   });
 
   test('uses the site root as the canonical homepage', async ({ request }, testInfo) => {
@@ -121,6 +126,8 @@ test.describe('Security headers and origin guard', () => {
   test('strict CSP does not block client or admin UI styles', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'Run CSP browser regression once.');
     const violations: string[] = [];
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900"><rect width="1200" height="900" fill="#9a5b31"/></svg>';
+    await page.route('https://res.cloudinary.com/**', (route) => route.fulfill({ body: svg, contentType: 'image/svg+xml' }));
     page.on('console', (message) => {
       if (message.text().includes('Content Security Policy')) violations.push(message.text());
     });
@@ -130,6 +137,12 @@ test.describe('Security headers and origin guard', () => {
     await page.locator('.site-menu-button').click();
     await expect(page.locator('.site-mobile-menu')).toBeVisible();
     await page.goto('/rooms');
+    await page.goto('/rooms/e2e-room-many');
+    await page.locator('[data-image-count="3"] button').first().click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.goto('/rooms/e2e-room-cloudinary');
+    await page.locator('[data-image-count="3"] button').first().click();
+    await expect(page.getByRole('dialog')).toBeVisible();
     await page.goto(new URL('/log-in', adminBaseURL).toString());
 
     expect(violations).toEqual([]);

@@ -51,6 +51,10 @@ class Room(TimeStampedModel):
         HIDDEN = "HIDDEN", "Hidden"
         ARCHIVED = "ARCHIVED", "Archived"
 
+    class WaterBillingType(models.TextChoices):
+        PER_PERSON = "PER_PERSON", "Per person"
+        PER_CUBIC_METER = "PER_CUBIC_METER", "Per cubic meter"
+
     @classmethod
     def can_transition(cls, current_status, next_status):
         if current_status == next_status:
@@ -76,7 +80,9 @@ class Room(TimeStampedModel):
     deposit_type_name_snapshot = models.CharField(max_length=255, blank=True)
     deposit_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
     electricity_price_per_kwh = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
+    water_billing_type = models.CharField(max_length=20, choices=WaterBillingType.choices, default=WaterBillingType.PER_PERSON)
     water_price_per_person = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
+    water_price_per_cubic_meter = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
     service_fee = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
     actual_area = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(Decimal("0"))])
     area_range = models.ForeignKey(AreaRange, on_delete=models.PROTECT, related_name="rooms")
@@ -125,10 +131,20 @@ class Room(TimeStampedModel):
         return self.title
 
 
+def room_media_upload_to(instance, filename):
+    folder = "room-videos" if instance.media_type == RoomImage.MediaType.VIDEO else "room-images"
+    return f"{folder}/{filename}"
+
+
 class RoomImage(models.Model):
+    class MediaType(models.TextChoices):
+        IMAGE = "IMAGE", "Image"
+        VIDEO = "VIDEO", "Video"
+
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="images")
-    image = models.ImageField(upload_to="room-images/", null=True, blank=True)
+    image = models.FileField(upload_to=room_media_upload_to, null=True, blank=True)
     image_url = models.URLField(blank=True)
+    media_type = models.CharField(max_length=10, choices=MediaType.choices, default=MediaType.IMAGE)
     sort_order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -136,4 +152,4 @@ class RoomImage(models.Model):
         ordering = ("sort_order", "id")
 
     def __str__(self):
-        return f"Image for {self.room}"
+        return f"{self.get_media_type_display()} for {self.room}"

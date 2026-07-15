@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Calculator, ImageIcon, Pencil, Plus, RefreshCw, Search, Trash2, X } from "lucide-react";
+import { Calculator, ImageIcon, Pencil, Plus, RefreshCw, Search, Trash2, Video, X } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -58,6 +58,8 @@ type RoomFormState = {
   status: string;
   service_fee: string;
   title: string;
+  water_billing_type: string;
+  water_price_per_cubic_meter: string;
   water_price_per_person: string;
   ward: string;
 };
@@ -93,6 +95,8 @@ const emptyForm: RoomFormState = {
   status: "DRAFT",
   service_fee: "",
   title: "",
+  water_billing_type: "PER_PERSON",
+  water_price_per_cubic_meter: "",
   water_price_per_person: "",
   ward: "",
 };
@@ -214,6 +218,8 @@ export function AdminRoomManager() {
       status: room.status,
       service_fee: room.service_fee,
       title: room.title,
+      water_billing_type: room.water_billing_type || "PER_PERSON",
+      water_price_per_cubic_meter: room.water_price_per_cubic_meter || "",
       water_price_per_person: room.water_price_per_person,
       ward: String(room.ward),
     });
@@ -247,6 +253,8 @@ export function AdminRoomManager() {
       status: form.status,
       service_fee: form.service_fee || "0",
       title: form.title.trim(),
+      water_billing_type: form.water_billing_type,
+      water_price_per_cubic_meter: form.water_price_per_cubic_meter || "0",
       water_price_per_person: form.water_price_per_person || "0",
       ward: form.ward,
     }).forEach(([key, value]) => payload.append(key, value));
@@ -692,15 +700,27 @@ function RoomFormModal({
                 <input className={adminInputClass} min="0" onChange={(event) => update("actual_area", event.target.value)} required step="0.1" type="number" value={form.actual_area} />
               </Field>
             </div>
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <Field label="Tiền điện / kWh">
                 <input className={adminInputClass} min="0" onChange={(event) => update("electricity_price_per_kwh", event.target.value)} type="number" value={form.electricity_price_per_kwh} />
               </Field>
-              <Field label="Tiền nước / người">
-                <input className={adminInputClass} min="0" onChange={(event) => update("water_price_per_person", event.target.value)} type="number" value={form.water_price_per_person} />
-              </Field>
               <Field label="Phí dịch vụ / tháng">
                 <input className={adminInputClass} min="0" onChange={(event) => update("service_fee", event.target.value)} type="number" value={form.service_fee} />
+              </Field>
+              <Field label="Cách tính tiền nước">
+                <select className={adminSelectClass} onChange={(event) => update("water_billing_type", event.target.value)} value={form.water_billing_type}>
+                  <option value="PER_PERSON">Theo đầu người</option>
+                  <option value="PER_CUBIC_METER">Theo số khối</option>
+                </select>
+              </Field>
+              <Field label={form.water_billing_type === "PER_CUBIC_METER" ? "Tiền nước / m³" : "Tiền nước / người"}>
+                <input
+                  className={adminInputClass}
+                  min="0"
+                  onChange={(event) => update(form.water_billing_type === "PER_CUBIC_METER" ? "water_price_per_cubic_meter" : "water_price_per_person", event.target.value)}
+                  type="number"
+                  value={form.water_billing_type === "PER_CUBIC_METER" ? form.water_price_per_cubic_meter : form.water_price_per_person}
+                />
               </Field>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
@@ -747,7 +767,7 @@ function RoomFormModal({
             <section className="rounded-xl border border-primary/10 bg-surface-container-lowest p-4 shadow-sm">
               <div className="mb-4 flex items-center gap-2">
                 <ImageIcon size={18} strokeWidth={1.8} />
-                <h3 className="font-semibold">Ảnh gallery</h3>
+                <h3 className="font-semibold">Ảnh và video</h3>
               </div>
               <Field label="Thumbnail">
                 <input
@@ -758,9 +778,9 @@ function RoomFormModal({
                 />
               </Field>
               <div className="mt-4" />
-              <Field label="Upload gallery">
+              <Field label="Upload ảnh/video">
                 <input
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp,image/avif,video/mp4,video/webm,video/quicktime"
                   className={adminInputClass}
                   multiple
                   onChange={(event) => update("uploaded_images", Array.from(event.target.files ?? []))}
@@ -768,33 +788,40 @@ function RoomFormModal({
                 />
               </Field>
               <div className="mt-4" />
-              <Field label="Image URLs, mỗi dòng một ảnh">
+              <Field label="URL ảnh, mỗi dòng một ảnh">
                 <textarea className={`${adminInputClass} min-h-28`} onChange={(event) => update("image_urls", event.target.value)} placeholder="https://..." value={form.image_urls} />
               </Field>
               {form.thumbnail ? <p className="mt-3 text-xs text-secondary">Thumbnail mới: {form.thumbnail.name}</p> : null}
               {form.uploaded_images.length ? (
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  {form.uploaded_images.map((image) => (
-                    <div className="rounded-md bg-surface-container-low p-2 text-xs text-secondary" key={`${image.name}-${image.size}`}>
-                      {image.name}
+                  {form.uploaded_images.map((mediaFile) => (
+                    <div className="flex items-center gap-2 rounded-md bg-surface-container-low p-2 text-xs text-secondary" key={`${mediaFile.name}-${mediaFile.size}`}>
+                      {mediaFile.type.startsWith("video/") ? <Video aria-hidden="true" className="shrink-0" size={15} /> : <ImageIcon aria-hidden="true" className="shrink-0" size={15} />}
+                      <span className="min-w-0 truncate">{mediaFile.name}</span>
                     </div>
                   ))}
                 </div>
               ) : null}
               {editingRoom?.images.length ? (
                 <div className="mt-4 space-y-2">
-                  <p className="text-xs font-semibold uppercase text-secondary">Ảnh đang có</p>
-                  {editingRoom.images.map((image, index) => (
-                    <div className="flex items-center gap-3 rounded-md border border-primary/10 bg-surface-container-low p-2" key={image.id}>
-                      {image.image_url || image.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img alt={`Ảnh phòng ${index + 1}`} className="size-14 rounded object-cover" src={image.image_url || image.image || ""} />
+                  <p className="text-xs font-semibold uppercase text-secondary">Media đang có</p>
+                  {editingRoom.images.map((mediaItem, index) => (
+                    <div className="flex items-center gap-3 rounded-md border border-primary/10 bg-surface-container-low p-2" key={mediaItem.id}>
+                      {mediaItem.image_url || mediaItem.image ? (
+                        mediaItem.media_type === "VIDEO" ? (
+                          <video aria-label={`Video phòng ${index + 1}`} className="size-14 rounded object-cover" muted playsInline preload="metadata" src={mediaItem.image_url || mediaItem.image || ""} />
+                        ) : (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img alt={`Ảnh phòng ${index + 1}`} className="size-14 rounded object-cover" src={mediaItem.image_url || mediaItem.image || ""} />
+                        )
                       ) : (
-                        <div className="grid size-14 place-items-center rounded bg-surface-container text-xs text-secondary">URL</div>
+                        <div className="grid size-14 place-items-center rounded bg-surface-container text-secondary">
+                          {mediaItem.media_type === "VIDEO" ? <Video aria-hidden="true" size={18} /> : <ImageIcon aria-hidden="true" size={18} />}
+                        </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs text-primary">Ảnh #{index + 1}</p>
-                        <p className="text-xs text-secondary">Thứ tự {image.sort_order}</p>
+                        <p className="truncate text-xs text-primary">{mediaItem.media_type === "VIDEO" ? "Video" : "Ảnh"} #{index + 1}</p>
+                        <p className="text-xs text-secondary">Thứ tự {mediaItem.sort_order}</p>
                       </div>
                       <div className="flex gap-1">
                         <button
@@ -802,8 +829,8 @@ function RoomFormModal({
                           disabled={index === 0}
                           onClick={() =>
                             onImageSwap(
-                              image.id,
-                              image.sort_order,
+                              mediaItem.id,
+                              mediaItem.sort_order,
                               editingRoom.images[index - 1].id,
                               editingRoom.images[index - 1].sort_order,
                             )
@@ -817,8 +844,8 @@ function RoomFormModal({
                           disabled={index === editingRoom.images.length - 1}
                           onClick={() =>
                             onImageSwap(
-                              image.id,
-                              image.sort_order,
+                              mediaItem.id,
+                              mediaItem.sort_order,
                               editingRoom.images[index + 1].id,
                               editingRoom.images[index + 1].sort_order,
                             )
@@ -827,7 +854,7 @@ function RoomFormModal({
                         >
                           Xuống
                         </button>
-                        <button className="rounded border border-error/20 px-2 py-1 text-xs text-error" onClick={() => onImageDelete(image.id)} type="button">
+                        <button className="rounded border border-error/20 px-2 py-1 text-xs text-error" onClick={() => onImageDelete(mediaItem.id)} type="button">
                           Xóa
                         </button>
                       </div>

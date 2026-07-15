@@ -66,6 +66,7 @@ type DetailView = {
   depositLabel: string;
   electricity: string;
   water: string;
+  waterLabel: string;
   serviceFee: string;
   location: string;
   area: string;
@@ -74,7 +75,7 @@ type DetailView = {
   description: string;
   secondaryDescription: string;
   amenities: ApiAmenity[];
-  gallery: string[];
+  gallery: Array<{ src: string; type: "image" | "video" }>;
   alt: string;
   updatedAt: string;
 };
@@ -98,7 +99,7 @@ export async function generateMetadata({ params }: RoomSlugPageProps): Promise<M
   const description = shortDescription(
     `${room.short_description || room.description || title}. Giá ${formatVnd(room.price)}/tháng, diện tích ${formatArea(room.actual_area)}${location ? ` tại ${location}` : ""}.`,
   );
-  const image = galleryFor(room)[0];
+  const image = galleryFor(room).find((item) => item.type === "image")?.src;
   const canonical = `/rooms/${encodeURIComponent(room.slug)}`;
 
   return {
@@ -117,14 +118,16 @@ export async function generateMetadata({ params }: RoomSlugPageProps): Promise<M
 }
 
 function galleryFor(room: ApiRoomDetail) {
-  const images = [
-    room.thumbnail_url,
-    ...room.images.map((image) => image.image_url || image.image),
-  ]
-    .map((image) => resolveMediaUrl(image))
-    .filter((image): image is string => Boolean(image));
-
-  return images;
+  return [
+    { source: room.thumbnail_url, type: "image" as const },
+    ...room.images.map((media) => ({
+      source: media.image_url || media.image,
+      type: media.media_type === "VIDEO" ? "video" as const : "image" as const,
+    })),
+  ].flatMap((media) => {
+    const src = resolveMediaUrl(media.source);
+    return src ? [{ src, type: media.type }] : [];
+  });
 }
 
 function mapDetail(room: ApiRoomDetail): DetailView {
@@ -143,7 +146,12 @@ function mapDetail(room: ApiRoomDetail): DetailView {
     deposit: formatOptionalVnd(room.deposit_amount),
     depositLabel: room.deposit_type_name || "Cọc",
     electricity: formatOptionalVnd(room.electricity_price_per_kwh),
-    water: formatOptionalVnd(room.water_price_per_person),
+    water: formatOptionalVnd(
+      room.water_billing_type === "PER_CUBIC_METER"
+        ? room.water_price_per_cubic_meter
+        : room.water_price_per_person,
+    ),
+    waterLabel: room.water_billing_type === "PER_CUBIC_METER" ? "Tiền nước / m³" : "Tiền nước / người",
     serviceFee: formatOptionalVnd(room.service_fee),
     location,
     area: formatArea(room.actual_area),
@@ -183,7 +191,7 @@ function roomStructuredData(room: ApiRoomDetail) {
           "@type": "Apartment",
           name: title,
           description,
-          image: galleryFor(room),
+          image: galleryFor(room).filter((item) => item.type === "image").map((item) => item.src),
           floorSize: {
             "@type": "QuantitativeValue",
             value: Number(room.actual_area),
@@ -269,7 +277,7 @@ export default async function RoomSlugPage({ params }: RoomSlugPageProps) {
         <div className="mb-5 hidden md:block">
           <ListingHeader detail={detail} />
         </div>
-        <RoomGallery images={detail.gallery} title={detail.title} />
+        <RoomGallery media={detail.gallery} title={detail.title} />
 
         <ListingBody detail={detail} />
           </>
@@ -375,7 +383,7 @@ function FactsSection({ detail }: Readonly<{ detail: DetailView }>) {
         <DetailRow icon={<ShieldCheck size={18} />} label={detail.depositLabel} value={detail.deposit} />
         <DetailRow icon={<CalendarCheck size={18} />} label="Cập nhật" value={detail.updatedAt} />
         <DetailRow icon={<Zap size={18} />} label="Tiền điện" value={detail.electricity} />
-        <DetailRow icon={<Droplets size={18} />} label="Tiền nước" value={detail.water} />
+        <DetailRow icon={<Droplets size={18} />} label={detail.waterLabel} value={detail.water} />
         <DetailRow icon={<ReceiptText size={18} />} label="Phí dịch vụ" value={detail.serviceFee} />
         <DetailRow icon={<Sparkles size={18} />} label="Tiện ích" value={`${detail.amenities.length} tiện ích`} />
       </div>
