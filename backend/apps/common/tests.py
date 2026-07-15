@@ -109,6 +109,20 @@ class CloudinaryMediaStorageTests(SimpleTestCase):
         assert upload.call_args.kwargs["overwrite"] is False
         assert upload.call_args.kwargs["eager"][0]["width"] == 640
 
+    def test_video_uses_cloudinary_video_resource_type(self):
+        storage = CloudinaryMediaStorage()
+
+        with mock.patch("cloudinary.uploader.upload") as upload:
+            saved_name = storage._save("room-videos/tour.mp4", ContentFile(b"video"))
+
+        assert saved_name == "room-videos/tour.mp4"
+        assert upload.call_args.kwargs["public_id"] == "room-videos/tour"
+        assert upload.call_args.kwargs["resource_type"] == "video"
+        assert "eager" not in upload.call_args.kwargs
+        assert storage.url("room-videos/tour.mp4") == (
+            "https://res.cloudinary.com/demo/video/upload/v1/room-videos/tour.mp4"
+        )
+
     @override_settings(CLOUDINARY_UPLOAD_MODERATION="manual")
     def test_save_passes_cloudinary_moderation_when_configured(self):
         storage = CloudinaryMediaStorage()

@@ -1,3 +1,5 @@
+from unittest import mock
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -5,10 +7,10 @@ from rest_framework import serializers
 from rest_framework.test import APIClient
 
 from apps.common.models import AuditLog
-from apps.common.image_validation import validate_uploaded_image_file
+from apps.common.image_validation import validate_uploaded_image_file, validate_uploaded_room_media_file
 from apps.rooms.tests.factories import create_admin, create_room, create_user
 from apps.locations.models import AreaRange
-from apps.rooms.models import DepositType, Room
+from apps.rooms.models import DepositType, Room, RoomImage
 from apps.rooms.serializers import validate_room_image_url
 
 User = get_user_model()
@@ -35,6 +37,30 @@ class TestRoomAPI:
         assert data["electricity_price_per_kwh"] == "4000.00"
         assert data["water_price_per_person"] == "100000.00"
         assert data["service_fee"] == "150000.00"
+
+    def test_admin_can_set_water_price_per_cubic_meter(self):
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        self.client.force_authenticate(admin)
+
+        response = self.client.patch(
+            f"/api/admin/rooms/{room.id}/",
+            {
+                "water_billing_type": "PER_CUBIC_METER",
+                "water_price_per_cubic_meter": "25000",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 200
+        room.refresh_from_db()
+        assert room.water_billing_type == Room.WaterBillingType.PER_CUBIC_METER
+        assert room.water_price_per_cubic_meter == 25000
+
+        public_response = self.client.get(f"/api/rooms/{room.slug}/")
+        data = public_response.json()["data"]
+        assert data["water_billing_type"] == "PER_CUBIC_METER"
+        assert data["water_price_per_cubic_meter"] == "25000.00"
 
     def test_public_room_list_hides_unavailable_rooms(self):
         available_room = create_room()
@@ -162,6 +188,41 @@ class TestRoomAPI:
 
         with pytest.raises(serializers.ValidationError):
             validate_uploaded_image_file(image, "uploaded_images")
+
+    def test_room_media_validation_accepts_mp4_and_rejects_spoofed_video(self):
+        mp4 = SimpleUploadedFile(
+            "tour.mp4",
+            b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 64,
+            content_type="video/mp4",
+        )
+        spoofed = SimpleUploadedFile("tour.mp4", b"not-a-video", content_type="video/mp4")
+
+        assert validate_uploaded_room_media_file(mp4, "uploaded_images") == "VIDEO"
+        with pytest.raises(serializers.ValidationError):
+            validate_uploaded_room_media_file(spoofed, "uploaded_images")
+
+    def test_admin_can_upload_room_video(self, tmp_path, settings):
+        settings.MEDIA_ROOT = tmp_path
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        self.client.force_authenticate(admin)
+        video = SimpleUploadedFile(
+            "tour.mp4",
+            b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 64,
+            content_type="video/mp4",
+        )
+
+        with mock.patch("cloudinary.uploader.upload"):
+            response = self.client.patch(
+                f"/api/admin/rooms/{room.id}/",
+                {"uploaded_images": [video]},
+                format="multipart",
+            )
+
+        assert response.status_code == 200
+        media = RoomImage.objects.get(room=room)
+        assert media.media_type == RoomImage.MediaType.VIDEO
+        assert media.image.name.startswith("room-videos/")
 
     def test_admin_rejected_room_upload_writes_audit_log(self):
         admin = create_admin()

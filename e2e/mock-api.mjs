@@ -12,6 +12,17 @@ const roomImages = ['#9a5b31', '#3f7664', '#b78348'].map((color, index) => ({
   id: index + 1,
   image: null,
   image_url: imageDataUrl(color),
+  media_type: 'IMAGE',
+  sort_order: index,
+  created_at: '2026-07-01T08:00:00Z',
+}));
+const cloudinaryRoomImages = Array.from({ length: 3 }, (_, index) => ({
+  id: index + 101,
+  image: null,
+  image_url: index === 2
+    ? 'https://res.cloudinary.com/forrent-test/video/upload/v1/e2e-room-tour.mp4'
+    : `https://res.cloudinary.com/forrent-test/image/upload/v1/e2e-room-${index + 1}.jpg`,
+  media_type: index === 2 ? 'VIDEO' : 'IMAGE',
   sort_order: index,
   created_at: '2026-07-01T08:00:00Z',
 }));
@@ -28,7 +39,9 @@ const room = {
   deposit_type_name: 'Coc 1 thang',
   deposit_amount: '3700000',
   electricity_price_per_kwh: '4000',
+  water_billing_type: 'PER_PERSON',
   water_price_per_person: '100000',
+  water_price_per_cubic_meter: '0',
   service_fee: '300000',
   actual_area: '25.00',
   area_range: areaRange,
@@ -79,17 +92,27 @@ const server = http.createServer((request, response) => {
     }));
     return;
   }
-  const roomDetailMatch = decodedPathname.match(
-    /^\/api\/rooms\/(e2e-room(?:-(?:one|many))?|phòng-đẹp-hà-nội)\/$/,
+  const cloudinaryRoomMatch = decodedPathname.match(/^\/api\/rooms\/(e2e-room-cloudinary)\/$/);
+  const roomDetailMatch = cloudinaryRoomMatch ?? decodedPathname.match(
+    /^\/api\/rooms\/(e2e-room(?:-(?:one|many|water-meter))?|phòng-đẹp-hà-nội)\/$/,
   );
   if (roomDetailMatch) {
     const slug = roomDetailMatch[1];
-    const images = slug.endsWith('-one') ? roomImages.slice(0, 1) : slug.endsWith('-many') ? roomImages : [];
+    const images = slug.endsWith('-cloudinary')
+      ? cloudinaryRoomImages
+      : slug.endsWith('-one')
+        ? roomImages.slice(0, 1)
+        : slug.endsWith('-many')
+          ? roomImages
+          : [];
     sendJson(response, 200, envelope({
       ...room,
       slug,
       title: slug === 'phòng-đẹp-hà-nội' ? '🎉 PHÒNG ĐẸP HÀ NỘI 🎉' : room.title,
       city: slug === 'phòng-đẹp-hà-nội' ? { ...city, name: 'Hà Nội' } : city,
+      ...(slug.endsWith('-water-meter')
+        ? { water_billing_type: 'PER_CUBIC_METER', water_price_per_cubic_meter: '25000' }
+        : {}),
       description: 'Can ho dich vu day du thong tin de dat lich xem.',
       images,
     }));

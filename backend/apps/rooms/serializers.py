@@ -5,7 +5,12 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
-from apps.common.image_validation import validate_uploaded_image_file
+from apps.common.image_validation import (
+    MAX_ROOM_MEDIA_UPLOAD_BYTES,
+    uploaded_room_media_type,
+    validate_uploaded_image_file,
+    validate_uploaded_room_media_file,
+)
 from apps.locations.serializers import AmenitySerializer, AreaRangeSerializer, CitySerializer, WardSerializer
 from apps.rooms.models import DepositType, Room, RoomImage
 
@@ -35,7 +40,7 @@ class DepositTypeSerializer(serializers.ModelSerializer):
 class RoomImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = RoomImage
-        fields = ("id", "image", "image_url", "sort_order", "created_at")
+        fields = ("id", "image", "image_url", "media_type", "sort_order", "created_at")
         read_only_fields = ("id", "created_at")
 
 
@@ -62,7 +67,9 @@ class PublicRoomListSerializer(serializers.ModelSerializer):
             "deposit_type_name",
             "deposit_amount",
             "electricity_price_per_kwh",
+            "water_billing_type",
             "water_price_per_person",
+            "water_price_per_cubic_meter",
             "service_fee",
             "actual_area",
             "area_range",
@@ -97,7 +104,8 @@ class PublicRoomDetailSerializer(PublicRoomListSerializer):
 class AdminRoomImageWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = RoomImage
-        fields = ("image", "image_url", "sort_order")
+        fields = ("image", "image_url", "media_type", "sort_order")
+        read_only_fields = ("media_type",)
 
     def validate(self, attrs):
         if not attrs.get("image") and not attrs.get("image_url"):
@@ -109,7 +117,7 @@ class AdminRoomSerializer(serializers.ModelSerializer):
     images = RoomImageSerializer(many=True, read_only=True)
     deposit_type_name = serializers.SerializerMethodField()
     uploaded_images = serializers.ListField(
-        child=serializers.ImageField(),
+        child=serializers.FileField(),
         write_only=True,
         required=False,
     )
@@ -135,7 +143,9 @@ class AdminRoomSerializer(serializers.ModelSerializer):
             "deposit_type_name",
             "deposit_amount",
             "electricity_price_per_kwh",
+            "water_billing_type",
             "water_price_per_person",
+            "water_price_per_cubic_meter",
             "service_fee",
             "actual_area",
             "area_range",
@@ -176,10 +186,12 @@ class AdminRoomSerializer(serializers.ModelSerializer):
         image_urls = attrs.get("image_urls") or []
         existing_count = self.instance.images.count() if self.instance else 0
         if existing_count + len(uploaded_images) + len(image_urls) > 12:
-            errors["uploaded_images"] = "A room can have at most 12 gallery images."
-        for image in uploaded_images:
+            errors["uploaded_images"] = "A room can have at most 12 gallery items."
+        if sum(upload.size for upload in uploaded_images) > MAX_ROOM_MEDIA_UPLOAD_BYTES:
+            errors["uploaded_images"] = "New gallery uploads must total 50MB or less."
+        for upload in uploaded_images:
             try:
-                validate_uploaded_image_file(image, "uploaded_images")
+                validate_uploaded_room_media_file(upload, "uploaded_images")
             except serializers.ValidationError as exc:
                 errors.update(exc.detail)
                 break
@@ -232,8 +244,13 @@ class AdminRoomSerializer(serializers.ModelSerializer):
 
     def _create_images(self, room, uploaded_images, image_urls):
         next_order = room.images.count()
-        for offset, image in enumerate(uploaded_images):
-            RoomImage.objects.create(room=room, image=image, sort_order=next_order + offset)
+        for offset, upload in enumerate(uploaded_images):
+            RoomImage.objects.create(
+                room=room,
+                image=upload,
+                media_type=uploaded_room_media_type(upload),
+                sort_order=next_order + offset,
+            )
         next_order = room.images.count()
         for offset, image_url in enumerate(image_urls):
             RoomImage.objects.create(room=room, image_url=image_url, sort_order=next_order + offset)

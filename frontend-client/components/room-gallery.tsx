@@ -1,29 +1,73 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, ImageOff, X } from "lucide-react";
-import Image from "next/image";
-import { useEffect, useState } from "react";
+/* eslint-disable @next/next/no-img-element -- Cloudinary optimizes media at the source; native elements avoid a second optimization layer. */
+
+import { ChevronLeft, ChevronRight, ImageOff, LoaderCircle, Play, Video, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
 import { useFocusTrap } from "@/hooks/use-focus-trap";
-import { fastImageUrl } from "@/lib/image";
+import { fastImageUrl, fastVideoUrl, videoPosterUrl } from "@/lib/image";
+
+export type RoomGalleryMedia = Readonly<{
+  src: string;
+  type: "image" | "video";
+}>;
 
 type RoomGalleryProps = Readonly<{
-  images: string[];
+  media: readonly RoomGalleryMedia[];
   title: string;
 }>;
 
-export function RoomGallery({ images, title }: RoomGalleryProps) {
+const modalMediaWidth = 1200;
+const galleryMediaLoads = new Map<string, Promise<void>>();
+
+export function RoomGallery({ media, title }: RoomGalleryProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const activeImage = activeIndex === null ? null : images[activeIndex];
+  const [pendingIndex, setPendingIndex] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const transitionId = useRef(0);
+  const pointerStartX = useRef<number | null>(null);
+  const activeMedia = activeIndex === null ? null : media[activeIndex];
   const modalRef = useFocusTrap<HTMLDivElement>(activeIndex !== null);
-  const visibleImages = images.slice(0, 4);
+  const visibleMedia = media.slice(0, 4);
+
+  const closeGallery = useCallback(() => {
+    transitionId.current += 1;
+    setActiveIndex(null);
+    setPendingIndex(null);
+    setLoadError(false);
+  }, []);
+
+  const showIndex = useCallback(async (index: number | null) => {
+    if (index === null || index === activeIndex || pendingIndex !== null || !media[index]) return;
+
+    const requestId = ++transitionId.current;
+    setPendingIndex(index);
+    setLoadError(false);
+
+    try {
+      await preloadGalleryMedia(media[index]);
+      if (transitionId.current === requestId) setActiveIndex(index);
+    } catch {
+      if (transitionId.current === requestId) setLoadError(true);
+    } finally {
+      if (transitionId.current === requestId) setPendingIndex(null);
+    }
+  }, [activeIndex, media, pendingIndex]);
 
   useEffect(() => {
     if (activeIndex === null) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setActiveIndex(null);
-      if (event.key === "ArrowLeft") setActiveIndex((current) => previousIndex(current, images.length));
-      if (event.key === "ArrowRight") setActiveIndex((current) => nextIndex(current, images.length));
+      if (event.key === "Escape") closeGallery();
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        void showIndex(previousIndex(activeIndex, media.length));
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        void showIndex(nextIndex(activeIndex, media.length));
+      }
     };
 
     document.body.classList.add("gallery-modal-open");
@@ -33,100 +77,192 @@ export function RoomGallery({ images, title }: RoomGalleryProps) {
       document.body.classList.remove("gallery-modal-open");
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [activeIndex, images.length]);
+  }, [activeIndex, closeGallery, media.length, showIndex]);
 
   useEffect(() => {
-    if (activeIndex === null || images.length < 2) return;
+    if (activeIndex === null || media.length < 2) return;
 
-    preloadGalleryImage(images[previousIndex(activeIndex, images.length) ?? 0]);
-    preloadGalleryImage(images[nextIndex(activeIndex, images.length) ?? 0]);
-  }, [activeIndex, images]);
+    const adjacent = [
+      nextIndex(activeIndex, media.length),
+      previousIndex(activeIndex, media.length),
+    ];
+    const preloadOrder = [...adjacent, ...media.map((_, index) => index)];
+    for (const index of new Set(preloadOrder)) {
+      if (index !== null && index !== activeIndex) {
+        void preloadGalleryMedia(media[index]).catch(() => undefined);
+      }
+    }
+  }, [activeIndex, media]);
+
+  const openGallery = (index: number) => {
+    transitionId.current += 1;
+    setPendingIndex(null);
+    setLoadError(false);
+    setActiveIndex(index);
+  };
 
   return (
     <>
       <section
-        aria-label="Ảnh phòng"
-        className={`relative mb-6 h-[320px] overflow-hidden rounded-lg md:h-[440px] ${galleryGridClass(images.length)}`}
-        data-image-count={images.length}
+        aria-label="Ảnh và video phòng"
+        className={`relative mb-6 h-[320px] overflow-hidden rounded-lg md:h-[440px] ${galleryGridClass(media.length)}`}
+        data-image-count={media.length}
+        data-media-count={media.length}
       >
-        {visibleImages.length ? (
-          visibleImages.map((src, index) => (
+        {visibleMedia.length ? (
+          visibleMedia.map((item, index) => (
             <GalleryTile
-              alt={`${title} - ${index === 0 ? "ảnh chính" : `ảnh ${index + 1}`}`}
-              badge={index === visibleImages.length - 1 && images.length > 1 ? `${images.length} ảnh` : undefined}
-              className={galleryTileClass(images.length, index)}
-              key={`${src}-${index}`}
-              onClick={() => setActiveIndex(index)}
+              badge={index === visibleMedia.length - 1 && media.length > 1 ? `${media.length} mục` : undefined}
+              className={galleryTileClass(media.length, index)}
+              index={index}
+              item={item}
+              key={`${item.type}-${item.src}`}
+              onClick={() => openGallery(index)}
               priority={index === 0}
-              src={src}
+              title={title}
             />
           ))
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 bg-surface-container-low px-6 text-center text-on-surface-variant">
             <ImageOff aria-hidden="true" size={36} strokeWidth={1.6} />
             <div>
-              <p className="font-semibold text-on-surface">Ảnh phòng đang được cập nhật</p>
+              <p className="font-semibold text-on-surface">Ảnh và video phòng đang được cập nhật</p>
               <p className="mt-1 text-sm">Nhân viên tư vấn sẽ xác nhận hình ảnh và tình trạng phòng trước lịch xem.</p>
             </div>
           </div>
         )}
-        {images.length > 1 ? (
+        {media.length > 1 ? (
           <span className="absolute bottom-3 right-3 rounded-md border border-outline-variant/30 bg-surface-container-high/90 px-3 py-1 text-sm font-semibold text-on-surface shadow-soft md:hidden">
-            {images.length} ảnh
+            {media.length} mục
           </span>
         ) : null}
       </section>
 
-      {activeImage ? (
-        <div aria-modal="true" className="fixed inset-0 z-[100] bg-surface-dim/95 p-4 text-on-surface" ref={modalRef} role="dialog">
+      {activeMedia && activeIndex !== null ? (
+        <div
+          aria-busy={pendingIndex !== null}
+          aria-label={`Thư viện ảnh và video: ${title}`}
+          aria-modal="true"
+          className="fixed inset-0 z-[100] bg-inverse-surface/95 p-4 text-inverse-on-surface"
+          ref={modalRef}
+          role="dialog"
+        >
           <button
-            aria-label="Đóng xem ảnh"
-            className="absolute right-4 top-4 z-10 min-h-[44px] min-w-[44px] rounded-full border border-outline-variant/30 bg-surface-container-high/80 p-3 transition hover:bg-surface-container-highest"
-            onClick={() => setActiveIndex(null)}
+            aria-label="Đóng thư viện"
+            className="absolute right-4 top-4 z-20 min-h-[48px] min-w-[48px] rounded-full border border-inverse-on-surface/20 bg-inverse-surface/80 p-3 transition hover:bg-inverse-surface focus-visible:outline-inverse-primary"
+            onClick={closeGallery}
             type="button"
           >
             <X size={22} strokeWidth={1.8} />
           </button>
 
-          {images.length > 1 ? (
+          {media.length > 1 ? (
             <button
-              aria-label="Ảnh trước"
-              className="absolute left-4 top-1/2 z-10 min-h-[44px] min-w-[44px] -translate-y-1/2 rounded-full border border-outline-variant/30 bg-surface-container-high/80 p-3 transition hover:bg-surface-container-highest"
-              onClick={() => setActiveIndex((current) => previousIndex(current, images.length))}
+              aria-label="Nội dung trước"
+              className="absolute left-4 top-1/2 z-20 min-h-[52px] min-w-[52px] -translate-y-1/2 rounded-full border border-inverse-on-surface/20 bg-inverse-surface/80 p-3 transition hover:bg-inverse-surface disabled:cursor-wait disabled:opacity-60"
+              disabled={pendingIndex !== null}
+              onClick={() => void showIndex(previousIndex(activeIndex, media.length))}
               type="button"
             >
               <ChevronLeft size={26} strokeWidth={1.8} />
             </button>
           ) : null}
 
-          <div className="relative mx-auto h-full max-w-6xl">
-            <Image
-              alt={`${title} - ảnh ${(activeIndex ?? 0) + 1}`}
-              className="object-contain"
-              decoding="async"
-              fill
-              priority
-              quality={78}
-              sizes="(min-width: 1280px) 1152px, 100vw"
-              src={fastImageUrl(activeImage, 1536, 78)}
-            />
+          <div
+            className="relative mx-auto h-full max-w-6xl touch-pan-y select-none pb-14 md:px-16 md:pb-24"
+            data-gallery-stage
+            onPointerCancel={() => {
+              pointerStartX.current = null;
+            }}
+            onPointerDown={(event) => {
+              if (event.pointerType === "touch" && activeMedia.type !== "video") {
+                pointerStartX.current = event.clientX;
+              }
+            }}
+            onPointerUp={(event) => {
+              const startX = pointerStartX.current;
+              pointerStartX.current = null;
+              if (startX === null || Math.abs(event.clientX - startX) < 50) return;
+              void showIndex(event.clientX < startX
+                ? nextIndex(activeIndex, media.length)
+                : previousIndex(activeIndex, media.length));
+            }}
+          >
+            {activeMedia.type === "video" ? (
+              <video
+                aria-label={`${title} - video ${activeIndex + 1}`}
+                className="h-full w-full object-contain"
+                controls
+                key={`${activeIndex}-${activeMedia.src}`}
+                playsInline
+                poster={videoPosterUrl(activeMedia.src, modalMediaWidth)}
+                preload="auto"
+                src={fastVideoUrl(activeMedia.src)}
+              />
+            ) : (
+              <img
+                alt={`${title} - ảnh ${activeIndex + 1}`}
+                className="h-full w-full object-contain"
+                decoding="async"
+                draggable={false}
+                height={900}
+                src={modalImageUrl(activeMedia.src)}
+                width={modalMediaWidth}
+              />
+            )}
           </div>
 
-          {images.length > 1 ? (
+          {pendingIndex !== null ? (
+            <div
+              className="pointer-events-none absolute left-1/2 top-1/2 z-30 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-md bg-inverse-surface/90 px-4 py-3 text-sm font-semibold shadow-lg"
+              role="status"
+            >
+              <LoaderCircle aria-hidden="true" className="motion-safe:animate-spin" size={20} />
+              Đang tải nội dung...
+            </div>
+          ) : null}
+
+          {loadError ? (
+            <p className="absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 rounded-md bg-error px-4 py-3 text-sm font-semibold text-on-error" role="alert">
+              Không tải được nội dung. Vui lòng thử lại.
+            </p>
+          ) : null}
+
+          {media.length > 1 ? (
             <button
-              aria-label="Ảnh tiếp theo"
-              className="absolute right-4 top-1/2 z-10 min-h-[44px] min-w-[44px] -translate-y-1/2 rounded-full border border-outline-variant/30 bg-surface-container-high/80 p-3 transition hover:bg-surface-container-highest"
-              onClick={() => setActiveIndex((current) => nextIndex(current, images.length))}
+              aria-label="Nội dung tiếp theo"
+              className="absolute right-4 top-1/2 z-20 min-h-[52px] min-w-[52px] -translate-y-1/2 rounded-full border border-inverse-on-surface/20 bg-inverse-surface/80 p-3 transition hover:bg-inverse-surface disabled:cursor-wait disabled:opacity-60"
+              disabled={pendingIndex !== null}
+              onClick={() => void showIndex(nextIndex(activeIndex, media.length))}
               type="button"
             >
               <ChevronRight size={26} strokeWidth={1.8} />
             </button>
           ) : null}
 
-          {images.length > 1 ? (
-            <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-outline-variant/30 bg-surface-container-high/80 px-4 py-2 text-sm font-semibold">
-              {(activeIndex ?? 0) + 1} / {images.length}
+          {media.length > 1 ? (
+            <p className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-full border border-inverse-on-surface/20 bg-inverse-surface/80 px-4 py-2 text-sm font-semibold md:bottom-auto md:left-4 md:top-4 md:translate-x-0">
+              {activeIndex + 1} / {media.length}
             </p>
+          ) : null}
+
+          {media.length > 1 ? (
+            <div
+              aria-label="Chọn nội dung"
+              className="absolute bottom-3 left-1/2 z-20 hidden max-w-[calc(100%-8rem)] -translate-x-1/2 gap-2 overflow-x-auto rounded-md border border-inverse-on-surface/15 bg-inverse-surface/85 p-2 md:flex"
+              role="group"
+            >
+              {media.map((item, index) => (
+                <FilmstripButton
+                  active={index === activeIndex}
+                  disabled={pendingIndex !== null}
+                  index={index}
+                  item={item}
+                  key={`${item.type}-${item.src}`}
+                  onClick={() => void showIndex(index)}
+                />
+              ))}
+            </div>
           ) : null}
         </div>
       ) : null}
@@ -134,42 +270,100 @@ export function RoomGallery({ images, title }: RoomGalleryProps) {
   );
 }
 
-function GalleryTile({
-  alt,
-  badge,
-  className,
-  onClick,
-  priority,
-  src,
-}: Readonly<{
-  alt: string;
+function GalleryTile({ badge, className, index, item, onClick, priority, title }: Readonly<{
   badge?: string;
   className: string;
+  index: number;
+  item: RoomGalleryMedia;
   onClick: () => void;
   priority?: boolean;
-  src: string;
+  title: string;
 }>) {
+  const width = priority ? modalMediaWidth : 768;
+  const quality = priority ? 82 : 78;
+  const imageAlt = `${title} - ${index === 0 ? "ảnh chính" : `ảnh ${index + 1}`}`;
+
   return (
     <button
-      aria-label={`Xem ${alt}`}
+      aria-label={item.type === "video" ? `Xem video ${index + 1} của ${title}` : `Xem ${imageAlt}`}
       className={`group relative overflow-hidden rounded-lg text-left ${className}`}
       onClick={onClick}
+      onFocus={() => {
+        void preloadGalleryMedia(item).catch(() => undefined);
+      }}
+      onPointerEnter={() => {
+        void preloadGalleryMedia(item).catch(() => undefined);
+      }}
       type="button"
     >
-      <Image
-        alt={alt}
-        className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-        decoding="async"
-        fill
-        loading={priority ? "eager" : "lazy"}
-        priority={priority}
-        quality={priority ? 82 : 78}
-        sizes="(min-width: 768px) 50vw, 100vw"
-        src={fastImageUrl(src, priority ? 1200 : 768, priority ? 82 : 78)}
-      />
+      {item.type === "video" ? (
+        <>
+          <video
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover"
+            height={900}
+            muted
+            playsInline
+            poster={videoPosterUrl(item.src, width)}
+            preload="metadata"
+            src={fastVideoUrl(item.src)}
+            width={width}
+          />
+          <span className="absolute inset-0 grid place-items-center bg-inverse-surface/20 transition-colors group-hover:bg-inverse-surface/30">
+            <span className="grid size-14 place-items-center rounded-full border border-inverse-on-surface/30 bg-inverse-surface/80 text-inverse-on-surface shadow-soft">
+              <Play aria-hidden="true" className="ml-0.5" fill="currentColor" size={24} />
+            </span>
+          </span>
+        </>
+      ) : (
+        <img
+          alt={imageAlt}
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+          decoding="async"
+          fetchPriority={priority ? "high" : "auto"}
+          height={900}
+          loading={priority ? "eager" : "lazy"}
+          src={fastImageUrl(item.src, width, quality)}
+          width={width}
+        />
+      )}
       {badge ? (
         <span className="absolute bottom-3 right-3 hidden rounded-md border border-outline-variant/30 bg-surface-container-high/90 px-3 py-1 text-sm font-semibold text-on-surface shadow-soft md:block">
           {badge}
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+function FilmstripButton({ active, disabled, index, item, onClick }: Readonly<{
+  active: boolean;
+  disabled: boolean;
+  index: number;
+  item: RoomGalleryMedia;
+  onClick: () => void;
+}>) {
+  const poster = item.type === "video" ? videoPosterUrl(item.src, 160) : modalImageUrl(item.src);
+
+  return (
+    <button
+      aria-current={active ? "true" : undefined}
+      aria-label={`Xem ${item.type === "video" ? "video" : "ảnh"} ${index + 1}`}
+      className={`relative h-14 w-20 shrink-0 overflow-hidden rounded border-2 transition ${active ? "border-inverse-primary" : "border-transparent opacity-70 hover:opacity-100"}`}
+      disabled={disabled}
+      onClick={onClick}
+      type="button"
+    >
+      {poster ? (
+        <img alt="" className="h-full w-full object-cover" decoding="async" height={56} loading="eager" src={poster} width={80} />
+      ) : (
+        <span className="grid h-full w-full place-items-center bg-inverse-surface text-inverse-on-surface">
+          <Video aria-hidden="true" size={20} />
+        </span>
+      )}
+      {item.type === "video" ? (
+        <span className="absolute inset-0 grid place-items-center bg-inverse-surface/25 text-inverse-on-surface">
+          <Play aria-hidden="true" fill="currentColor" size={16} />
         </span>
       ) : null}
     </button>
@@ -201,12 +395,55 @@ function nextIndex(current: number | null, total: number) {
   return current === null || current === total - 1 ? 0 : current + 1;
 }
 
-function preloadGalleryImage(src?: string) {
-  if (!src || typeof window === "undefined") return;
+function modalImageUrl(src: string) {
+  return fastImageUrl(src, modalMediaWidth, 78);
+}
 
-  for (const width of [768, 1200]) {
+function preloadGalleryMedia(item?: RoomGalleryMedia) {
+  if (!item || typeof window === "undefined") return Promise.resolve();
+  if (item.type === "video") {
+    const poster = videoPosterUrl(item.src, modalMediaWidth);
+    void preloadVideoMetadata(fastVideoUrl(item.src)).catch(() => undefined);
+    return poster ? preloadImage(poster) : preloadVideoMetadata(fastVideoUrl(item.src));
+  }
+  return preloadImage(modalImageUrl(item.src));
+}
+
+function preloadImage(url: string) {
+  const key = `image:${url}`;
+  const cached = galleryMediaLoads.get(key);
+  if (cached) return cached;
+
+  const request = new Promise<void>((resolve, reject) => {
     const image = new window.Image();
     image.decoding = "async";
-    image.src = fastImageUrl(src, width, 78);
-  }
+    image.onload = () => {
+      image.decode().then(resolve).catch(resolve);
+    };
+    image.onerror = () => reject(new Error("Gallery image failed to load."));
+    image.src = url;
+  });
+
+  galleryMediaLoads.set(key, request);
+  void request.catch(() => galleryMediaLoads.delete(key));
+  return request;
+}
+
+function preloadVideoMetadata(url: string) {
+  const key = `video:${url}`;
+  const cached = galleryMediaLoads.get(key);
+  if (cached) return cached;
+
+  const request = new Promise<void>((resolve, reject) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () => resolve();
+    video.onerror = () => reject(new Error("Gallery video failed to load."));
+    video.src = url;
+    video.load();
+  });
+
+  galleryMediaLoads.set(key, request);
+  void request.catch(() => galleryMediaLoads.delete(key));
+  return request;
 }
