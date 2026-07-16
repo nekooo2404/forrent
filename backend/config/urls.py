@@ -10,6 +10,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.accounts.views import AdminUserViewSet
 from apps.blogs.views import AdminBlogViewSet, PublicBlogViewSet
+from apps.common.views import SendifyTemplatesAPIView
 from apps.contacts.views import ContactCreateAPIView, AdminContactMessageViewSet
 from apps.locations.views import (
     AdminAmenityViewSet,
@@ -81,6 +82,11 @@ urlpatterns = [
     path("api/contact/", ContactCreateAPIView.as_view(), name="contact"),
     path("api/admin/dashboard/", include("apps.commissions.dashboard_urls")),
     path("api/admin/commissions/", include("apps.commissions.urls")),
+    path(
+        "api/admin/sendify/templates/",
+        SendifyTemplatesAPIView.as_view(),
+        name="admin-sendify-templates",
+    ),
     path("api/admin/", include(admin_router.urls)),
 ]
 

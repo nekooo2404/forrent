@@ -3,16 +3,20 @@ from unittest import mock
 
 import cloudinary.exceptions
 import pytest
+from django.core.exceptions import ImproperlyConfigured
 from django.core.files.base import ContentFile
 from django.core.mail import EmailMessage
 from django.http import HttpResponse
 from django.test import RequestFactory
 from django.test import SimpleTestCase, override_settings
+from rest_framework.test import APIClient
 
-from apps.common.middleware import RequestIDMiddleware
+from apps.common import email as sendify_email
 from apps.common.audit import audit_event
 from apps.common.email import SendifyEmailBackend
+from apps.common.middleware import RequestIDMiddleware
 from apps.common.storage import CloudinaryMediaStorage
+from apps.rooms.tests.factories import create_admin, create_user
 
 
 @pytest.mark.django_db
@@ -110,6 +114,89 @@ class SendifyEmailBackendTests(SimpleTestCase):
         }
         urlopen.assert_called_once()
         assert urlopen.call_args.kwargs["timeout"] == 9
+
+
+@override_settings(
+    SENDIFY_ACCOUNT_KEY="sfy_account_test_key",
+    SENDIFY_TEMPLATES_URL="https://sendify.example/api/templates",
+    SENDIFY_API_TIMEOUT=9,
+)
+class SendifyTemplateClientTests(SimpleTestCase):
+    @override_settings(SENDIFY_ACCOUNT_KEY="")
+    def test_requires_account_key(self):
+        with mock.patch("apps.common.email.urlopen") as urlopen:
+            with pytest.raises(ImproperlyConfigured, match="SENDIFY_ACCOUNT_KEY"):
+                sendify_email.fetch_sendify_templates()
+
+        urlopen.assert_not_called()
+
+    def test_fetches_shared_and_personal_templates_with_account_key(self):
+        response = mock.MagicMock()
+        response.status = 200
+        response.read.return_value = json.dumps(
+            {
+                "shared": [{"id": "shared-1", "name": "OTP mac dinh"}],
+                "personal": [{"id": "personal-1", "name": "OTP ForRent"}],
+            }
+        ).encode("utf-8")
+        response.__enter__.return_value = response
+
+        with mock.patch("apps.common.email.urlopen", return_value=response) as urlopen:
+            templates = sendify_email.fetch_sendify_templates()
+
+        assert templates == {
+            "shared": [{"id": "shared-1", "name": "OTP mac dinh"}],
+            "personal": [{"id": "personal-1", "name": "OTP ForRent"}],
+        }
+        request = urlopen.call_args.args[0]
+        assert request.full_url == "https://sendify.example/api/templates"
+        assert request.get_method() == "GET"
+        assert request.get_header("Authorization") == "Bearer sfy_account_test_key"
+        assert request.get_header("Accept") == "application/json"
+        assert urlopen.call_args.kwargs["timeout"] == 9
+
+    def test_rejects_invalid_template_response_shape(self):
+        response = mock.MagicMock()
+        response.status = 200
+        response.read.return_value = b'{"shared": {}, "personal": []}'
+        response.__enter__.return_value = response
+
+        with mock.patch("apps.common.email.urlopen", return_value=response):
+            with pytest.raises(sendify_email.SendifyEmailError):
+                sendify_email.fetch_sendify_templates()
+
+
+@pytest.mark.django_db
+class TestSendifyTemplateAPI:
+    @override_settings(
+        SENDIFY_ACCOUNT_KEY="sfy_account_test_key",
+        SENDIFY_TEMPLATES_URL="https://sendify.example/api/templates",
+        SENDIFY_API_TIMEOUT=9,
+    )
+    def test_admin_can_list_sendify_templates(self):
+        client = APIClient()
+        client.force_authenticate(create_admin())
+        response_from_sendify = mock.MagicMock()
+        response_from_sendify.status = 200
+        response_from_sendify.read.return_value = b'{"shared": [], "personal": [{"id": "otp"}]}'
+        response_from_sendify.__enter__.return_value = response_from_sendify
+
+        with mock.patch("apps.common.email.urlopen", return_value=response_from_sendify):
+            response = client.get("/api/admin/sendify/templates/")
+
+        assert response.status_code == 200
+        assert response.data["data"] == {"shared": [], "personal": [{"id": "otp"}]}
+
+    def test_tenant_cannot_list_sendify_templates(self):
+        client = APIClient()
+        client.force_authenticate(create_user())
+
+        with mock.patch("apps.common.email.urlopen") as urlopen:
+            response = client.get("/api/admin/sendify/templates/")
+
+        assert response.status_code == 403
+        urlopen.assert_not_called()
+
 
 @override_settings(
     CLOUDINARY_CLOUD_NAME="demo",

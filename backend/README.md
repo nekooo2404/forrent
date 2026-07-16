@@ -104,6 +104,7 @@ Admin/Saler:
 - `POST /api/admin/viewing-requests/{id}/confirm-moved-in/`
 - `GET /api/admin/commissions/summary/`
 - `GET|POST|PUT|PATCH|DELETE /api/admin/blogs/`
+- `GET /api/admin/sendify/templates/`
 
 ## Response Format
 

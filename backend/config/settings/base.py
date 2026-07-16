@@ -250,6 +250,8 @@ EMAIL_USE_SSL = env("EMAIL_USE_SSL")
 EMAIL_TIMEOUT = env("EMAIL_TIMEOUT")
 SENDIFY_API_KEY = env("SENDIFY_API_KEY", default="")
 SENDIFY_API_URL = env("SENDIFY_API_URL", default="https://sendify.vn/api/emails")
+SENDIFY_ACCOUNT_KEY = env("SENDIFY_ACCOUNT_KEY", default="")
+SENDIFY_TEMPLATES_URL = env("SENDIFY_TEMPLATES_URL", default="https://sendify.vn/api/templates")
 SENDIFY_API_TIMEOUT = env("SENDIFY_API_TIMEOUT")
 
 SENTRY_DSN = env("SENTRY_DSN", default="")
