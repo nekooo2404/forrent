@@ -2,6 +2,7 @@ from celery import shared_task
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
+from django.template.loader import render_to_string
 
 User = get_user_model()
 
@@ -26,6 +27,7 @@ def send_otp_email(email, otp, purpose, token_id):
         ),
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[email],
+        html_message=render_to_string("emails/otp.html", {"label": label, "otp": otp}),
         fail_silently=False,
     )
     return {"email": email, "purpose": purpose, "token_id": token_id}

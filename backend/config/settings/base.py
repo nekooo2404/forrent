@@ -18,6 +18,7 @@ env = environ.Env(
     EMAIL_USE_TLS=(bool, False),
     EMAIL_USE_SSL=(bool, True),
     EMAIL_TIMEOUT=(int, 15),
+    SENDIFY_API_TIMEOUT=(int, 15),
     CELERY_TASK_ALWAYS_EAGER=(bool, False),
     CELERY_TASK_EAGER_PROPAGATES=(bool, False),
     SENTRY_TRACES_SAMPLE_RATE=(float, 0.0),
@@ -235,7 +236,7 @@ CELERY_TASK_EAGER_PROPAGATES = env(
 )
 
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:3000")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@forrent.io.vn")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="no-reply@forrent.io.vn")
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
 EMAIL_HOST = env("EMAIL_HOST", default="")
 EMAIL_PORT = env("EMAIL_PORT")
@@ -247,6 +248,11 @@ if EMAIL_HOST_PASSWORD_B64:
 EMAIL_USE_TLS = env("EMAIL_USE_TLS")
 EMAIL_USE_SSL = env("EMAIL_USE_SSL")
 EMAIL_TIMEOUT = env("EMAIL_TIMEOUT")
+SENDIFY_API_KEY = env("SENDIFY_API_KEY", default="")
+SENDIFY_API_URL = env("SENDIFY_API_URL", default="https://sendify.vn/api/emails")
+SENDIFY_ACCOUNT_KEY = env("SENDIFY_ACCOUNT_KEY", default="")
+SENDIFY_TEMPLATES_URL = env("SENDIFY_TEMPLATES_URL", default="https://sendify.vn/api/templates")
+SENDIFY_API_TIMEOUT = env("SENDIFY_API_TIMEOUT")
 
 SENTRY_DSN = env("SENTRY_DSN", default="")
 SENTRY_ENVIRONMENT = env("SENTRY_ENVIRONMENT", default="local")
