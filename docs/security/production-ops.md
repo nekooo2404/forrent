@@ -151,7 +151,7 @@ Deliverable required before marking complete: findings list, severity, reproduct
 `deploy/nginx/forrent.conf` and `deploy/nginx/forrent-staging.conf` define:
 
 - generic API limit: `10r/s`
-- auth endpoint limit: `5r/m` for login, register, refresh, logout, OTP, profile, change-password, and password-reset
+- edge auth limit: `30r/m` with a burst of 10; application throttles remain stricter per scope (`login` 10/min, password reset/OTP 5/min)
 - `429` response for limited requests
 - `/api/docs/` and `/api/schema/` blocked at edge
 
