@@ -181,6 +181,46 @@ class TestAuthAPI:
         assert response.status_code == 200
         assert "access" in response.data["data"]
 
+    def test_two_device_sessions_refresh_independently(self):
+        User.objects.create_user(
+            email="multi-device@example.com",
+            phone="0911222333",
+            password="Password@123",
+            full_name="Multi Device Admin",
+            role=User.Role.SALER,
+            is_staff=True,
+        )
+        first_device = APIClient()
+        second_device = APIClient()
+
+        first_login = first_device.post(
+            "/api/auth/login/",
+            {"identifier": "multi-device@example.com", "password": "Password@123"},
+            format="json",
+        )
+        second_login = second_device.post(
+            "/api/auth/login/",
+            {"identifier": "multi-device@example.com", "password": "Password@123"},
+            format="json",
+        )
+
+        first_refresh = first_device.post(
+            "/api/auth/refresh/",
+            {"refresh": first_login.data["data"]["refresh"]},
+            format="json",
+        )
+        second_refresh = second_device.post(
+            "/api/auth/refresh/",
+            {"refresh": second_login.data["data"]["refresh"]},
+            format="json",
+        )
+
+        assert first_login.status_code == 200
+        assert second_login.status_code == 200
+        assert first_login.data["data"]["refresh"] != second_login.data["data"]["refresh"]
+        assert first_refresh.status_code == 200
+        assert second_refresh.status_code == 200
+
     def test_logout_revokes_refresh_without_valid_access_token(self):
         User.objects.create_user(
             email="logout@example.com",

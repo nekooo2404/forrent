@@ -72,6 +72,8 @@ type RoomsPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
+const ROOMS_PAGE_SIZE = 6;
+
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -165,7 +167,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   const [roomsResponse, filtersResponse] = await Promise.all([
     getRooms({
       page: currentPage,
-      page_size: 12,
+      page_size: ROOMS_PAGE_SIZE,
       ordering,
       search,
       city,
@@ -183,7 +185,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   const rooms = roomsResponse?.results.map(mapRoom) ?? [];
   const filters = filtersResponse ?? fallbackFilters;
   const totalCount = roomsResponse?.count ?? rooms.length;
-  const totalPages = Math.max(1, Math.ceil(totalCount / 12));
+  const totalPages = Math.max(1, Math.ceil(totalCount / ROOMS_PAGE_SIZE));
   const roomListStructuredData = {
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -193,7 +195,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
       room.slug
         ? [{
             "@type": "ListItem",
-            position: (currentPage - 1) * 12 + index + 1,
+            position: (currentPage - 1) * ROOMS_PAGE_SIZE + index + 1,
             name: room.title,
             url: absoluteUrl(`/rooms/${encodeURIComponent(room.slug)}`),
           }]
