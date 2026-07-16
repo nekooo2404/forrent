@@ -236,7 +236,7 @@ CELERY_TASK_EAGER_PROPAGATES = env(
 )
 
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:3000")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@forrent.io.vn")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="no-reply@forrent.io.vn")
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
 EMAIL_HOST = env("EMAIL_HOST", default="")
 EMAIL_PORT = env("EMAIL_PORT")

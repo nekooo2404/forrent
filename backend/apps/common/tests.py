@@ -91,9 +91,9 @@ class SendifyEmailBackendTests(SimpleTestCase):
                 [
                     EmailMessage(
                         subject="Ma OTP ForRent",
-                        body="Ma xac thuc: 123456",
-                        from_email="ForRent <noreply@forrent.io.vn>",
-                        to=["tenant@example.com"],
+                        body="Ma xac thuc: <123456>\nHet han sau 10 phut.",
+                        from_email="no-reply@forrent.io.vn",
+                        to=["tenant@example.com", "backup@example.com"],
                     )
                 ]
             )
@@ -103,11 +103,12 @@ class SendifyEmailBackendTests(SimpleTestCase):
         assert request.full_url == "https://sendify.example/api/emails"
         assert request.get_header("Authorization") == "Bearer sfy_test_key"
         assert json.loads(request.data) == {
-            "from": "ForRent <noreply@forrent.io.vn>",
-            "to": "tenant@example.com",
+            "from": "no-reply@forrent.io.vn",
+            "to": ["tenant@example.com", "backup@example.com"],
             "subject": "Ma OTP ForRent",
-            "text": "Ma xac thuc: 123456",
+            "html": "<p>Ma xac thuc: &lt;123456&gt;<br>Het han sau 10 phut.</p>",
         }
+        urlopen.assert_called_once()
         assert urlopen.call_args.kwargs["timeout"] == 9
 
 @override_settings(
