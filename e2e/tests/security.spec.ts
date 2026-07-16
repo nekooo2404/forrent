@@ -46,6 +46,10 @@ test.describe('Security headers and origin guard', () => {
     expect(legacy.status()).toBe(308);
     expect(legacy.headers().location).toBe('/');
 
+    const www = await request.get('/', { headers: { Host: 'www.forrent.io.vn' }, maxRedirects: 0 });
+    expect(www.status()).toBe(308);
+    expect(www.headers().location).toBe('https://forrent.io.vn/');
+
     const root = await request.get('/');
     expect(root.ok()).toBeTruthy();
     const canonical = (await root.text()).match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? '';
@@ -105,6 +109,59 @@ test.describe('Security headers and origin guard', () => {
     expect(xml).not.toContain('/room-details');
     expect(xml).not.toContain('/homepage');
     expect(homepageEntry).not.toContain('<lastmod>');
+    expect(xml).toContain('<image:image>');
+    expect(xml).toContain('sitemap-room.jpg');
+  });
+
+  test('canonicalizes pagination and noindexes filter combinations', async ({ request }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', 'Run SEO regression once.');
+
+    const paginatedHtml = await (await request.get('/rooms?page=2')).text();
+    const filteredHtml = await (await request.get('/rooms?search=studio')).text();
+    const paginatedBlogsHtml = await (await request.get('/blogs?page=2')).text();
+    const prefilledContactHtml = await (await request.get('/contact?room_id=1')).text();
+    const paginatedCanonical = paginatedHtml.match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? '';
+    const filteredCanonical = filteredHtml.match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? '';
+    const filteredRobots = filteredHtml.match(/<meta name="robots" content="([^"]+)"/)?.[1] ?? '';
+    const blogsCanonical = paginatedBlogsHtml.match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? '';
+    const contactRobots = prefilledContactHtml.match(/<meta name="robots" content="([^"]+)"/)?.[1] ?? '';
+
+    expect(new URL(paginatedCanonical).pathname + new URL(paginatedCanonical).search).toBe('/rooms?page=2');
+    expect(new URL(filteredCanonical).pathname).toBe('/rooms');
+    expect(filteredRobots).toContain('noindex');
+    expect(filteredRobots).toContain('follow');
+    expect(new URL(blogsCanonical).pathname + new URL(blogsCanonical).search).toBe('/blogs?page=2');
+    expect(contactRobots).toContain('noindex');
+  });
+
+  test('publishes website and article structured data', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', 'Run SEO regression once.');
+
+    await page.goto('/');
+    const homepageData = JSON.parse(await page.locator('script[type="application/ld+json"]').textContent() || '{}');
+    expect(homepageData['@graph']).toEqual(expect.arrayContaining([
+      expect.objectContaining({ '@type': 'Organization' }),
+      expect.objectContaining({ '@type': 'WebSite' }),
+    ]));
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /forrent-hero-old-quarter\.jpg/);
+
+    await page.goto('/blogs/seo-guide');
+    const blogData = JSON.parse(await page.locator('script[type="application/ld+json"]').textContent() || '{}');
+    expect(blogData['@graph']).toEqual(expect.arrayContaining([
+      expect.objectContaining({ '@type': 'BlogPosting', headline: 'Kinh nghiem xem phong lan dau' }),
+      expect.objectContaining({ '@type': 'BreadcrumbList' }),
+    ]));
+  });
+
+  test('noindexes unavailable room URLs', async ({ request }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', 'Run SEO regression once.');
+
+    const response = await request.get('/rooms/khong-ton-tai');
+    const html = await response.text();
+    const robots = html.match(/<meta name="robots" content="([^"]+)"/)?.[1] ?? '';
+
+    expect(robots).toContain('noindex');
+    expect(robots).toContain('nofollow');
   });
 
   test('room pages expose valid structured data', async ({ page }, testInfo) => {

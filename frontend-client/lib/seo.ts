@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 export const SITE_NAME = "ForRent";
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://forrent.io.vn";
 export const SITE_DESCRIPTION =
@@ -5,6 +7,45 @@ export const SITE_DESCRIPTION =
 
 export function absoluteUrl(path = "/") {
   return new URL(path, SITE_URL).toString();
+}
+
+export const DEFAULT_SOCIAL_IMAGE = {
+  url: absoluteUrl("/brand/forrent-hero-old-quarter.jpg"),
+  width: 2000,
+  height: 1200,
+  alt: "Không gian phòng thuê theo tháng tại Hà Nội trên ForRent",
+};
+
+export function socialMetadata({
+  title,
+  description,
+  path,
+  image,
+}: {
+  title: string;
+  description: string;
+  path: string;
+  image?: string | null;
+}) {
+  const images = image ? [{ url: image, alt: title }] : [DEFAULT_SOCIAL_IMAGE];
+
+  return {
+    openGraph: {
+      type: "website",
+      locale: "vi_VN",
+      siteName: SITE_NAME,
+      url: path,
+      title,
+      description,
+      images,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images,
+    },
+  } satisfies Pick<Metadata, "openGraph" | "twitter">;
 }
 
 export function shortDescription(value?: string | null, fallback = SITE_DESCRIPTION, maxLength = 160) {

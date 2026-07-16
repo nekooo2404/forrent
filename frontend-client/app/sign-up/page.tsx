@@ -4,7 +4,7 @@ import { SignUpForm } from "@/components/auth/sign-up-form";
 import { PublicShell } from "@/components/public-shell";
 
 export const metadata: Metadata = {
-  title: "Đăng ký tài khoản - ForRent",
+  title: "Đăng ký tài khoản",
   description: "Tạo tài khoản ForRent để đặt lịch xem phòng và theo dõi yêu cầu thuê phòng.",
   robots: {
     index: false,

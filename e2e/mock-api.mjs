@@ -53,6 +53,18 @@ const room = {
   created_at: '2026-07-01T08:00:00Z',
   updated_at: '2026-07-10T08:00:00Z',
 };
+const blog = {
+  id: 1,
+  title: 'Kinh nghiem xem phong lan dau',
+  slug: 'seo-guide',
+  thumbnail: null,
+  short_description: 'Cac buoc kiem tra gia, coc va tien ich truoc khi thue.',
+  content: 'Kiem tra hien trang phong.\nXac nhan gia, coc va cac khoan phi truoc khi ky.',
+  author_name: 'ForRent',
+  published_at: '2026-07-05T08:00:00Z',
+  created_at: '2026-07-04T08:00:00Z',
+  updated_at: '2026-07-10T08:00:00Z',
+};
 
 function envelope(data, message = 'OK') {
   return { success: true, message, data };
@@ -134,7 +146,20 @@ const server = http.createServer((request, response) => {
       sendJson(response, 200, envelope({ count: rooms.length, next: null, previous: null, results: rooms }));
       return;
     }
+    if (url.searchParams.get('ordering') === '-updated_at') {
+      sendJson(response, 200, envelope({
+        count: 1,
+        next: null,
+        previous: null,
+        results: [{ ...room, thumbnail_url: 'https://res.cloudinary.com/forrent-test/image/upload/v1/sitemap-room.jpg' }],
+      }));
+      return;
+    }
     sendJson(response, 200, envelope({ count: 1, next: null, previous: null, results: [room] }));
+    return;
+  }
+  if (url.pathname === '/api/blogs/seo-guide/') {
+    sendJson(response, 200, envelope(blog));
     return;
   }
   if (url.pathname === '/api/blogs/') {

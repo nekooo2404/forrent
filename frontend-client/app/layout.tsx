@@ -5,7 +5,7 @@ import "./globals.css";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, socialMetadata } from "@/lib/seo";
 
 const noindex = process.env.NEXT_PUBLIC_NOINDEX === "true";
 
@@ -32,19 +32,11 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/brand/forrent-icon-192.png", sizes: "192x192", type: "image/png" }],
   },
-  openGraph: {
-    type: "website",
-    locale: "vi_VN",
-    siteName: SITE_NAME,
-    url: "/",
+  ...socialMetadata({
     title: "ForRent - Thuê phòng theo tháng tại Hà Nội",
     description: SITE_DESCRIPTION,
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "ForRent - Thuê phòng theo tháng tại Hà Nội",
-    description: SITE_DESCRIPTION,
-  },
+    path: "/",
+  }),
   verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
     ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
     : undefined,

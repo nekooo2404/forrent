@@ -5,15 +5,31 @@ import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { BlogSubmitForm } from "@/components/blog-submit-form";
 import { PublicShell } from "@/components/public-shell";
+import { StructuredData } from "@/components/structured-data";
 import { formatDate, getBlogs, resolveMediaUrl, type ApiBlog } from "@/lib/api";
+import { absoluteUrl, socialMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Blog kinh nghiệm thuê phòng",
-  description: "Kinh nghiệm thuê phòng theo tháng, chọn khu vực, xem phòng và chuẩn bị hồ sơ thuê.",
-  alternates: {
-    canonical: "/blogs",
-  },
-};
+const blogsTitle = "Blog kinh nghiệm thuê phòng";
+const blogsDescription = "Kinh nghiệm thuê phòng theo tháng, chọn khu vực, xem phòng và chuẩn bị hồ sơ thuê.";
+
+export async function generateMetadata({ searchParams }: BlogsPageProps): Promise<Metadata> {
+  const params = (await searchParams) ?? {};
+  const currentPage = Math.max(1, Number(firstParam(params.page)) || 1);
+  const hasUnknownQuery = Object.entries(params).some(([key, value]) => {
+    const values = Array.isArray(value) ? value : [value];
+    return key !== "page" && values.some((item) => Boolean(item));
+  });
+  const canonical = !hasUnknownQuery && currentPage > 1 ? `/blogs?page=${currentPage}` : "/blogs";
+  const title = !hasUnknownQuery && currentPage > 1 ? `${blogsTitle} - Trang ${currentPage}` : blogsTitle;
+
+  return {
+    title,
+    description: blogsDescription,
+    alternates: { canonical },
+    robots: hasUnknownQuery ? { index: false, follow: true } : undefined,
+    ...socialMetadata({ title, description: blogsDescription, path: canonical }),
+  };
+}
 
 type BlogPostView = {
   id: number | string;
@@ -57,9 +73,22 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
   const featuredPost = posts[0];
   const gridPosts = posts.slice(1);
   const totalPages = Math.max(1, Math.ceil((blogsResponse?.count ?? posts.length) / 7));
+  const blogListStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: blogsTitle,
+    numberOfItems: blogsResponse?.count ?? posts.length,
+    itemListElement: posts.map((post, index) => ({
+      "@type": "ListItem",
+      position: (currentPage - 1) * 7 + index + 1,
+      name: post.title,
+      url: absoluteUrl(post.href || "/blogs"),
+    })),
+  };
 
   return (
     <PublicShell active="blogs">
+      {posts.length ? <StructuredData data={blogListStructuredData} /> : null}
       <header className="scroll-reveal mx-auto max-w-container-max px-margin-mobile pb-16 pt-36 text-center md:px-margin-desktop md:pb-20 md:pt-44">
         <span className="mb-4 block font-label-caps text-label-caps uppercase text-on-primary-container">
           Kinh nghiệm thuê phòng

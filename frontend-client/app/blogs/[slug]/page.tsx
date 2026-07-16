@@ -5,8 +5,9 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, CalendarDays, UserRound } from "lucide-react";
 
 import { PublicShell } from "@/components/public-shell";
+import { StructuredData } from "@/components/structured-data";
 import { formatDate, getBlogs, getCachedBlogDetail, resolveMediaUrl, type ApiBlog } from "@/lib/api";
-import { shortDescription } from "@/lib/seo";
+import { absoluteUrl, shortDescription, SITE_NAME, socialMetadata } from "@/lib/seo";
 
 type BlogDetailPageProps = {
   params: Promise<{ slug: string }>;
@@ -18,29 +19,73 @@ export async function generateMetadata({ params }: BlogDetailPageProps): Promise
 
   if (!post) {
     return {
-      title: "Không tìm thấy bài viết - ForRent",
+      title: "Không tìm thấy bài viết",
+      robots: { index: false, follow: false },
     };
   }
 
   const description = shortDescription(post.short_description || post.content);
   const image = resolveMediaUrl(post.thumbnail);
+  const canonical = `/blogs/${encodeURIComponent(post.slug)}`;
+  const social = socialMetadata({ title: post.title, description, path: canonical, image });
 
   return {
     title: post.title,
     description,
     alternates: {
-      canonical: `/blogs/${post.slug}`,
+      canonical,
     },
     openGraph: {
+      ...social.openGraph,
       type: "article",
-      title: post.title,
-      description,
-      url: `/blogs/${post.slug}`,
       publishedTime: post.published_at || post.created_at,
       modifiedTime: post.updated_at,
       authors: post.author_name ? [post.author_name] : ["ForRent"],
-      images: image ? [image] : undefined,
     },
+    twitter: social.twitter,
+  };
+}
+
+function blogStructuredData(post: ApiBlog, image: string | null) {
+  const url = absoluteUrl(`/blogs/${encodeURIComponent(post.slug)}`);
+  const description = shortDescription(post.short_description || post.content);
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "BlogPosting",
+        "@id": `${url}#article`,
+        headline: post.title,
+        description,
+        datePublished: post.published_at || post.created_at,
+        dateModified: post.updated_at,
+        mainEntityOfPage: url,
+        inLanguage: "vi-VN",
+        image: image ? [image] : undefined,
+        author: {
+          "@type": post.author_name ? "Person" : "Organization",
+          name: post.author_name || SITE_NAME,
+        },
+        publisher: {
+          "@type": "Organization",
+          "@id": absoluteUrl("/#organization"),
+          name: SITE_NAME,
+          logo: {
+            "@type": "ImageObject",
+            url: absoluteUrl("/brand/forrent-logo.png"),
+          },
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Trang chủ", item: absoluteUrl("/") },
+          { "@type": "ListItem", position: 2, name: "Blog", item: absoluteUrl("/blogs") },
+          { "@type": "ListItem", position: 3, name: post.title, item: url },
+        ],
+      },
+    ],
   };
 }
 
@@ -62,6 +107,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
 
   return (
     <PublicShell active="blogs">
+      <StructuredData data={blogStructuredData(post, image)} />
       <article>
         <header className="mx-auto max-w-[980px] px-margin-mobile pb-12 pt-32 md:px-margin-desktop md:pt-40">
           <Link

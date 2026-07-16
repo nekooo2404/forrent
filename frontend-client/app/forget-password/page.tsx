@@ -5,7 +5,7 @@ import { ForgotPasswordClient } from "@/components/profile/forgot-password-clien
 import { PublicShell } from "@/components/public-shell";
 
 export const metadata: Metadata = {
-  title: "Quên mật khẩu - ForRent",
+  title: "Quên mật khẩu",
   description: "Yêu cầu liên kết đặt lại mật khẩu cho tài khoản ForRent.",
   robots: {
     index: false,

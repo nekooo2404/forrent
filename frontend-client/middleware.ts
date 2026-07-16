@@ -78,6 +78,13 @@ function csrfFailure(request: NextRequest) {
 }
 
 export function middleware(request: NextRequest) {
+  if (isProduction && request.headers.get("host")?.split(":")[0].toLowerCase() === "www.forrent.io.vn") {
+    return NextResponse.redirect(
+      new URL(`${request.nextUrl.pathname}${request.nextUrl.search}`, "https://forrent.io.vn"),
+      308,
+    );
+  }
+
   const blocked = csrfFailure(request);
   if (blocked) {
     return blocked;

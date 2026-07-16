@@ -2,12 +2,16 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { PublicShell } from "@/components/public-shell";
+import { socialMetadata } from "@/lib/seo";
 import { CONTACT_EMAIL, LEGAL_ADDRESS, LEGAL_NAME } from "@/lib/site-config";
+
+const privacyDescription = "Chính sách thu thập, sử dụng và bảo vệ dữ liệu cá nhân trên ForRent.";
 
 export const metadata: Metadata = {
   title: "Chính sách bảo mật",
-  description: "Chính sách thu thập, sử dụng và bảo vệ dữ liệu cá nhân trên ForRent.",
+  description: privacyDescription,
   alternates: { canonical: "/privacy" },
+  ...socialMetadata({ title: "Chính sách bảo mật", description: privacyDescription, path: "/privacy" }),
 };
 
 export default function PrivacyPage() {

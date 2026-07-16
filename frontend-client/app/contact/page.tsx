@@ -4,15 +4,24 @@ import type { ReactNode } from "react";
 
 import { ContactForm } from "@/components/contact-form";
 import { PublicShell } from "@/components/public-shell";
+import { socialMetadata } from "@/lib/seo";
 import { CONTACT_EMAIL, CONTACT_PHONE, LEGAL_ADDRESS } from "@/lib/site-config";
 
-export const metadata: Metadata = {
-  title: "Liên hệ - ForRent",
-  description: "Liên hệ nhân viên tư vấn ForRent để nhận hỗ trợ tìm phòng theo khu vực, giá và lịch xem.",
-  alternates: {
-    canonical: "/contact",
-  },
-};
+const contactTitle = "Liên hệ tư vấn tìm phòng";
+const contactDescription = "Liên hệ nhân viên tư vấn ForRent để nhận hỗ trợ tìm phòng theo khu vực, giá và lịch xem.";
+
+export async function generateMetadata({ searchParams }: ContactPageProps): Promise<Metadata> {
+  const params = (await searchParams) ?? {};
+  const hasPrefill = Object.values(params).some((value) => (Array.isArray(value) ? value : [value]).some(Boolean));
+
+  return {
+    title: contactTitle,
+    description: contactDescription,
+    alternates: { canonical: "/contact" },
+    robots: hasPrefill ? { index: false, follow: true } : undefined,
+    ...socialMetadata({ title: contactTitle, description: contactDescription, path: "/contact" }),
+  };
+}
 
 const offices = [
   {

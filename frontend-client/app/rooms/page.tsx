@@ -29,20 +29,29 @@ import {
   type ApiRoom,
   type RoomFilters,
 } from "@/lib/api";
-import { absoluteUrl, cleanRoomTitle } from "@/lib/seo";
+import { absoluteUrl, cleanRoomTitle, socialMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Danh sách phòng thuê Hà Nội",
-  description: "Tìm phòng thuê đang trống tại Hà Nội, xem rõ giá tháng, tiền cọc, diện tích và tiện ích trước khi đặt lịch xem.",
-  alternates: {
-    canonical: "/rooms",
-  },
-  openGraph: {
-    title: "Phòng thuê đang trống tại Hà Nội",
-    description: "Lọc phòng theo khu vực, ngân sách, diện tích và tiện ích; xem giá và đặt lịch trực tiếp với ForRent.",
-    url: "/rooms",
-  },
-};
+const roomsTitle = "Danh sách phòng thuê Hà Nội";
+const roomsDescription = "Tìm phòng thuê đang trống tại Hà Nội, xem rõ giá tháng, tiền cọc, diện tích và tiện ích trước khi đặt lịch xem.";
+
+export async function generateMetadata({ searchParams }: RoomsPageProps): Promise<Metadata> {
+  const params = (await searchParams) ?? {};
+  const currentPage = Math.max(1, Number(firstParam(params.page)) || 1);
+  const hasFilters = Object.entries(params).some(([key, value]) => {
+    const values = Array.isArray(value) ? value : [value];
+    return key !== "page" && values.some((item) => Boolean(item));
+  });
+  const canonical = !hasFilters && currentPage > 1 ? `/rooms?page=${currentPage}` : "/rooms";
+  const title = !hasFilters && currentPage > 1 ? `${roomsTitle} - Trang ${currentPage}` : roomsTitle;
+
+  return {
+    title,
+    description: roomsDescription,
+    alternates: { canonical },
+    robots: hasFilters ? { index: false, follow: true } : undefined,
+    ...socialMetadata({ title, description: roomsDescription, path: canonical }),
+  };
+}
 
 type RoomCardView = {
   id: number | string;

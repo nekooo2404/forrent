@@ -5,7 +5,7 @@ import { LoginForm } from "@/components/auth/login-form";
 import { PublicShell } from "@/components/public-shell";
 
 export const metadata: Metadata = {
-  title: "Đăng nhập - ForRent",
+  title: "Đăng nhập",
   description: "Đăng nhập tài khoản ForRent để đặt lịch xem phòng và theo dõi yêu cầu.",
   robots: {
     index: false,

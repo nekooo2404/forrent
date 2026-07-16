@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 
 import { MotionItem, MotionList, MotionSection } from "@/components/motion";
 import { PublicShell } from "@/components/public-shell";
+import { StructuredData } from "@/components/structured-data";
 import { fastImageUrl } from "@/lib/image";
 import {
   formatArea,
@@ -16,19 +17,55 @@ import {
   roomTypeLabel,
   type ApiRoom,
 } from "@/lib/api";
-import { cleanRoomTitle, SITE_DESCRIPTION } from "@/lib/seo";
+import { absoluteUrl, cleanRoomTitle, SITE_DESCRIPTION, SITE_NAME, socialMetadata } from "@/lib/seo";
+import { CONTACT_EMAIL, CONTACT_PHONE, LEGAL_ADDRESS, LEGAL_NAME } from "@/lib/site-config";
+
+const homepageTitle = "Thuê phòng theo tháng tại Hà Nội";
 
 export const metadata: Metadata = {
-  title: "Thuê phòng theo tháng tại Hà Nội | ForRent",
+  title: homepageTitle,
   description: SITE_DESCRIPTION,
   alternates: {
     canonical: "/",
   },
-  openGraph: {
+  ...socialMetadata({
     title: "ForRent - Thuê phòng theo tháng tại Hà Nội",
     description: SITE_DESCRIPTION,
-    url: "/",
-  },
+    path: "/",
+  }),
+};
+
+const homepageStructuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": absoluteUrl("/#organization"),
+      name: SITE_NAME,
+      legalName: LEGAL_NAME,
+      url: absoluteUrl("/"),
+      logo: {
+        "@type": "ImageObject",
+        url: absoluteUrl("/brand/forrent-logo.png"),
+      },
+      email: CONTACT_EMAIL,
+      telephone: CONTACT_PHONE,
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: LEGAL_ADDRESS,
+        addressCountry: "VN",
+      },
+    },
+    {
+      "@type": "WebSite",
+      "@id": absoluteUrl("/#website"),
+      url: absoluteUrl("/"),
+      name: SITE_NAME,
+      description: SITE_DESCRIPTION,
+      inLanguage: "vi-VN",
+      publisher: { "@id": absoluteUrl("/#organization") },
+    },
+  ],
 };
 
 const collections = [
@@ -108,6 +145,7 @@ export default async function Homepage() {
 
   return (
     <PublicShell active="home">
+      <StructuredData data={homepageStructuredData} />
       <header
         className="relative mt-16 min-h-[550px] overflow-hidden lg:mt-20 lg:min-h-[560px]"
         data-testid="homepage-hero"

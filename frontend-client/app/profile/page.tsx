@@ -4,7 +4,7 @@ import { ProfileClient } from "@/components/profile/profile-client";
 import { PublicShell } from "@/components/public-shell";
 
 export const metadata: Metadata = {
-  title: "Thông tin người dùng - ForRent",
+  title: "Thông tin người dùng",
   description: "Quản lý thông tin cá nhân, cập nhật hồ sơ và bảo mật tài khoản ForRent.",
   robots: {
     index: false,

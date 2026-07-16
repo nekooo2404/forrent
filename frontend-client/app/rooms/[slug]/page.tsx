@@ -42,7 +42,7 @@ import {
   type ApiAmenity,
   type ApiRoomDetail,
 } from "@/lib/api";
-import { absoluteUrl, cleanRoomTitle, shortDescription, SITE_NAME } from "@/lib/seo";
+import { absoluteUrl, cleanRoomTitle, shortDescription, SITE_NAME, socialMetadata } from "@/lib/seo";
 import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/site-config";
 
 type RoomSlugPageProps = {
@@ -87,10 +87,7 @@ export async function generateMetadata({ params }: RoomSlugPageProps): Promise<M
   if (!room) {
     return {
       title: "Không tìm thấy phòng",
-      robots: {
-        index: false,
-        follow: false,
-      },
+      robots: { index: false, follow: false },
     };
   }
 
@@ -101,19 +98,15 @@ export async function generateMetadata({ params }: RoomSlugPageProps): Promise<M
   );
   const image = galleryFor(room).find((item) => item.type === "image")?.src;
   const canonical = `/rooms/${encodeURIComponent(room.slug)}`;
+  const metadataTitle = `${title}${location ? ` - ${location}` : ""}`;
 
   return {
-    title: `${title}${location ? ` - ${location}` : ""}`,
+    title: metadataTitle,
     description,
     alternates: {
       canonical,
     },
-    openGraph: {
-      title,
-      description,
-      url: canonical,
-      images: image ? [image] : undefined,
-    },
+    ...socialMetadata({ title: metadataTitle, description, path: canonical, image }),
   };
 }
 
@@ -184,6 +177,7 @@ function roomStructuredData(room: ApiRoomDetail) {
         url,
         seller: {
           "@type": "Organization",
+          "@id": absoluteUrl("/#organization"),
           name: SITE_NAME,
           url: absoluteUrl("/"),
         },

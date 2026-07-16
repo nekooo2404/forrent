@@ -2,12 +2,16 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { PublicShell } from "@/components/public-shell";
+import { socialMetadata } from "@/lib/seo";
 import { CONTACT_EMAIL, LEGAL_ADDRESS, LEGAL_NAME } from "@/lib/site-config";
+
+const termsDescription = "Điều khoản sử dụng website và dịch vụ hỗ trợ tìm phòng của ForRent.";
 
 export const metadata: Metadata = {
   title: "Điều khoản sử dụng",
-  description: "Điều khoản sử dụng website và dịch vụ hỗ trợ tìm phòng của ForRent.",
+  description: termsDescription,
   alternates: { canonical: "/terms" },
+  ...socialMetadata({ title: "Điều khoản sử dụng", description: termsDescription, path: "/terms" }),
 };
 
 export default function TermsPage() {
