@@ -67,6 +67,8 @@ jobs:
         timeout-minutes: 5
       - run: python manage.py check --settings=config.settings.local
         timeout-minutes: 3
+      - run: python manage.py check --settings=config.settings.production
+        timeout-minutes: 3
       - run: python manage.py makemigrations --check --dry-run
         timeout-minutes: 3
       - run: pytest apps/accounts apps/blogs apps/common apps/contacts apps/commissions apps/locations apps/rooms apps/viewing_requests
@@ -123,12 +125,15 @@ jobs:
       - run: npm ci
         working-directory: e2e
         timeout-minutes: 3
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium firefox webkit
         working-directory: e2e
-        timeout-minutes: 8
+        timeout-minutes: 12
       - run: npm run test:ci
         working-directory: e2e
         timeout-minutes: 10
+      - run: npm run test:cross-browser
+        working-directory: e2e
+        timeout-minutes: 12
       - uses: actions/upload-artifact@v6
         if: failure()
         with:

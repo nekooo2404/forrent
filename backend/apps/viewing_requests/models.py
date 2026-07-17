@@ -72,6 +72,7 @@ class ViewingRequest(TimeStampedModel):
         indexes = [
             models.Index(fields=["user", "room", "status"]),
             models.Index(fields=["status", "created_at"]),
+            models.Index(fields=["appointment_date"], name="viewing_appointment_idx"),
         ]
 
     def __str__(self):

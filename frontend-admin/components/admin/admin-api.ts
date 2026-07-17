@@ -59,6 +59,15 @@ export type AdminDepositType = {
   updated_at?: string;
 };
 
+export type AdminRoomSubtype = {
+  id: number;
+  parent_type: "CCMN" | "CCDV" | string;
+  name: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type AdminRoomImage = {
   id: number;
   image: string | null;
@@ -73,9 +82,12 @@ export type AdminRoom = {
   title: string;
   slug: string;
   room_type: "CCMN" | "CCDV" | "HOUSE" | string;
+  room_subtype: number | null;
+  room_subtype_name: string;
   city: number;
   ward: number;
   address: string;
+  building_code: string;
   price: string;
   deposit_type: number | null;
   deposit_type_name: string;

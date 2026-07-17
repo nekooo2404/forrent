@@ -1,12 +1,15 @@
 from urllib.parse import urlparse
 
 from django.core.cache import cache
+from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_control
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
@@ -21,7 +24,7 @@ from apps.locations.models import Amenity, AreaRange, City, Ward
 from apps.locations.serializers import AmenitySerializer, AreaRangeSerializer, CitySerializer, WardSerializer
 from apps.locations.services import ActiveFlagDeleteMixin
 from apps.rooms.filters import RoomFilter
-from apps.rooms.models import DepositType, Room
+from apps.rooms.models import DepositType, Room, RoomSubtype
 from apps.rooms.selectors import admin_rooms_queryset, public_room_details_queryset, public_rooms_queryset
 from apps.rooms.serializers import (
     AdminRoomSerializer,
@@ -30,8 +33,14 @@ from apps.rooms.serializers import (
     PublicRoomListSerializer,
     RoomFiltersSerializer,
     RoomImageSerializer,
+    RoomSubtypeSerializer,
 )
 from apps.rooms.services import RoomService
+
+
+class RoomHistoryConflict(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "Room has viewing or rental history. Archive or hide it instead."
 
 
 @method_decorator(cache_control(public=True, max_age=30), name="list")
@@ -71,6 +80,7 @@ class PublicRoomFiltersAPIView(APIView):
                 "area_ranges": AreaRangeSerializer(AreaRange.objects.active(), many=True).data,
                 "deposit_types": DepositTypeSerializer(DepositType.objects.active(), many=True).data,
                 "room_types": [{"value": value, "label": label} for value, label in Room.RoomType.choices],
+                "room_subtypes": RoomSubtypeSerializer(RoomSubtype.objects.active(), many=True).data,
                 "statuses": [
                     {"value": Room.Status.PUBLISHED, "label": "Còn trống"},
                 ],
@@ -84,7 +94,7 @@ class AdminRoomViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
     permission_classes = [IsAdmin]
     parser_classes = [JSONParser, MultiPartParser, FormParser]
     filterset_class = RoomFilter
-    search_fields = ("title", "address", "description", "internal_note")
+    search_fields = ("title", "address", "building_code", "description", "internal_note")
     ordering_fields = ("price", "actual_area", "created_at", "estimated_commission_amount")
 
     def get_queryset(self):
@@ -153,13 +163,20 @@ class AdminRoomViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
         RoomService.update_room(serializer=serializer, request=self.request)
 
     def perform_destroy(self, instance):
-        audit_event(
-            "room.deleted",
-            request=self.request,
-            target=instance,
-            metadata={"status": instance.status},
-        )
-        instance.delete()
+        with transaction.atomic():
+            room = Room.objects.select_for_update().get(pk=instance.pk)
+            if room.viewing_requests.exists() or room.leases.exists():
+                raise RoomHistoryConflict()
+            audit_event(
+                "room.deleted",
+                request=self.request,
+                target=room,
+                metadata={"status": room.status},
+            )
+            try:
+                room.delete()
+            except ProtectedError as exc:
+                raise RoomHistoryConflict() from exc
 
     @extend_schema(
         parameters=[
@@ -222,3 +239,54 @@ class AdminDepositTypeViewSet(StandardResponseModelViewSetMixin, ActiveFlagDelet
             metadata={"name": instance.name, "was_used": was_used},
         )
         instance.delete()
+
+
+class AdminRoomSubtypeViewSet(StandardResponseModelViewSetMixin, ActiveFlagDeleteMixin, ModelViewSet):
+    queryset = RoomSubtype.objects.all()
+    serializer_class = RoomSubtypeSerializer
+    permission_classes = [IsAdmin]
+    filterset_fields = ("parent_type", "is_active")
+    search_fields = ("name",)
+    ordering_fields = ("parent_type", "name", "created_at")
+
+    def _invalidate_public_filters(self):
+        cache.delete("public-room-filters")
+
+    def perform_create(self, serializer):
+        subtype = serializer.save()
+        self._invalidate_public_filters()
+        audit_event(
+            "room_subtype.created",
+            request=self.request,
+            target=subtype,
+            metadata={"parent_type": subtype.parent_type, "name": subtype.name, "is_active": subtype.is_active},
+        )
+
+    def perform_update(self, serializer):
+        previous = {
+            "parent_type": serializer.instance.parent_type,
+            "name": serializer.instance.name,
+            "is_active": serializer.instance.is_active,
+        }
+        subtype = serializer.save()
+        self._invalidate_public_filters()
+        audit_event(
+            "room_subtype.updated",
+            request=self.request,
+            target=subtype,
+            metadata={
+                "from": previous,
+                "to": {"parent_type": subtype.parent_type, "name": subtype.name, "is_active": subtype.is_active},
+            },
+        )
+
+    def perform_destroy(self, instance):
+        was_used = instance.rooms.exists()
+        instance.delete()
+        self._invalidate_public_filters()
+        audit_event(
+            "room_subtype.deactivated" if was_used else "room_subtype.deleted",
+            request=self.request,
+            target=instance,
+            metadata={"parent_type": instance.parent_type, "name": instance.name, "was_used": was_used},
+        )

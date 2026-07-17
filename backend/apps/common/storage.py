@@ -57,13 +57,13 @@ class CloudinaryMediaStorage(Storage):
             "resource_type": resource_type,
             "overwrite": False,
         }
+        if settings.CLOUDINARY_UPLOAD_MODERATION:
+            upload_options["moderation"] = settings.CLOUDINARY_UPLOAD_MODERATION
         if resource_type == "image":
             upload_options["eager"] = [
                 {"width": 640, "crop": "limit", "fetch_format": "auto", "quality": "auto:eco"},
                 {"width": 1200, "crop": "limit", "fetch_format": "auto", "quality": "auto:good"},
             ]
-            if settings.CLOUDINARY_UPLOAD_MODERATION:
-                upload_options["moderation"] = settings.CLOUDINARY_UPLOAD_MODERATION
         cloudinary.uploader.upload(content, **upload_options)
         return name
 

@@ -22,6 +22,7 @@ class RoomFilter(django_filters.FilterSet):
             "city": ["exact"],
             "ward": ["exact"],
             "room_type": ["exact"],
+            "room_subtype": ["exact"],
             "area_range": ["exact"],
             "status": ["exact"],
         }

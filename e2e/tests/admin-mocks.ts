@@ -121,4 +121,7 @@ export async function mockAdminRoomInventory(page: Page) {
   await page.route('**/api/admin/deposit-types**', (route) =>
     route.fulfill({ json: adminList([{ id: 1, name: 'Coc 1 thang', is_active: true }]) }),
   );
+  await page.route('**/api/admin/room-subtypes**', (route) =>
+    route.fulfill({ json: adminList([{ id: 1, parent_type: 'CCDV', name: 'Studio', is_active: true }]) }),
+  );
 }

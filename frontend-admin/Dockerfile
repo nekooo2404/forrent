@@ -36,16 +36,16 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN addgroup -S -g 10001 nextjs && adduser -S -u 10001 nextjs -G nextjs
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx \
+    && addgroup -S -g 10001 nextjs \
+    && adduser -S -u 10001 nextjs -G nextjs
 
-COPY --from=builder --chown=nextjs:nextjs /app/package.json ./package.json
-COPY --from=builder --chown=nextjs:nextjs /app/package-lock.json ./package-lock.json
-COPY --from=builder --chown=nextjs:nextjs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nextjs /app/.next ./.next
-COPY --from=builder --chown=nextjs:nextjs /app/next.config.ts ./next.config.ts
+COPY --from=builder --chown=nextjs:nextjs /app/public ./public
+COPY --from=builder --chown=nextjs:nextjs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nextjs /app/.next/static ./.next/static
 
 EXPOSE 3001
 
 USER nextjs
 
-CMD ["npm", "run", "start"]
+CMD ["node", "server.js"]

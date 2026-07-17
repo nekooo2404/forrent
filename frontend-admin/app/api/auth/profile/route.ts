@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { ApiError, updateProfile, type ProfileUpdatePayload } from "@/lib/api";
+import { parseJsonRequest } from "@/lib/server-request";
 import { getAccessAuthorization } from "@/lib/server-auth";
 
 export async function PUT(request: Request) {
-  const payload = (await request.json()) as ProfileUpdatePayload;
+  const parsed = await parseJsonRequest<ProfileUpdatePayload>(request);
+  if (!parsed.ok) return parsed.response;
+  const payload = parsed.data;
 
   try {
     const data = await updateProfile(payload, getAccessAuthorization(request));

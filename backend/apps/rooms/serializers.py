@@ -12,7 +12,7 @@ from apps.common.image_validation import (
     validate_uploaded_room_media_file,
 )
 from apps.locations.serializers import AmenitySerializer, AreaRangeSerializer, CitySerializer, WardSerializer
-from apps.rooms.models import DepositType, Room, RoomImage
+from apps.rooms.models import DepositType, Room, RoomImage, RoomSubtype
 
 
 def allowed_room_image_url_hosts():
@@ -37,6 +37,38 @@ class DepositTypeSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "created_at", "updated_at")
 
 
+class RoomSubtypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RoomSubtype
+        fields = ("id", "parent_type", "name", "is_active", "created_at", "updated_at")
+        read_only_fields = ("id", "created_at", "updated_at")
+
+    def validate_parent_type(self, value):
+        if value not in {Room.RoomType.CCMN, Room.RoomType.CCDV}:
+            raise serializers.ValidationError("Room subtypes are supported for CCMN and CCDV only.")
+        return value
+
+    def validate_name(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Subtype name is required.")
+        return value
+
+    def validate(self, attrs):
+        parent_type = attrs.get("parent_type", getattr(self.instance, "parent_type", None))
+        name = attrs.get("name", getattr(self.instance, "name", ""))
+        if parent_type not in {Room.RoomType.CCMN, Room.RoomType.CCDV}:
+            raise serializers.ValidationError({"parent_type": "Room subtypes are supported for CCMN and CCDV only."})
+        if self.instance and parent_type != self.instance.parent_type and self.instance.rooms.exists():
+            raise serializers.ValidationError({"parent_type": "Cannot change the room type of a subtype already in use."})
+        queryset = RoomSubtype.objects.filter(parent_type=parent_type, name__iexact=name)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError({"name": "This subtype already exists for the selected room type."})
+        return attrs
+
+
 class RoomImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = RoomImage
@@ -50,6 +82,7 @@ class PublicRoomListSerializer(serializers.ModelSerializer):
     area_range = AreaRangeSerializer(read_only=True)
     amenities = AmenitySerializer(many=True, read_only=True)
     deposit_type_name = serializers.SerializerMethodField()
+    room_subtype_name = serializers.SerializerMethodField()
     thumbnail_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -59,6 +92,8 @@ class PublicRoomListSerializer(serializers.ModelSerializer):
             "title",
             "slug",
             "room_type",
+            "room_subtype",
+            "room_subtype_name",
             "city",
             "ward",
             "address",
@@ -93,6 +128,9 @@ class PublicRoomListSerializer(serializers.ModelSerializer):
     def get_deposit_type_name(self, obj):
         return obj.deposit_type_name_snapshot or (obj.deposit_type.name if obj.deposit_type_id else "")
 
+    def get_room_subtype_name(self, obj):
+        return obj.room_subtype.name if obj.room_subtype_id else ""
+
 
 class PublicRoomDetailSerializer(PublicRoomListSerializer):
     images = RoomImageSerializer(many=True, read_only=True)
@@ -116,6 +154,7 @@ class AdminRoomImageWriteSerializer(serializers.ModelSerializer):
 class AdminRoomSerializer(serializers.ModelSerializer):
     images = RoomImageSerializer(many=True, read_only=True)
     deposit_type_name = serializers.SerializerMethodField()
+    room_subtype_name = serializers.SerializerMethodField()
     uploaded_images = serializers.ListField(
         child=serializers.FileField(),
         write_only=True,
@@ -135,9 +174,12 @@ class AdminRoomSerializer(serializers.ModelSerializer):
             "title",
             "slug",
             "room_type",
+            "room_subtype",
+            "room_subtype_name",
             "city",
             "ward",
             "address",
+            "building_code",
             "price",
             "deposit_type",
             "deposit_type_name",
@@ -169,12 +211,16 @@ class AdminRoomSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "created_by", "created_by_name", "estimated_commission_amount", "created_at", "updated_at")
 
     def validate(self, attrs):
+        room_type = attrs.get("room_type") or getattr(self.instance, "room_type", None)
+        room_subtype = attrs["room_subtype"] if "room_subtype" in attrs else getattr(self.instance, "room_subtype", None)
         city = attrs.get("city") or getattr(self.instance, "city", None)
         ward = attrs.get("ward") or getattr(self.instance, "ward", None)
         actual_area = attrs.get("actual_area") or getattr(self.instance, "actual_area", None)
         area_range = attrs.get("area_range") or getattr(self.instance, "area_range", None)
         commission_percent = attrs.get("commission_percent")
         errors = {}
+        if room_subtype and room_subtype.parent_type != room_type:
+            errors["room_subtype"] = "Room subtype must belong to the selected room type."
         if city and ward and ward.city_id != city.id:
             errors["ward"] = "Ward must belong to selected city."
         if actual_area is not None and area_range is not None:
@@ -221,6 +267,9 @@ class AdminRoomSerializer(serializers.ModelSerializer):
     def get_deposit_type_name(self, obj):
         return obj.deposit_type_name_snapshot or (obj.deposit_type.name if obj.deposit_type_id else "")
 
+    def get_room_subtype_name(self, obj):
+        return obj.room_subtype.name if obj.room_subtype_id else ""
+
     def create(self, validated_data):
         uploaded_images = validated_data.pop("uploaded_images", [])
         image_urls = validated_data.pop("image_urls", [])
@@ -263,4 +312,5 @@ class RoomFiltersSerializer(serializers.Serializer):
     area_ranges = AreaRangeSerializer(many=True)
     deposit_types = DepositTypeSerializer(many=True)
     room_types = serializers.ListField()
+    room_subtypes = RoomSubtypeSerializer(many=True)
     statuses = serializers.ListField()

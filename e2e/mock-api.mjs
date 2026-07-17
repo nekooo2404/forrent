@@ -88,6 +88,7 @@ const server = http.createServer((request, response) => {
       area_ranges: [areaRange],
       deposit_types: [{ id: 1, name: 'Coc 1 thang', is_active: true }],
       room_types: [{ value: 'CCDV', label: 'Can ho dich vu' }],
+      room_subtypes: [{ id: 1, parent_type: 'CCDV', name: 'Studio', is_active: true }],
       statuses: [{ value: 'PUBLISHED', label: 'Dang hien thi' }],
     }));
     return;

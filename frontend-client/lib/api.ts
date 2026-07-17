@@ -76,11 +76,20 @@ export type ApiDepositType = {
   is_active: boolean;
 };
 
+export type ApiRoomSubtype = {
+  id: number;
+  parent_type: string;
+  name: string;
+  is_active: boolean;
+};
+
 export type ApiRoom = {
   id: number;
   title: string;
   slug: string;
   room_type: "CCMN" | "CCDV" | "HOUSE" | string;
+  room_subtype: number | null;
+  room_subtype_name: string;
   city: ApiCity;
   ward: ApiWard;
   address: string;
@@ -125,6 +134,7 @@ export type RoomFilters = {
   area_ranges: ApiAreaRange[];
   deposit_types: ApiDepositType[];
   room_types: Array<{ value: string; label: string }>;
+  room_subtypes: ApiRoomSubtype[];
   statuses: Array<{ value: string; label: string }>;
 };
 
@@ -305,6 +315,7 @@ export async function getRooms(params?: {
   city?: number | string;
   ward?: number | string;
   room_type?: string;
+  room_subtype?: number | string;
   area_range?: number | string;
   status?: string;
   min_price?: number | string;

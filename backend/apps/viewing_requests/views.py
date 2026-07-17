@@ -1,9 +1,7 @@
 from drf_spectacular.utils import extend_schema
-from django.db import transaction
 from rest_framework import mixins
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -12,7 +10,6 @@ from rest_framework.viewsets import GenericViewSet
 from apps.common.permissions import IsAdminOrSaler, IsTenant
 from apps.common.responses import success_response
 from apps.common.viewsets import StandardResponseUpdateMixin
-from apps.common.audit import audit_event
 from apps.viewing_requests.filters import ViewingRequestAdminFilter
 from apps.viewing_requests.selectors import admin_viewing_requests_queryset, user_viewing_requests_queryset
 from apps.viewing_requests.models import ViewingRequest
@@ -67,7 +64,7 @@ class AdminViewingRequestViewSet(
     permission_classes = [IsAdminOrSaler]
     filterset_class = ViewingRequestAdminFilter
     search_fields = ("full_name", "email", "phone", "room__title")
-    ordering_fields = ("created_at", "confirmed_at", "moved_in_at", "estimated_commission_amount", "actual_commission_amount")
+    ordering_fields = ("created_at", "confirmed_at", "appointment_date", "moved_in_at", "estimated_commission_amount", "actual_commission_amount")
     http_method_names = ["get", "patch", "post", "head", "options"]
 
     def get_queryset(self):
@@ -126,25 +123,10 @@ class AdminViewingRequestViewSet(
         serializer.is_valid(raise_exception=True)
         ids = serializer.validated_data.pop("ids")
         updates = serializer.validated_data
-        with transaction.atomic():
-            leads = list(ViewingRequest.objects.select_for_update().filter(id__in=ids))
-            missing_ids = sorted(set(ids) - {lead.id for lead in leads})
-            if missing_ids:
-                raise ValidationError({"ids": f"Unknown lead IDs: {missing_ids}."})
-
-            next_status = updates.get("status")
-            invalid_ids = [
-                lead.id
-                for lead in leads
-                if next_status and not ViewingRequest.can_transition(lead.status, next_status)
-            ]
-            if invalid_ids:
-                raise ValidationError({"status": f"Invalid status transition for lead IDs: {invalid_ids}."})
-
-            updated_count = ViewingRequest.objects.filter(id__in=ids).update(**updates) if updates else 0
-        audit_event(
-            "viewing_request.bulk_updated",
+        updated_count = ViewingRequestService.bulk_update(
+            ids=ids,
+            updates=updates,
+            actor=request.user,
             request=request,
-            metadata={"ids": ids, "fields": list(updates.keys()), "updated_count": updated_count},
         )
         return success_response(data={"updated_count": updated_count}, message="Leads updated successfully.")

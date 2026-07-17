@@ -159,6 +159,23 @@ class TestAuthAPI:
         assert "access" in response.data["data"]
         assert response.data["data"]["user"]["phone"] == "0911111111"
 
+    def test_login_by_formatted_phone(self):
+        User.objects.create_user(
+            email="tenant@example.com",
+            phone="0914032706",
+            password="Password@123",
+            full_name="Tenant",
+        )
+
+        response = self.client.post(
+            "/api/auth/login/",
+            {"identifier": "+84 914-032-706", "password": "Password@123"},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert response.data["data"]["user"]["phone"] == "0914032706"
+
     def test_refresh_token_returns_new_access_token(self):
         User.objects.create_user(
             email="tenant@example.com",

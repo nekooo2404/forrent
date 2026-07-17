@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { ApiError, requestPasswordReset, type PasswordResetRequestPayload } from "@/lib/api";
+import { parseJsonRequest } from "@/lib/server-request";
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as PasswordResetRequestPayload;
+  const parsed = await parseJsonRequest<PasswordResetRequestPayload>(request);
+  if (!parsed.ok) return parsed.response;
+  const payload = parsed.data;
 
   try {
     const data = await requestPasswordReset(payload);

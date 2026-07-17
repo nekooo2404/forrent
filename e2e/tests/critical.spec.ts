@@ -209,6 +209,9 @@ test.describe('Public critical flows', () => {
     await advanced.locator('summary').click();
     await expect(advanced).toHaveAttribute('open', '');
     await expect(advanced.locator('input[name="room_type"]')).not.toHaveCount(0);
+    await advanced.getByLabel('Căn hộ dịch vụ').check();
+    await expect(advanced.locator('select[name="room_subtype"]')).toBeVisible();
+    await expect(advanced.locator('select[name="room_subtype"] option')).toContainText(['Tất cả kiểu phòng', 'Studio']);
 
     const amenityLabel = advanced.locator('label').first();
     const box = await amenityLabel.boundingBox();

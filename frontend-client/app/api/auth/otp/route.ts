@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { ApiError, requestOtp, type OTPRequestPayload } from "@/lib/api";
+import { parseJsonRequest } from "@/lib/server-request";
 import { getAccessAuthorization } from "@/lib/server-auth";
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as OTPRequestPayload;
+  const parsed = await parseJsonRequest<OTPRequestPayload>(request);
+  if (!parsed.ok) return parsed.response;
+  const payload = parsed.data;
 
   try {
     const data = await requestOtp(payload, getAccessAuthorization(request));

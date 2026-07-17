@@ -254,6 +254,51 @@ class TestViewingRequestAPI:
         assert ViewingRequestActivity.objects.filter(viewing_request=lead, action="SCHEDULE_APPOINTMENT").exists()
         assert AuditLog.objects.filter(event="viewing_request.scheduled", target_id=str(lead.id)).exists()
 
+    def test_admin_list_can_filter_confirmed_appointments_by_date(self):
+        tenant = create_user()
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        start_date = timezone.localdate() + timedelta(days=2)
+        end_date = start_date + timedelta(days=1)
+        in_range = ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
+            confirmed_at=timezone.now(),
+            appointment_date=start_date,
+            appointment_time_slot=ViewingRequest.TimeSlot.MORNING,
+            estimated_commission_amount=room.estimated_commission_amount,
+        )
+        ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone="0911222333",
+            email="outside@example.com",
+            status=ViewingRequest.Status.SCHEDULED,
+            confirmed_at=timezone.now(),
+            appointment_date=end_date + timedelta(days=1),
+            appointment_time_slot=ViewingRequest.TimeSlot.AFTERNOON,
+            estimated_commission_amount=room.estimated_commission_amount,
+        )
+        self.client.force_authenticate(admin)
+
+        response = self.client.get(
+            "/api/admin/viewing-requests/",
+            {
+                "appointment_date_from": start_date.isoformat(),
+                "appointment_date_to": end_date.isoformat(),
+                "page_size": 100,
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.data["data"]["count"] == 1
+        assert response.data["data"]["results"][0]["id"] == in_range.id
+
     def test_admin_can_assign_lead_and_set_follow_up(self):
         tenant = create_user()
         admin = create_admin()
@@ -300,6 +345,7 @@ class TestViewingRequestAPI:
             )
             for index in range(2)
         ]
+        original_updated_at = {lead.id: lead.updated_at for lead in leads}
         self.client.force_authenticate(admin)
 
         response = self.client.post(
@@ -313,6 +359,11 @@ class TestViewingRequestAPI:
         assert set(ViewingRequest.objects.filter(id__in=[lead.id for lead in leads]).values_list("status", flat=True)) == {
             ViewingRequest.Status.CONTACTED
         }
+        for lead in leads:
+            lead.refresh_from_db()
+            assert lead.updated_at > original_updated_at[lead.id]
+            assert ViewingRequestActivity.objects.filter(viewing_request=lead, action="BULK_UPDATE").exists()
+            assert AuditLog.objects.filter(event="viewing_request.status_changed", target_id=str(lead.id)).exists()
 
     def test_admin_bulk_update_rejects_invalid_transition_for_every_lead(self):
         tenant = create_user()

@@ -33,3 +33,56 @@ jobs:
         timeout-minutes: 2
         with:
           sarif_file: trivy-results.sarif
+
+  trivy-images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: backend
+            context: backend
+          - name: frontend-client
+            context: frontend-client
+          - name: frontend-admin
+            context: frontend-admin
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build ${{ matrix.name }} image
+        run: docker build --tag forrent-${{ matrix.name }}:scan ${{ matrix.context }}
+      - name: Scan ${{ matrix.name }} image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: forrent-${{ matrix.name }}:scan
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-${{ matrix.name }}.sarif
+          exit-code: "1"
+      - name: Upload image SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-${{ matrix.name }}.sarif
+          category: trivy-${{ matrix.name }}
+      - name: Generate ${{ matrix.name }} SBOM
+        if: always()
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: forrent-${{ matrix.name }}:scan
+          format: cyclonedx
+          output: sbom-${{ matrix.name }}.cdx.json
+          exit-code: "0"
+      - name: Upload SBOM
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: sbom-${{ matrix.name }}
+          path: sbom-${{ matrix.name }}.cdx.json
+          retention-days: 30

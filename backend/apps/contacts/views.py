@@ -11,8 +11,15 @@ from rest_framework.viewsets import ModelViewSet
 from apps.common.permissions import IsAdminOrSaler
 from apps.common.responses import success_response
 from apps.common.viewsets import StandardResponseModelViewSetMixin
+from apps.common.audit import audit_event
+from apps.common.validators import normalize_vietnamese_phone
 from apps.contacts.models import ContactMessage
-from apps.contacts.serializers import AdminContactMessageSerializer, ContactConvertResponseSerializer, ContactCreateSerializer
+from apps.contacts.serializers import (
+    AdminContactMessageSerializer,
+    BulkContactUpdateSerializer,
+    ContactConvertResponseSerializer,
+    ContactCreateSerializer,
+)
 from apps.viewing_requests.services import ViewingRequestService
 
 User = get_user_model()
@@ -62,13 +69,14 @@ class AdminContactMessageViewSet(StandardResponseModelViewSetMixin, ModelViewSet
         if not contact.email:
             raise ValidationError({"email": "Email is required before converting contact to a tenant lead."})
 
-        user = User.objects.filter(phone=contact.phone).first()
+        phone = normalize_vietnamese_phone(contact.phone)
+        user = User.objects.filter(phone=phone).first()
         if user is None and contact.email:
             user = User.objects.filter(email__iexact=contact.email).first()
         if user is None:
             user = User.objects.create_user(
                 email=contact.email.lower(),
-                phone=contact.phone,
+                phone=phone,
                 password=None,
                 full_name=contact.full_name,
                 role=User.Role.TENANT,
@@ -78,13 +86,14 @@ class AdminContactMessageViewSet(StandardResponseModelViewSetMixin, ModelViewSet
             user=user,
             room=contact.room,
             full_name=contact.full_name,
-            phone=contact.phone,
+            phone=phone,
             email=contact.email or user.email,
         )
         contact.status = ContactMessage.Status.HANDLED
+        contact.phone = phone
         contact.converted_viewing_request = viewing_request
         contact.assigned_to = request.user
-        contact.save(update_fields=["status", "converted_viewing_request", "assigned_to", "updated_at"])
+        contact.save(update_fields=["status", "phone", "converted_viewing_request", "assigned_to", "updated_at"])
         return success_response(
             data={
                 "contact_id": contact.id,
@@ -96,11 +105,24 @@ class AdminContactMessageViewSet(StandardResponseModelViewSetMixin, ModelViewSet
     @action(detail=False, methods=["post"], url_path="bulk-update")
     @transaction.atomic
     def bulk_update(self, request):
-        ids = request.data.get("ids") or []
-        next_status = request.data.get("status")
-        if not ids:
-            raise ValidationError({"ids": "Select at least one contact."})
-        if next_status not in ContactMessage.Status.values:
-            raise ValidationError({"status": "Invalid contact status."})
-        updated_count = ContactMessage.objects.select_for_update().filter(id__in=ids).update(status=next_status)
+        serializer = BulkContactUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        ids = serializer.validated_data["ids"]
+        next_status = serializer.validated_data["status"]
+        contacts = list(ContactMessage.objects.select_for_update().filter(id__in=ids))
+        missing_ids = sorted(set(ids) - {contact.id for contact in contacts})
+        if missing_ids:
+            raise ValidationError({"ids": f"Unknown contact IDs: {missing_ids}."})
+        for contact in contacts:
+            previous_status = contact.status
+            contact.status = next_status
+            contact.save(update_fields=["status", "updated_at"])
+            if previous_status != next_status:
+                audit_event(
+                    "contact.status_changed",
+                    request=request,
+                    target=contact,
+                    metadata={"from": previous_status, "to": next_status},
+                )
+        updated_count = len(contacts)
         return success_response(data={"updated_count": updated_count}, message="Contacts updated successfully.")

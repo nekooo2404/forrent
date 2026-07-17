@@ -14,6 +14,47 @@ logger = logging.getLogger(__name__)
 
 class ViewingRequestService:
     @staticmethod
+    @transaction.atomic
+    def bulk_update(*, ids, updates, actor, request=None):
+        leads = list(ViewingRequest.objects.select_for_update().filter(id__in=ids))
+        missing_ids = sorted(set(ids) - {lead.id for lead in leads})
+        if missing_ids:
+            raise ValidationError({"ids": f"Unknown lead IDs: {missing_ids}."})
+        next_status = updates.get("status")
+        invalid_ids = [lead.id for lead in leads if next_status and not ViewingRequest.can_transition(lead.status, next_status)]
+        if invalid_ids:
+            raise ValidationError({"status": f"Invalid status transition for lead IDs: {invalid_ids}."})
+        for lead in leads:
+            previous_status = lead.status
+            for field, value in updates.items():
+                setattr(lead, field, value)
+            if not updates:
+                continue
+            lead.save(update_fields=[*updates, "updated_at"])
+            ViewingRequestActivity.objects.create(
+                viewing_request=lead,
+                actor=actor,
+                action="BULK_UPDATE",
+                note=updates.get("saler_note", ""),
+            )
+            if lead.status != previous_status:
+                audit_event(
+                    "viewing_request.status_changed",
+                    request=request,
+                    actor=actor,
+                    target=lead,
+                    metadata={"from": previous_status, "to": lead.status},
+                )
+        updated_count = len(leads) if updates else 0
+        audit_event(
+            "viewing_request.bulk_updated",
+            request=request,
+            actor=actor,
+            metadata={"ids": ids, "fields": list(updates), "updated_count": updated_count},
+        )
+        return updated_count
+
+    @staticmethod
     def _active_duplicate(*, room, user, phone, email):
         return (
             ViewingRequest.objects.select_for_update()

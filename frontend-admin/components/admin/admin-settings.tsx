@@ -16,6 +16,7 @@ import {
   type AdminAreaRange,
   type AdminCity,
   type AdminDepositType,
+  type AdminRoomSubtype,
   type AdminWard,
 } from "./admin-api";
 import { useAdminAuth } from "./admin-shell";
@@ -31,13 +32,14 @@ import {
   adminSelectClass,
 } from "./admin-ui";
 
-type TabKey = "cities" | "wards" | "amenities" | "areas" | "depositTypes" | "account";
+type TabKey = "cities" | "wards" | "amenities" | "areas" | "depositTypes" | "roomSubtypes" | "account";
 
 type SettingsState = {
   amenities: AdminAmenity[];
   areas: AdminAreaRange[];
   cities: AdminCity[];
   depositTypes: AdminDepositType[];
+  roomSubtypes: AdminRoomSubtype[];
   wards: AdminWard[];
 };
 
@@ -46,14 +48,17 @@ type WardForm = { city: string; id?: number; is_active: boolean; name: string; s
 type AmenityForm = { icon: string; id?: number; is_active: boolean; name: string };
 type AreaForm = { id?: number; is_active: boolean; max_area: string; min_area: string; name: string };
 type DepositTypeForm = { id?: number; is_active: boolean; name: string };
+type RoomSubtypeForm = { id?: number; is_active: boolean; name: string; parent_type: "CCMN" | "CCDV" };
 
 const emptyCity: CityForm = { is_active: true, name: "", slug: "" };
 const emptyWard: WardForm = { city: "", is_active: true, name: "", slug: "" };
 const emptyAmenity: AmenityForm = { icon: "", is_active: true, name: "" };
 const emptyArea: AreaForm = { is_active: true, max_area: "", min_area: "", name: "" };
 const emptyDepositType: DepositTypeForm = { is_active: true, name: "" };
+const emptyRoomSubtype: RoomSubtypeForm = { is_active: true, name: "", parent_type: "CCMN" };
 
 const tabs: Array<{ key: TabKey; label: string }> = [
+  { key: "roomSubtypes", label: "Kiểu phòng" },
   { key: "depositTypes", label: "Loại cọc" },
   { key: "cities", label: "Thành phố" },
   { key: "wards", label: "Phường" },
@@ -65,12 +70,13 @@ const tabs: Array<{ key: TabKey; label: string }> = [
 export function AdminSettings() {
   const { refreshUser, token, user } = useAdminAuth();
   const [activeTab, setActiveTab] = useState<TabKey>("cities");
-  const [state, setState] = useState<SettingsState>({ amenities: [], areas: [], cities: [], depositTypes: [], wards: [] });
+  const [state, setState] = useState<SettingsState>({ amenities: [], areas: [], cities: [], depositTypes: [], roomSubtypes: [], wards: [] });
   const [cityForm, setCityForm] = useState<CityForm>(emptyCity);
   const [wardForm, setWardForm] = useState<WardForm>(emptyWard);
   const [amenityForm, setAmenityForm] = useState<AmenityForm>(emptyAmenity);
   const [areaForm, setAreaForm] = useState<AreaForm>(emptyArea);
   const [depositTypeForm, setDepositTypeForm] = useState<DepositTypeForm>(emptyDepositType);
+  const [roomSubtypeForm, setRoomSubtypeForm] = useState<RoomSubtypeForm>(emptyRoomSubtype);
   const [pendingDelete, setPendingDelete] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -81,18 +87,20 @@ export function AdminSettings() {
     setIsLoading(true);
     setError("");
     try {
-      const [cities, wards, amenities, areas, depositTypes] = await Promise.all([
+      const [cities, wards, amenities, areas, depositTypes, roomSubtypes] = await Promise.all([
         adminList<AdminCity>("cities", token, { page_size: 100, ordering: "name" }),
         adminList<AdminWard>("wards", token, { page_size: 100, ordering: "name" }),
         adminList<AdminAmenity>("amenities", token, { page_size: 100, ordering: "name" }),
         adminList<AdminAreaRange>("area-ranges", token, { page_size: 100, ordering: "min_area" }),
         adminList<AdminDepositType>("deposit-types", token, { page_size: 100, ordering: "name" }),
+        adminList<AdminRoomSubtype>("room-subtypes", token, { page_size: 100, ordering: "parent_type,name" }),
       ]);
       setState({
         amenities: amenities.results,
         areas: areas.results,
         cities: cities.results,
         depositTypes: depositTypes.results,
+        roomSubtypes: roomSubtypes.results,
         wards: wards.results,
       });
     } catch (loadError) {
@@ -305,6 +313,29 @@ export function AdminSettings() {
                 if (saved) setDepositTypeForm(emptyDepositType);
               }}
               onToggleActive={(depositType) => toggleActive("deposit-types", depositType.id, depositType.is_active)}
+              pendingDelete={pendingDelete}
+            />
+          ) : null}
+
+          {activeTab === "roomSubtypes" ? (
+            <RoomSubtypePanel
+              form={roomSubtypeForm}
+              isSaving={isSaving}
+              items={state.roomSubtypes}
+              onDelete={(id) => deleteResource("room-subtypes", id)}
+              onEdit={(item) => setRoomSubtypeForm({ id: item.id, is_active: item.is_active, name: item.name, parent_type: item.parent_type as "CCMN" | "CCDV" })}
+              onFormChange={setRoomSubtypeForm}
+              onReset={() => setRoomSubtypeForm(emptyRoomSubtype)}
+              onSubmit={async (event) => {
+                event.preventDefault();
+                const saved = await saveResource("room-subtypes", roomSubtypeForm.id, {
+                  is_active: roomSubtypeForm.is_active,
+                  name: roomSubtypeForm.name.trim(),
+                  parent_type: roomSubtypeForm.parent_type,
+                });
+                if (saved) setRoomSubtypeForm(emptyRoomSubtype);
+              }}
+              onToggleActive={(item) => toggleActive("room-subtypes", item.id, item.is_active)}
               pendingDelete={pendingDelete}
             />
           ) : null}
@@ -562,6 +593,63 @@ function DepositTypePanel(props: Readonly<{
         )
       }
       title="Loại cọc"
+    />
+  );
+}
+
+function RoomSubtypePanel(props: Readonly<{
+  form: RoomSubtypeForm;
+  isSaving: boolean;
+  items: AdminRoomSubtype[];
+  onDelete: (id: number) => void;
+  onEdit: (item: AdminRoomSubtype) => void;
+  onFormChange: (value: RoomSubtypeForm) => void;
+  onReset: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onToggleActive: (item: AdminRoomSubtype) => void;
+  pendingDelete: string;
+}>) {
+  return (
+    <ResourceLayout
+      form={
+        <form className="space-y-4" onSubmit={props.onSubmit}>
+          <FormTitle editing={Boolean(props.form.id)} title="Kiểu phòng" />
+          <label className="block space-y-2 text-sm font-medium text-on-surface">
+            <span>Loại hình</span>
+            <select
+              className={adminSelectClass}
+              onChange={(event) => props.onFormChange({ ...props.form, parent_type: event.target.value as "CCMN" | "CCDV" })}
+              value={props.form.parent_type}
+            >
+              <option value="CCMN">Chung cư mini</option>
+              <option value="CCDV">Căn hộ dịch vụ</option>
+            </select>
+          </label>
+          <TextField label="Tên kiểu phòng" onChange={(name) => props.onFormChange({ ...props.form, name })} required value={props.form.name} />
+          <ActiveCheckbox checked={props.form.is_active} onChange={(is_active) => props.onFormChange({ ...props.form, is_active })} />
+          <FormActions editing={Boolean(props.form.id)} isSaving={props.isSaving} onReset={props.onReset} />
+        </form>
+      }
+      list={
+        props.items.length ? (
+          <ResourceTable
+            columns={["Tên", "Loại hình", "Trạng thái"]}
+            rows={props.items.map((item) => ({
+              cells: [item.name, item.parent_type === "CCMN" ? "Chung cư mini" : "Căn hộ dịch vụ", <ActivePill active={item.is_active} key="active" />],
+              id: item.id,
+              item,
+            }))}
+            onDelete={(item) => props.onDelete(item.id)}
+            onEdit={props.onEdit}
+            onToggleActive={props.onToggleActive}
+            pendingDelete={props.pendingDelete}
+            path="room-subtypes"
+          />
+        ) : (
+          <AdminEmptyState description="Thêm Studio, 1N1K, 1N1B và các kiểu phòng khác cho từng loại hình." title="Chưa có kiểu phòng" />
+        )
+      }
+      title="Kiểu phòng"
     />
   );
 }

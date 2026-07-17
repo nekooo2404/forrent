@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -72,9 +73,17 @@ class Room(TimeStampedModel):
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True, allow_unicode=True, blank=True)
     room_type = models.CharField(max_length=20, choices=RoomType.choices)
+    room_subtype = models.ForeignKey(
+        "RoomSubtype",
+        on_delete=models.PROTECT,
+        related_name="rooms",
+        null=True,
+        blank=True,
+    )
     city = models.ForeignKey(City, on_delete=models.PROTECT, related_name="rooms")
     ward = models.ForeignKey(Ward, on_delete=models.PROTECT, related_name="rooms")
     address = models.CharField(max_length=500)
+    building_code = models.CharField(max_length=50, blank=True, db_index=True)
     price = models.DecimalField(max_digits=14, decimal_places=2, validators=[MinValueValidator(Decimal("0"))])
     deposit_type = models.ForeignKey(DepositType, on_delete=models.PROTECT, related_name="rooms", null=True, blank=True)
     deposit_type_name_snapshot = models.CharField(max_length=255, blank=True)
@@ -103,11 +112,13 @@ class Room(TimeStampedModel):
         ordering = ("-created_at",)
         indexes = [
             models.Index(fields=["status", "room_type"]),
+            models.Index(fields=["status", "room_subtype"], name="rooms_status_subtype_idx"),
             models.Index(fields=["city", "ward"]),
             models.Index(fields=["price"]),
         ]
 
     def save(self, *args, **kwargs):
+        self.building_code = (self.building_code or "").strip().upper()
         if not self.slug:
             self.slug = unique_slugify(self, self.title)
         if self.deposit_type_id:
@@ -127,8 +138,40 @@ class Room(TimeStampedModel):
         )
         super().save(*args, **kwargs)
 
+    def clean(self):
+        super().clean()
+        if self.room_subtype_id and self.room_subtype.parent_type != self.room_type:
+            raise ValidationError({"room_subtype": "Room subtype must belong to the selected room type."})
+
     def __str__(self):
         return self.title
+
+
+class RoomSubtype(TimeStampedModel):
+    parent_type = models.CharField(max_length=20, choices=Room.RoomType.choices)
+    name = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+
+    objects = ActiveQuerySet.as_manager()
+
+    class Meta:
+        ordering = ("parent_type", "name")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("parent_type", "name"),
+                name="rooms_subtype_parent_name_uniq",
+            ),
+        ]
+
+    def delete(self, using=None, keep_parents=False):
+        if self.rooms.exists():
+            self.is_active = False
+            self.save(update_fields=("is_active", "updated_at"))
+            return 1, {self._meta.label: 1}
+        return super().delete(using=using, keep_parents=keep_parents)
+
+    def __str__(self):
+        return f"{self.get_parent_type_display()} - {self.name}"
 
 
 def room_media_upload_to(instance, filename):

@@ -141,7 +141,7 @@ function mapDetail(room: ApiRoomDetail): DetailView {
   return {
     id: room.id,
     title,
-    collection: roomTypeLabel(room.room_type),
+    collection: room.room_subtype_name || roomTypeLabel(room.room_type),
     price: `${formatVnd(room.price)} / tháng`,
     deposit: formatOptionalVnd(room.deposit_amount),
     depositLabel: room.deposit_type_name || "Cọc",

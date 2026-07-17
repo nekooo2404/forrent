@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Building2,
+  CalendarDays,
   ChevronRight,
   DoorOpen,
   HelpCircle,
@@ -57,6 +58,7 @@ const navItems = [
   { href: "/admin", label: "Tổng quan", icon: BarChart3, exact: true },
   { href: "/admin/rooms", label: "Quản lý phòng", icon: Building2 },
   { href: "/admin/leads", label: "Yêu cầu xem phòng", icon: UsersRound },
+  { href: "/admin/calendar", label: "Lịch xem phòng", icon: CalendarDays },
   { href: "/admin/blogs", label: "Bài viết", icon: Newspaper },
   { href: "/admin/contacts", label: "Hộp thư liên hệ", icon: Mail },
   { href: "/admin/commissions", label: "Hoa hồng", icon: WalletCards },
@@ -416,6 +418,7 @@ function AdminGateMessage({
 function activeTitle(pathname: string) {
   if (pathname.startsWith("/admin/rooms")) return "Quản lý phòng";
   if (pathname.startsWith("/admin/leads")) return "Yêu cầu xem phòng";
+  if (pathname.startsWith("/admin/calendar")) return "Lịch xem phòng";
   if (pathname.startsWith("/admin/blogs")) return "Bài viết";
   if (pathname.startsWith("/admin/contacts")) return "Hộp thư liên hệ";
   if (pathname.startsWith("/admin/commissions")) return "Hoa hồng";

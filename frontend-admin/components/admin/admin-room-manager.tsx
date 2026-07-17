@@ -17,6 +17,7 @@ import {
   type AdminCity,
   type AdminDepositType,
   type AdminRoom,
+  type AdminRoomSubtype,
   type AdminWard,
 } from "./admin-api";
 import { useAdminAuth } from "./admin-shell";
@@ -40,6 +41,7 @@ type RoomFormState = {
   address: string;
   amenities: number[];
   area_range: string;
+  building_code: string;
   city: string;
   commission_base_amount: string;
   commission_percent: string;
@@ -53,6 +55,7 @@ type RoomFormState = {
   internal_note: string;
   price: string;
   room_type: string;
+  room_subtype: string;
   short_description: string;
   slug: string;
   status: string;
@@ -69,6 +72,7 @@ type RoomLookups = {
   areaRanges: AdminAreaRange[];
   cities: AdminCity[];
   depositTypes: AdminDepositType[];
+  roomSubtypes: AdminRoomSubtype[];
   wards: AdminWard[];
 };
 
@@ -77,6 +81,7 @@ const emptyForm: RoomFormState = {
   address: "",
   amenities: [],
   area_range: "",
+  building_code: "",
   city: "",
   commission_base_amount: "",
   commission_percent: "0",
@@ -90,6 +95,7 @@ const emptyForm: RoomFormState = {
   internal_note: "",
   price: "",
   room_type: "CCMN",
+  room_subtype: "",
   short_description: "",
   slug: "",
   status: "DRAFT",
@@ -123,7 +129,7 @@ export function AdminRoomManager() {
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
-  const [lookups, setLookups] = useState<RoomLookups>({ amenities: [], areaRanges: [], cities: [], depositTypes: [], wards: [] });
+  const [lookups, setLookups] = useState<RoomLookups>({ amenities: [], areaRanges: [], cities: [], depositTypes: [], roomSubtypes: [], wards: [] });
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -142,7 +148,7 @@ export function AdminRoomManager() {
     setIsLoading(true);
     setError("");
     try {
-      const [roomResponse, cities, wards, amenities, areaRanges, depositTypes] = await Promise.all([
+      const [roomResponse, cities, wards, amenities, areaRanges, depositTypes, roomSubtypes] = await Promise.all([
         adminList<AdminRoom>("rooms", token, {
           ordering: "-created_at",
           page: nextPage,
@@ -155,6 +161,7 @@ export function AdminRoomManager() {
         adminList<AdminAmenity>("amenities", token, { page_size: 100, ordering: "name" }),
         adminList<AdminAreaRange>("area-ranges", token, { page_size: 100, ordering: "min_area" }),
         adminList<AdminDepositType>("deposit-types", token, { page_size: 100, ordering: "name" }),
+        adminList<AdminRoomSubtype>("room-subtypes", token, { page_size: 100, ordering: "parent_type,name" }),
       ]);
 
       setRooms(roomResponse.results);
@@ -165,6 +172,7 @@ export function AdminRoomManager() {
         areaRanges: areaRanges.results,
         cities: cities.results,
         depositTypes: depositTypes.results,
+        roomSubtypes: roomSubtypes.results,
         wards: wards.results,
       });
     } catch (loadError) {
@@ -200,6 +208,7 @@ export function AdminRoomManager() {
       address: room.address,
       amenities: room.amenities,
       area_range: String(room.area_range),
+      building_code: room.building_code,
       city: String(room.city),
       commission_base_amount: room.commission_base_amount,
       commission_percent: room.commission_percent,
@@ -213,6 +222,7 @@ export function AdminRoomManager() {
       internal_note: room.internal_note,
       price: room.price,
       room_type: room.room_type,
+      room_subtype: room.room_subtype ? String(room.room_subtype) : "",
       short_description: room.short_description,
       slug: room.slug,
       status: room.status,
@@ -239,6 +249,7 @@ export function AdminRoomManager() {
       actual_area: form.actual_area,
       address: form.address.trim(),
       area_range: form.area_range,
+      building_code: form.building_code.trim(),
       city: form.city,
       commission_base_amount: form.commission_base_amount || "0",
       commission_percent: form.commission_percent || "0",
@@ -259,6 +270,7 @@ export function AdminRoomManager() {
       ward: form.ward,
     }).forEach(([key, value]) => payload.append(key, value));
     if (form.deposit_type) payload.append("deposit_type", form.deposit_type);
+    if (form.room_subtype) payload.append("room_subtype", form.room_subtype);
     form.amenities.forEach((amenity) => payload.append("amenities", String(amenity)));
     form.image_urls
       .split(/\r?\n/)
@@ -355,7 +367,7 @@ export function AdminRoomManager() {
               <input
                 className={`${adminInputClass} pl-9`}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Tìm phòng, địa chỉ, ghi chú..."
+                placeholder="Tìm phòng, mã tòa, địa chỉ..."
                 type="search"
                 value={search}
               />
@@ -396,7 +408,7 @@ export function AdminRoomManager() {
                     <tr className="transition hover:bg-surface-container-low/70" key={room.id}>
                       <td className="max-w-[280px] py-4 pr-5">
                         <p className="line-clamp-1 font-semibold text-primary">{room.title}</p>
-                        <p className="mt-1 line-clamp-1 text-xs text-secondary">{room.slug}</p>
+                        <p className="mt-1 line-clamp-1 text-xs text-secondary">{room.building_code ? `${room.building_code} · ` : ""}{room.slug}</p>
                       </td>
                       <td className="py-4 pr-5 text-secondary">
                         <p>{wardById.get(room.ward)?.name ?? `Ward #${room.ward}`}</p>
@@ -452,7 +464,7 @@ export function AdminRoomManager() {
                   <div className="mb-3 flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate font-semibold text-on-surface">{room.title}</h3>
-                      <p className="mt-1 truncate text-xs text-secondary">{room.slug}</p>
+                      <p className="mt-1 truncate text-xs text-secondary">{room.building_code ? `${room.building_code} · ` : ""}{room.slug}</p>
                     </div>
                     <StatusBadge status={room.status} type="room" />
                   </div>
@@ -631,14 +643,30 @@ function RoomFormModal({
             <Field label="Tên phòng">
               <input className={adminInputClass} onChange={(event) => update("title", event.target.value)} required value={form.title} />
             </Field>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-4">
               <Field label="Slug">
                 <input className={adminInputClass} onChange={(event) => update("slug", event.target.value)} placeholder="Để trống để hệ thống tự tạo" value={form.slug} />
               </Field>
+              <Field label="Mã tòa (nội bộ)">
+                <input className={adminInputClass} maxLength={50} onChange={(event) => update("building_code", event.target.value)} placeholder="Ví dụ: S3.02" value={form.building_code} />
+              </Field>
               <Field label="Loại hình">
-                <select className={adminSelectClass} onChange={(event) => update("room_type", event.target.value)} value={form.room_type}>
+                <select className={adminSelectClass} onChange={(event) => onFormChange({ ...form, room_type: event.target.value, room_subtype: "" })} value={form.room_type}>
                   {roomTypes.map((item) => (
                     <option key={item.value} value={item.value}>{item.label}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Kiểu phòng">
+                <select
+                  className={adminSelectClass}
+                  disabled={form.room_type === "HOUSE"}
+                  onChange={(event) => update("room_subtype", event.target.value)}
+                  value={form.room_subtype}
+                >
+                  <option value="">Chưa chọn kiểu</option>
+                  {lookups.roomSubtypes.filter((item) => item.parent_type === form.room_type).map((item) => (
+                    <option key={item.id} value={item.id}>{item.name}</option>
                   ))}
                 </select>
               </Field>
