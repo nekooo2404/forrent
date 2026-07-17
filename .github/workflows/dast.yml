@@ -7,6 +7,8 @@ on:
         description: Target URL to scan
         required: false
         default: https://forrent.io.vn
+  schedule:
+    - cron: "0 20 * * 6"
 
 jobs:
   zap-baseline:
@@ -16,7 +18,7 @@ jobs:
       contents: read
       issues: write
     env:
-      TARGET: ${{ inputs.target }}
+      TARGET: ${{ inputs.target || 'https://forrent.io.vn' }}
     steps:
       - uses: actions/checkout@v6
       - name: Check target availability

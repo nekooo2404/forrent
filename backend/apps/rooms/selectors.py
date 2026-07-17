@@ -7,7 +7,7 @@ from apps.rooms.models import Room
 def public_rooms_queryset():
     return (
         Room.objects.public()
-        .select_related("city", "ward", "area_range", "deposit_type")
+        .select_related("city", "ward", "area_range", "deposit_type", "room_subtype")
         .prefetch_related(
             Prefetch("amenities", queryset=Amenity.objects.active()),
         )
@@ -21,7 +21,7 @@ def public_room_details_queryset():
 
 def admin_rooms_queryset():
     return (
-        Room.objects.select_related("city", "ward", "area_range", "created_by", "deposit_type")
+        Room.objects.select_related("city", "ward", "area_range", "created_by", "deposit_type", "room_subtype")
         .prefetch_related("amenities", "images")
         .distinct()
     )

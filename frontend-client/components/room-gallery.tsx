@@ -86,8 +86,7 @@ export function RoomGallery({ media, title }: RoomGalleryProps) {
       nextIndex(activeIndex, media.length),
       previousIndex(activeIndex, media.length),
     ];
-    const preloadOrder = [...adjacent, ...media.map((_, index) => index)];
-    for (const index of new Set(preloadOrder)) {
+    for (const index of new Set(adjacent)) {
       if (index !== null && index !== activeIndex) {
         void preloadGalleryMedia(media[index]).catch(() => undefined);
       }
@@ -280,7 +279,7 @@ function GalleryTile({ badge, className, index, item, onClick, priority, title }
   title: string;
 }>) {
   const width = priority ? modalMediaWidth : 768;
-  const quality = priority ? 82 : 78;
+  const quality = 78;
   const imageAlt = `${title} - ${index === 0 ? "ảnh chính" : `ảnh ${index + 1}`}`;
 
   return (
@@ -292,6 +291,9 @@ function GalleryTile({ badge, className, index, item, onClick, priority, title }
         void preloadGalleryMedia(item).catch(() => undefined);
       }}
       onPointerEnter={() => {
+        void preloadGalleryMedia(item).catch(() => undefined);
+      }}
+      onPointerDown={() => {
         void preloadGalleryMedia(item).catch(() => undefined);
       }}
       type="button"

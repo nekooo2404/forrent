@@ -1,12 +1,19 @@
 from django.contrib import admin
 
-from apps.rooms.models import DepositType, Room, RoomImage
+from apps.rooms.models import DepositType, Room, RoomImage, RoomSubtype
 
 
 @admin.register(DepositType)
 class DepositTypeAdmin(admin.ModelAdmin):
     list_display = ("name", "is_active", "updated_at")
     list_filter = ("is_active",)
+    search_fields = ("name",)
+
+
+@admin.register(RoomSubtype)
+class RoomSubtypeAdmin(admin.ModelAdmin):
+    list_display = ("name", "parent_type", "is_active", "updated_at")
+    list_filter = ("parent_type", "is_active")
     search_fields = ("name",)
 
 
@@ -17,9 +24,9 @@ class RoomImageInline(admin.TabularInline):
 
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):
-    list_display = ("title", "room_type", "city", "ward", "price", "deposit_type", "deposit_amount", "status", "estimated_commission_amount")
+    list_display = ("title", "building_code", "room_type", "city", "ward", "price", "deposit_type", "deposit_amount", "status", "estimated_commission_amount")
     list_filter = ("room_type", "status", "city", "ward", "deposit_type")
-    search_fields = ("title", "address", "description", "internal_note")
+    search_fields = ("title", "building_code", "address", "description", "internal_note")
     prepopulated_fields = {"slug": ("title",)}
     inlines = [RoomImageInline]
 

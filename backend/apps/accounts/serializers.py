@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from apps.accounts.models import PasswordResetToken, User
 from apps.accounts.services import AuthService
+from apps.common.audit import client_ip
 from apps.common.validators import normalize_vietnamese_phone, validate_vietnamese_phone
 
 
@@ -217,8 +218,7 @@ class PasswordResetRequestSerializer(serializers.Serializer):
         requested_ip = None
         user_agent = ""
         if request:
-            forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
-            requested_ip = forwarded_for.split(",")[0].strip() or request.META.get("REMOTE_ADDR")
+            requested_ip = client_ip(request)
             user_agent = request.META.get("HTTP_USER_AGENT", "")
         return AuthService.request_password_reset(
             email=self.validated_data["email"],

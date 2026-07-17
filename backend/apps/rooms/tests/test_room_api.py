@@ -3,6 +3,7 @@ from unittest import mock
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.cache import cache
 from rest_framework import serializers
 from rest_framework.test import APIClient
 
@@ -10,8 +11,9 @@ from apps.common.models import AuditLog
 from apps.common.image_validation import validate_uploaded_image_file, validate_uploaded_room_media_file
 from apps.rooms.tests.factories import create_admin, create_room, create_user
 from apps.locations.models import AreaRange
-from apps.rooms.models import DepositType, Room, RoomImage
+from apps.rooms.models import DepositType, Room, RoomImage, RoomSubtype
 from apps.rooms.serializers import validate_room_image_url
+from apps.viewing_requests.models import ViewingRequest
 
 User = get_user_model()
 
@@ -37,6 +39,24 @@ class TestRoomAPI:
         assert data["electricity_price_per_kwh"] == "4000.00"
         assert data["water_price_per_person"] == "100000.00"
         assert data["service_fee"] == "150000.00"
+
+    def test_building_code_is_admin_only_and_searchable(self):
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        self.client.force_authenticate(admin)
+
+        update_response = self.client.patch(
+            f"/api/admin/rooms/{room.id}/",
+            {"building_code": " s3.02 "},
+            format="json",
+        )
+        search_response = self.client.get("/api/admin/rooms/?search=S3.02")
+        public_response = self.client.get(f"/api/rooms/{room.slug}/")
+
+        assert update_response.status_code == 200
+        assert update_response.data["data"]["building_code"] == "S3.02"
+        assert [item["id"] for item in search_response.data["data"]["results"]] == [room.id]
+        assert "building_code" not in public_response.data["data"]
 
     def test_admin_can_set_water_price_per_cubic_meter(self):
         admin = create_admin()
@@ -118,6 +138,74 @@ class TestRoomAPI:
         for url in allowed_urls:
             assert self.client.get(url).status_code == 200
 
+    def test_admin_can_manage_room_subtypes_and_public_filters_expose_active_values(self):
+        admin = create_admin()
+        self.client.force_authenticate(admin)
+
+        response = self.client.post(
+            "/api/admin/room-subtypes/",
+            {"parent_type": Room.RoomType.CCDV, "name": "Studio"},
+            format="json",
+        )
+
+        assert response.status_code == 201
+        subtype_id = response.data["data"]["id"]
+        cache.clear()
+        filters_response = self.client.get("/api/rooms/filters/")
+
+        assert filters_response.status_code == 200
+        assert {item["id"] for item in filters_response.data["data"]["room_subtypes"]} == {subtype_id}
+
+        update_response = self.client.patch(
+            f"/api/admin/room-subtypes/{subtype_id}/",
+            {"name": "1N1K"},
+            format="json",
+        )
+        assert update_response.status_code == 200
+
+    def test_room_rejects_subtype_from_another_parent_type(self):
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        subtype = RoomSubtype.objects.create(parent_type=Room.RoomType.CCDV, name="Studio")
+        self.client.force_authenticate(admin)
+
+        response = self.client.patch(
+            f"/api/admin/rooms/{room.id}/",
+            {"room_subtype": subtype.id},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "room_subtype" in response.data["errors"]
+
+    def test_admin_cannot_change_parent_type_of_used_subtype(self):
+        admin = create_admin()
+        subtype = RoomSubtype.objects.create(parent_type=Room.RoomType.CCMN, name="Studio")
+        room = create_room(created_by=admin)
+        room.room_subtype = subtype
+        room.save(update_fields=("room_subtype", "updated_at"))
+        self.client.force_authenticate(admin)
+
+        response = self.client.patch(
+            f"/api/admin/room-subtypes/{subtype.id}/",
+            {"parent_type": Room.RoomType.CCDV},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "parent_type" in response.data["errors"]
+
+    def test_public_rooms_can_filter_by_subtype(self):
+        subtype = RoomSubtype.objects.create(parent_type=Room.RoomType.CCMN, name="1N1K")
+        room = create_room()
+        room.room_subtype = subtype
+        room.save(update_fields=("room_subtype", "updated_at"))
+
+        response = self.client.get(f"/api/rooms/?room_subtype={subtype.id}")
+
+        assert response.status_code == 200
+        assert [item["id"] for item in response.data["data"]["results"]] == [room.id]
+
     def test_admin_room_validation_rejects_area_outside_range_and_large_commission(self):
         admin = create_admin()
         room = create_room(created_by=admin)
@@ -182,6 +270,24 @@ class TestRoomAPI:
         assert response.status_code == 400
         room.refresh_from_db()
         assert room.status == Room.Status.RENTED
+
+    def test_admin_delete_room_with_viewing_history_returns_conflict(self):
+        admin = create_admin()
+        tenant = create_user(email="delete-history@example.com", phone="0912345699")
+        room = create_room(created_by=admin)
+        ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+        )
+        self.client.force_authenticate(admin)
+
+        response = self.client.delete(f"/api/admin/rooms/{room.id}/")
+
+        assert response.status_code == 409
+        assert Room.objects.filter(pk=room.pk).exists()
 
     def test_room_image_validation_rejects_svg_upload(self):
         image = SimpleUploadedFile("bad.svg", b"<svg></svg>", content_type="image/svg+xml")

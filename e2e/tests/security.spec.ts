@@ -82,6 +82,22 @@ test.describe('Security headers and origin guard', () => {
     expect(response.status()).toBe(204);
   });
 
+  test('malformed JSON returns 400 on client and admin API routes', async ({ request }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', 'Run API security regression once.');
+
+    for (const [url, origin] of [
+      ['/api/auth/log-in', 'http://localhost:3000'],
+      [new URL('/api/auth/log-in', adminBaseURL).toString(), adminBaseURL],
+    ]) {
+      const response = await request.post(url, {
+        data: Buffer.from('{'),
+        headers: { 'Content-Type': 'application/json', Origin: origin },
+      });
+      expect(response.status(), url).toBe(400);
+      expect(await response.json()).toMatchObject({ success: false, errors: {} });
+    }
+  });
+
   test('anonymous session check succeeds without refreshing', async ({ request }, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'Run API security regression once.');
 

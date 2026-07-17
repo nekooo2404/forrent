@@ -1,9 +1,13 @@
 import pytest
+from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
+from apps.common.models import AuditLog
 from apps.contacts.models import ContactMessage
-from apps.rooms.tests.factories import create_admin, create_room
+from apps.rooms.tests.factories import create_admin, create_room, create_user
 from apps.viewing_requests.models import ViewingRequest
+
+User = get_user_model()
 
 
 @pytest.mark.django_db
@@ -42,7 +46,7 @@ class TestContactAdminAPI:
             "/api/contact/",
             {
                 "full_name": "Nguyen Van B",
-                "phone": "0912345679",
+                "phone": "+84 912-345-679",
                 "email": "tenant-b@example.com",
                 "message": "Toi muon duoc tu van phong nay",
                 "room_id": room.id,
@@ -53,6 +57,30 @@ class TestContactAdminAPI:
         assert response.status_code == 201
         contact = ContactMessage.objects.get(phone="0912345679")
         assert contact.room == room
+        assert contact.phone == "0912345679"
+
+    def test_convert_contact_reuses_user_after_phone_normalization(self):
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        tenant = create_user(email="existing@example.com", phone="0912345681")
+        contact = ContactMessage.objects.create(
+            full_name="Existing Tenant",
+            phone="+84 912 345 681",
+            email="new-address@example.com",
+            message="Toi muon xem phong nay",
+            room=room,
+        )
+        user_count = User.objects.count()
+        self.client.force_authenticate(admin)
+
+        response = self.client.post(f"/api/admin/contacts/{contact.id}/convert-to-lead/")
+
+        assert response.status_code == 200
+        lead = ViewingRequest.objects.get(pk=response.data["data"]["viewing_request_id"])
+        contact.refresh_from_db()
+        assert lead.user == tenant
+        assert contact.phone == tenant.phone
+        assert User.objects.count() == user_count
 
     def test_contact_without_email_cannot_be_converted_to_placeholder_user(self):
         admin = create_admin()
@@ -82,6 +110,7 @@ class TestContactAdminAPI:
             )
             for index in range(2)
         ]
+        original_updated_at = {contact.id: contact.updated_at for contact in contacts}
         self.client.force_authenticate(admin)
 
         response = self.client.post(
@@ -95,3 +124,7 @@ class TestContactAdminAPI:
         assert set(ContactMessage.objects.filter(id__in=[contact.id for contact in contacts]).values_list("status", flat=True)) == {
             ContactMessage.Status.READ
         }
+        for contact in contacts:
+            contact.refresh_from_db()
+            assert contact.updated_at > original_updated_at[contact.id]
+            assert AuditLog.objects.filter(event="contact.status_changed", target_id=str(contact.id)).exists()

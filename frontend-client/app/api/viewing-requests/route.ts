@@ -2,13 +2,16 @@ import { NextResponse } from "next/server";
 
 import { ApiError, createViewingRequest } from "@/lib/api";
 import { getAccessAuthorization } from "@/lib/server-auth";
+import { parseJsonRequest } from "@/lib/server-request";
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as {
+  const parsed = await parseJsonRequest<{
     room_id?: number;
     preferred_viewing_date?: string;
     preferred_viewing_time_slot?: "morning" | "afternoon" | "evening" | "";
-  };
+  }>(request);
+  if (!parsed.ok) return parsed.response;
+  const payload = parsed.data;
   const roomId = Number(payload.room_id);
 
   if (!Number.isInteger(roomId) || roomId <= 0) {

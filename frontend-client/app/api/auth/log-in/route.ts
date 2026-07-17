@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { ApiError, loginTenant, type LoginPayload } from "@/lib/api";
+import { parseJsonRequest } from "@/lib/server-request";
 import { setSessionCookies } from "@/lib/server-auth";
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as LoginPayload;
+  const parsed = await parseJsonRequest<LoginPayload>(request);
+  if (!parsed.ok) return parsed.response;
+  const payload = parsed.data;
 
   try {
     const data = await loginTenant(payload);

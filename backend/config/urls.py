@@ -18,7 +18,13 @@ from apps.locations.views import (
     AdminCityViewSet,
     AdminWardViewSet,
 )
-from apps.rooms.views import AdminDepositTypeViewSet, AdminRoomViewSet, PublicRoomFiltersAPIView, PublicRoomViewSet
+from apps.rooms.views import (
+    AdminDepositTypeViewSet,
+    AdminRoomSubtypeViewSet,
+    AdminRoomViewSet,
+    PublicRoomFiltersAPIView,
+    PublicRoomViewSet,
+)
 from apps.viewing_requests.views import AdminViewingRequestViewSet
 
 admin_router = DefaultRouter()
@@ -27,6 +33,7 @@ admin_router.register("wards", AdminWardViewSet, basename="admin-ward")
 admin_router.register("amenities", AdminAmenityViewSet, basename="admin-amenity")
 admin_router.register("area-ranges", AdminAreaRangeViewSet, basename="admin-area-range")
 admin_router.register("deposit-types", AdminDepositTypeViewSet, basename="admin-deposit-type")
+admin_router.register("room-subtypes", AdminRoomSubtypeViewSet, basename="admin-room-subtype")
 admin_router.register("rooms", AdminRoomViewSet, basename="admin-room")
 admin_router.register("viewing-requests", AdminViewingRequestViewSet, basename="admin-viewing-request")
 admin_router.register("blogs", AdminBlogViewSet, basename="admin-blog")

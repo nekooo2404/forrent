@@ -14,7 +14,7 @@ import {
 import type { ReactNode } from "react";
 
 import { PublicShell } from "@/components/public-shell";
-import { ResponsiveFilter } from "@/components/responsive-filter";
+import { ResponsiveFilter, RoomTypeSubtypeFilter } from "@/components/responsive-filter";
 import { StructuredData } from "@/components/structured-data";
 import { fastImageUrl } from "@/lib/image";
 import {
@@ -89,6 +89,7 @@ const fallbackFilters: RoomFilters = {
     { value: "CCDV", label: "Căn hộ dịch vụ" },
     { value: "HOUSE", label: "Nhà nguyên căn" },
   ],
+  room_subtypes: [],
   statuses: [
     { value: "PUBLISHED", label: "Còn trống" },
   ],
@@ -105,7 +106,7 @@ function mapRoom(room: ApiRoom): RoomCardView {
     period: "/ tháng",
     deposit: formatOptionalVnd(room.deposit_amount),
     depositLabel: room.deposit_type_name || "Cọc",
-    primaryMeta: roomTypeLabel(room.room_type),
+    primaryMeta: room.room_subtype_name || roomTypeLabel(room.room_type),
     area: formatArea(room.actual_area),
     status: roomStatusLabel(room.status),
     unavailable: room.status !== "PUBLISHED",
@@ -155,6 +156,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   const city = firstParam(params.city);
   const ward = firstParam(params.ward);
   const roomType = firstParam(params.room_type);
+  const roomSubtype = firstParam(params.room_subtype);
   const areaRange = firstParam(params.area_range);
   const status = firstParam(params.status);
   const minPrice = firstParam(params.min_price);
@@ -173,6 +175,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
       city,
       ward,
       room_type: roomType,
+      room_subtype: roomSubtype,
       area_range: areaRange,
       status,
       min_price: minPrice,
@@ -183,7 +186,10 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   ]);
 
   const rooms = roomsResponse?.results.map(mapRoom) ?? [];
-  const filters = filtersResponse ?? fallbackFilters;
+  const filters = {
+    ...(filtersResponse ?? fallbackFilters),
+    room_subtypes: filtersResponse?.room_subtypes ?? [],
+  };
   const totalCount = roomsResponse?.count ?? rooms.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / ROOMS_PAGE_SIZE));
   const roomListStructuredData = {
@@ -207,6 +213,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
     city && filters.cities.length > 1 ? { key: "city", label: filters.cities.find((item) => String(item.id) === city)?.name || "Khu vực" } : null,
     ward ? { key: "ward", label: filters.wards.find((item) => String(item.id) === ward)?.name || "Phường" } : null,
     roomType ? { key: "room_type", label: roomTypeLabel(roomType) } : null,
+    roomSubtype ? { key: "room_subtype", label: filters.room_subtypes.find((item) => String(item.id) === roomSubtype)?.name || "Kiểu phòng" } : null,
     areaRange ? { key: "area_range", label: filters.area_ranges.find((item) => String(item.id) === areaRange)?.name || "Diện tích" } : null,
     status ? { key: "status", label: roomStatusLabel(status) } : null,
     minPrice ? { key: "min_price", label: `Từ ${formatVnd(minPrice)}` } : null,
@@ -248,6 +255,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
           activeMaxPrice={maxPrice}
           activeMinPrice={minPrice}
           activeRoomType={roomType}
+          activeRoomSubtype={roomSubtype}
           activeWard={ward}
           activeAmenities={activeAmenities}
           filters={filters}
@@ -372,6 +380,7 @@ function FilterSidebar({
   activeMaxPrice,
   activeMinPrice,
   activeRoomType,
+  activeRoomSubtype,
   activeWard,
   filters,
   search,
@@ -382,6 +391,7 @@ function FilterSidebar({
   activeMaxPrice?: string;
   activeMinPrice?: string;
   activeRoomType?: string;
+  activeRoomSubtype?: string;
   activeWard?: string;
   filters: RoomFilters;
   search?: string;
@@ -391,7 +401,9 @@ function FilterSidebar({
   const cityFilters = [{ id: "", name: "Tất cả khu vực", slug: "all", is_active: true }, ...filters.cities];
   const typeFilters = filters.room_types.length ? filters.room_types : fallbackFilters.room_types;
   const visibleWards = filters.wards.filter((ward) => !effectiveCity || String(ward.city) === effectiveCity);
-  const hasAdvancedFilters = Boolean(activeRoomType || activeAreaRange || activeAmenities.length);
+  const selectedSubtype = filters.room_subtypes.find((item) => String(item.id) === activeRoomSubtype);
+  const selectedParentType = activeRoomType || selectedSubtype?.parent_type;
+  const hasAdvancedFilters = Boolean(selectedParentType || activeRoomSubtype || activeAreaRange || activeAmenities.length);
 
   return (
     <aside className="w-full flex-shrink-0 lg:sticky lg:top-24 lg:w-[280px] lg:self-start">
@@ -469,20 +481,12 @@ function FilterSidebar({
                 <ChevronDown aria-hidden="true" className="transition-transform group-open:rotate-180" size={18} strokeWidth={1.8} />
               </summary>
               <div className="pt-1">
-                <FilterSection title="Loại hình">
-                  <div className="space-y-1">
-                    <label className="group flex min-h-11 cursor-pointer items-center gap-3 py-2">
-                      <input className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary" defaultChecked={!activeRoomType} name="room_type" type="radio" value="" />
-                      <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-on-surface">Tất cả loại phòng</span>
-                    </label>
-                    {typeFilters.map((item) => (
-                      <label className="group flex min-h-11 cursor-pointer items-center gap-3 py-2" key={item.value}>
-                        <input className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary" defaultChecked={item.value === activeRoomType} name="room_type" type="radio" value={item.value} />
-                        <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-on-surface">{roomTypeLabel(item.value) || item.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </FilterSection>
+                <RoomTypeSubtypeFilter
+                  initialRoomSubtype={activeRoomSubtype}
+                  initialRoomType={selectedParentType}
+                  roomSubtypes={filters.room_subtypes}
+                  roomTypes={typeFilters.map((item) => ({ ...item, label: roomTypeLabel(item.value) || item.label }))}
+                />
 
                 {filters.area_ranges.length ? (
                   <FilterSection title="Diện tích">

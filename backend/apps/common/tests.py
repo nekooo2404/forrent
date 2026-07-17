@@ -34,7 +34,11 @@ def test_health_check(client):
 
 @pytest.mark.django_db
 def test_audit_event_structured_log_includes_request_context():
-    request = RequestFactory().post("/api/admin/test/", HTTP_X_FORWARDED_FOR="203.0.113.10")
+    request = RequestFactory().post(
+        "/api/admin/test/",
+        HTTP_X_FORWARDED_FOR="198.51.100.99",
+        HTTP_X_REAL_IP="203.0.113.10",
+    )
     request.id = "request-123"
 
     with mock.patch("apps.common.audit.logger.info") as info:
@@ -46,6 +50,14 @@ def test_audit_event_structured_log_includes_request_context():
     assert payload["path"] == "/api/admin/test/"
     assert payload["ip_address"] == "203.0.113.10"
     assert payload["metadata_fields"] == ["password", "status"]
+
+
+@pytest.mark.django_db
+@override_settings(AUDIT_LOG_FAIL_CLOSED=True)
+def test_audit_event_fails_closed_when_persistence_fails():
+    with mock.patch("apps.common.audit.AuditLog.objects.create", side_effect=RuntimeError("database unavailable")):
+        with pytest.raises(RuntimeError, match="database unavailable"):
+            audit_event("admin.test")
 
 
 class RequestIDMiddlewareTests(SimpleTestCase):
@@ -255,6 +267,15 @@ class CloudinaryMediaStorageTests(SimpleTestCase):
 
         with mock.patch("cloudinary.uploader.upload") as upload:
             storage._save("room-images/photo.jpg", ContentFile(b"image"))
+
+        assert upload.call_args.kwargs["moderation"] == "manual"
+
+    @override_settings(CLOUDINARY_UPLOAD_MODERATION="manual")
+    def test_video_upload_also_passes_cloudinary_moderation(self):
+        storage = CloudinaryMediaStorage()
+
+        with mock.patch("cloudinary.uploader.upload") as upload:
+            storage._save("room-videos/tour.mp4", ContentFile(b"video"))
 
         assert upload.call_args.kwargs["moderation"] == "manual"
 

@@ -44,9 +44,10 @@ class AuthService:
 
     @staticmethod
     def login(*, identifier, password):
-        user = User.objects.filter(email__iexact=identifier).first()
+        normalized_identifier = (identifier or "").strip()
+        user = User.objects.filter(email__iexact=normalized_identifier).first()
         if user is None:
-            user = User.objects.filter(phone=identifier).first()
+            user = User.objects.filter(phone=normalize_vietnamese_phone(normalized_identifier)).first()
         if user is None:
             raise AuthenticationFailed("Invalid credentials.")
 

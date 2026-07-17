@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { ApiError, createTenantBlog, type TenantBlogPayload } from "@/lib/api";
+import { parseJsonRequest } from "@/lib/server-request";
 import { getAccessAuthorization } from "@/lib/server-auth";
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as TenantBlogPayload;
+  const parsed = await parseJsonRequest<TenantBlogPayload>(request);
+  if (!parsed.ok) return parsed.response;
+  const payload = parsed.data;
 
   try {
     const data = await createTenantBlog(payload, getAccessAuthorization(request));

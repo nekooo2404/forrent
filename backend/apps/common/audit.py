@@ -20,8 +20,7 @@ def audit_hash(value):
 def client_ip(request):
     if not request:
         return None
-    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    return forwarded_for.split(",")[0].strip() or request.META.get("REMOTE_ADDR")
+    return request.META.get("HTTP_X_REAL_IP") or request.META.get("REMOTE_ADDR")
 
 
 def safe_metadata(metadata):
@@ -72,6 +71,8 @@ def audit_event(event, *, request=None, actor=None, target=None, status=AuditLog
         )
     except Exception:
         logger.exception("audit_event_failed event=%s", event)
+        if settings.AUDIT_LOG_FAIL_CLOSED:
+            raise
 
 
 def audit_admin_action(request, action, target=None, metadata=None):

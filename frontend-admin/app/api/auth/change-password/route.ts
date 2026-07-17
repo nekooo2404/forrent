@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { ApiError, changePassword, type ChangePasswordPayload } from "@/lib/api";
+import { parseJsonRequest } from "@/lib/server-request";
 import { getAccessAuthorization } from "@/lib/server-auth";
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as ChangePasswordPayload;
+  const parsed = await parseJsonRequest<ChangePasswordPayload>(request);
+  if (!parsed.ok) return parsed.response;
+  const payload = parsed.data;
 
   try {
     const data = await changePassword(payload, getAccessAuthorization(request));

@@ -23,6 +23,7 @@ env = environ.Env(
     CELERY_TASK_EAGER_PROPAGATES=(bool, False),
     SENTRY_TRACES_SAMPLE_RATE=(float, 0.0),
     EXPOSE_API_DOCS=(bool, False),
+    AUDIT_LOG_FAIL_CLOSED=(bool, False),
 )
 
 env_file = BASE_DIR / ".env"
@@ -33,6 +34,7 @@ SECRET_KEY = env("DJANGO_SECRET_KEY", default="unsafe-local-development-key-for-
 DEBUG = env("DJANGO_DEBUG")
 ALLOWED_HOSTS = env("DJANGO_ALLOWED_HOSTS")
 EXPOSE_API_DOCS = env("EXPOSE_API_DOCS", default=DEBUG)
+AUDIT_LOG_FAIL_CLOSED = env("AUDIT_LOG_FAIL_CLOSED")
 
 DJANGO_APPS = [
     "django.contrib.admin",

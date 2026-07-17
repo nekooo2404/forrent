@@ -85,7 +85,7 @@ jobs:
           }
 
           login_and_scan tenant "$CLIENT_URL" "$STAGING_TENANT_IDENTIFIER" "$STAGING_TENANT_PASSWORD" "/profile"
-          login_and_scan admin "$ADMIN_URL" "$STAGING_ADMIN_IDENTIFIER" "$STAGING_ADMIN_PASSWORD" "/admin/rooms"
+          login_and_scan admin "$ADMIN_URL" "$STAGING_ADMIN_IDENTIFIER" "$STAGING_ADMIN_PASSWORD" "/admin/"
 
       - name: Upload ZAP reports
         if: always()

@@ -84,6 +84,8 @@ test('rooms grid with twelve results visual regression', async ({ page }, testIn
 
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/rooms?search=visual-12');
+  await page.waitForLoadState('networkidle');
+  await expect(page.locator('[data-testid="site-nav"]:visible').first()).toHaveAttribute('data-ready', 'true');
   await expect(page.locator('[data-room-card]')).toHaveCount(12);
   await expect(page).toHaveScreenshot('rooms-list-12-light.png', {
     maxDiffPixelRatio: 0.01,
