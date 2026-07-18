@@ -126,6 +126,7 @@ export default async function Homepage() {
         data-hero-room-id={listingHeroProperty?.id}
         data-hero-room-slug={listingHeroProperty?.slug}
         data-hero-source={listingHeroImage ? "listing" : "brand"}
+        data-search-led-marketplace="true"
         data-testid="homepage-hero"
       >
         <Image
@@ -138,41 +139,29 @@ export default async function Homepage() {
           src={heroImage}
           unoptimized={Boolean(listingHeroImage && isCloudinaryImage(listingHeroImage))}
         />
-        <div aria-hidden="true" className="absolute inset-0 bg-inverse-surface/[0.58]" />
+        <div aria-hidden="true" className="absolute inset-0 bg-inverse-surface/[0.48]" />
 
-        <div className="relative mx-auto flex min-h-[550px] w-full max-w-container-max flex-col px-margin-mobile pb-4 pt-6 text-inverse-on-surface md:px-margin-desktop md:pt-9 lg:min-h-[560px] lg:pb-6 lg:pt-12">
+        <div className="relative mx-auto flex min-h-[550px] w-full max-w-container-max flex-col justify-center px-margin-mobile pb-12 pt-8 text-inverse-on-surface md:px-margin-desktop lg:min-h-[560px] lg:pb-16 lg:pt-10">
           <div className="max-w-2xl">
             <p className="mb-2 font-label-caps text-label-caps uppercase text-inverse-primary md:mb-3">
               Phòng thuê theo tháng tại Hà Nội
             </p>
-            <h1 className="max-w-2xl text-[34px] font-extrabold leading-[1.1] md:text-[44px] lg:text-[48px]">
+            <h1 className="min-w-0 max-w-2xl [overflow-wrap:anywhere] font-display-lg text-[34px] font-bold leading-[1.1] md:text-[44px] lg:text-[48px]">
               Phòng đẹp, giá rõ, đặt lịch không vòng vo
             </h1>
             <p className="mt-3 max-w-xl text-sm font-medium leading-6 text-inverse-on-surface/90 md:mt-4 md:text-lg md:leading-7">
               Lọc phòng còn trống theo khu vực, giá tháng, cọc và tiện ích. ForRent xác nhận lại trước khi bạn đi xem.
             </p>
-            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold md:mt-4">
-              <Link
-                className="inline-flex min-h-11 items-center rounded-md bg-surface-container-lowest px-4 py-2 font-semibold text-primary shadow-soft transition-colors hover:bg-primary-container"
-                href="/rooms"
-              >
-                Xem phòng đang trống
-              </Link>
-              <Link
-                className="inline-flex min-h-11 items-center whitespace-nowrap underline decoration-inverse-primary/70 underline-offset-4 transition-colors hover:text-inverse-primary"
-                href="/contact"
-              >
-                Gửi nhu cầu
-              </Link>
-            </div>
           </div>
 
           <form
             action="/rooms"
-            className="mt-auto grid grid-cols-2 gap-2 rounded-lg border border-outline-variant/40 bg-surface-container-lowest/95 p-3 text-on-surface shadow-high lg:grid-cols-[1.4fr_0.85fr_0.85fr_auto] lg:items-end"
+            aria-label="Tìm phòng thuê"
+            className="mt-7 grid max-w-5xl grid-cols-1 gap-2 rounded-lg border border-outline-variant/60 bg-surface-container-lowest/95 p-3 text-on-surface shadow-high sm:grid-cols-2 lg:grid-cols-[1.4fr_0.85fr_0.85fr_auto] lg:items-end"
             data-product-event="room_search_submitted"
+            role="search"
           >
-            <div className="col-span-2 flex flex-col rounded-md bg-surface-container-low px-4 py-2 lg:col-span-1">
+            <div className="flex flex-col rounded-md bg-surface-container-low px-4 py-2 sm:col-span-2 lg:col-span-1">
               <label className="mb-1 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-room-search">
                 Khu vực
               </label>
@@ -222,13 +211,23 @@ export default async function Homepage() {
               </select>
             </div>
             <button
-              className="premium-button urban-cta col-span-2 flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-md px-6 font-button text-button lg:col-span-1"
+              className="premium-button urban-cta flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-md px-6 font-button text-button sm:col-span-2 lg:col-span-1"
               type="submit"
             >
               <Search aria-hidden="true" size={20} strokeWidth={1.8} />
               Tìm phòng
             </button>
           </form>
+          <div className="mt-3 flex max-w-5xl flex-wrap items-center gap-x-5 gap-y-1 text-sm font-medium text-inverse-on-surface/90">
+            {listingHeroProperty ? (
+              <Link className="min-h-11 py-3 underline decoration-inverse-primary/70 underline-offset-4 hover:text-inverse-primary" href={`/rooms/${encodeURIComponent(listingHeroProperty.slug || "")}`}>
+                Ảnh phòng thật: {listingHeroProperty.location}
+              </Link>
+            ) : null}
+            <Link className="min-h-11 py-3 underline decoration-inverse-primary/70 underline-offset-4 hover:text-inverse-primary" href="/contact">
+              Không thấy phòng phù hợp? Gửi nhu cầu
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -250,16 +249,16 @@ export default async function Homepage() {
             </Link>
           </MotionSection>
 
-          <MotionList className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-gutter">
-            {collections.map((item) => (
-              <MotionItem key={item.title}>
+          <MotionList className="grid grid-cols-1 gap-4 md:grid-cols-12 md:gap-gutter">
+            {collections.map((item, index) => (
+              <MotionItem className={index === 0 ? "md:col-span-6" : "md:col-span-3"} key={item.title}>
                 <Link
                   aria-label={`Xem ${item.title}`}
-                  className="group flex h-full min-h-64 flex-col rounded-lg border border-outline-variant/30 bg-surface-container-lowest p-6 transition hover:border-primary/35"
+                  className="group flex h-full min-h-56 flex-col rounded-lg border border-outline-variant/50 bg-surface-container-lowest p-6 transition-colors duration-200 hover:border-primary/35 md:min-h-64"
                   href={item.href}
                 >
                   <div className="flex h-full flex-col">
-                    <span className="mb-10 flex size-12 items-center justify-center rounded-md bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-on-primary">
+                    <span className="mb-8 flex size-12 items-center justify-center rounded-md bg-primary-container text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-on-primary">
                       {item.icon}
                     </span>
                     <span className="mb-2 font-label-caps text-label-caps text-secondary">{item.kicker}</span>
@@ -388,7 +387,7 @@ function PropertyCard({ featured = false, property }: Readonly<{ featured?: bool
           <Link className="line-clamp-2 min-h-11 font-headline-sm text-headline-sm text-on-surface hover:text-primary" href={detailHref}>
             {property.title}
           </Link>
-          <span className="shrink-0 whitespace-nowrap font-headline-sm text-xl tabular-nums text-on-surface sm:text-right">{property.price}</span>
+          <span className="[overflow-wrap:anywhere] font-headline-sm text-xl tabular-nums text-on-surface sm:max-w-40 sm:text-right">{property.price}</span>
         </div>
         <p className="mb-4 font-body-md text-body-md text-on-surface-variant">
           {property.location} · {property.descriptor}
@@ -436,10 +435,12 @@ function PropertyCard({ featured = false, property }: Readonly<{ featured?: bool
 
 function UrbanStep({ children, icon, title }: Readonly<{ children: ReactNode; icon: ReactNode; title: string }>) {
   return (
-    <div className="h-full rounded-lg border border-on-primary/20 bg-on-primary/5 p-5">
-      <div className="mb-4 inline-flex rounded-md bg-on-primary/10 p-3 text-on-primary">{icon}</div>
-      <h3 className="mb-2 font-headline-sm text-xl text-on-primary">{title}</h3>
-      <p className="font-body-md text-sm leading-6 text-on-primary">{children}</p>
+    <div className="flex h-full items-start gap-3 border-t border-on-primary/25 pt-4">
+      <div className="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-on-primary/10 text-on-primary">{icon}</div>
+      <div>
+        <h3 className="font-headline-sm text-xl text-on-primary">{title}</h3>
+        <p className="mt-1 font-body-md text-sm leading-6 text-on-primary/80">{children}</p>
+      </div>
     </div>
   );
 }

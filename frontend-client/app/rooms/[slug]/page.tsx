@@ -128,14 +128,16 @@ export async function generateMetadata({ params }: RoomSlugPageProps): Promise<M
 
 function galleryFor(room: ApiRoomDetail) {
   return [
-    { source: room.thumbnail_url, type: "image" as const },
+    { source: room.thumbnail_url, type: "image" as const, label: "OVERVIEW", labelText: "Toàn cảnh" },
     ...room.images.map((media) => ({
       source: media.image_url || media.image,
       type: media.media_type === "VIDEO" ? "video" as const : "image" as const,
+      label: media.label,
+      labelText: media.label_display,
     })),
   ].flatMap((media) => {
     const src = resolveMediaUrl(media.source);
-    return src ? [{ src, type: media.type }] : [];
+    return src ? [{ src, type: media.type, label: media.label, labelText: media.labelText }] : [];
   });
 }
 

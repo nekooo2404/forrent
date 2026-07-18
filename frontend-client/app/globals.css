@@ -1,34 +1,37 @@
+/* Hallmark · pre-emit critique: P5 H5 E4 S5 R5 V4 · genre: modern-minimal · macrostructure: Marketplace Workbench · design-system: /DESIGN.md */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: light;
-  --font-open-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "Open Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: ui-serif, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-open-sans: var(--font-body);
 
   /* Motion system */
-  --motion-fast: 160ms;
-  --motion-base: 250ms;
-  --motion-medium: 250ms;
-  --motion-slow: 350ms;
-  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --ease-in: cubic-bezier(0.4, 0, 1, 1);
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-fast: 120ms;
+  --motion-base: 220ms;
+  --motion-medium: 300ms;
+  --motion-slow: 420ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-smooth: var(--ease-out);
 
   /* Light theme colors (RGB values for alpha support) */
-  --surface-container-low: 245 242 238;
+  --surface-container-low: 242 237 231;
   --on-secondary-fixed: 54 46 40;
   --on-tertiary: 255 255 255;
   --primary-fixed: 248 229 215;
-  --tertiary-container: 219 240 234;
+  --tertiary-container: 226 233 214;
   --inverse-on-surface: 255 252 248;
   --secondary: 83 67 57;
   --on-primary-fixed-variant: 128 55 24;
   --primary: 151 65 28;
   --secondary-fixed-dim: 223 213 203;
-  --surface-container-high: 234 229 224;
-  --on-tertiary-fixed: 15 72 64;
+  --surface-container-high: 229 220 211;
+  --on-tertiary-fixed: 48 61 34;
   --on-secondary: 255 255 255;
   --primary-fixed-dim: 238 203 179;
   --on-primary: 255 255 255;
@@ -37,31 +40,31 @@
   --inverse-surface: 43 35 30;
   --primary-container: 250 235 224;
   --on-error-container: 140 20 20;
-  --surface-container-highest: 223 216 208;
-  --surface-container-lowest: 255 255 255;
+  --surface-container-highest: 219 208 198;
+  --surface-container-lowest: 255 253 249;
   --surface-dim: 230 226 221;
   --inverse-primary: 245 174 124;
   --on-error: 255 255 255;
-  --tertiary-fixed-dim: 180 224 212;
-  --background: 247 246 243;
+  --tertiary-fixed-dim: 198 211 177;
+  --background: 247 244 239;
   --outline: 134 123 115;
-  --on-tertiary-container: 18 89 77;
-  --tertiary: 17 111 95;
-  --tertiary-fixed: 218 243 237;
+  --on-tertiary-container: 54 68 38;
+  --tertiary: 79 98 57;
+  --tertiary-fixed: 226 233 214;
   --on-secondary-container: 65 49 40;
   --on-primary-fixed: 68 31 16;
   --on-secondary-fixed-variant: 95 71 57;
   --surface-tint: 128 55 24;
   --outline-variant: 218 210 202;
-  --surface-bright: 255 255 255;
+  --surface-bright: 255 253 249;
   --on-surface: 42 35 31;
   --error-container: 254 226 226;
-  --surface-variant: 240 235 230;
-  --surface-container: 239 235 230;
+  --surface-variant: 237 230 223;
+  --surface-container: 235 228 221;
   --secondary-container: 237 229 222;
-  --surface: 250 249 247;
+  --surface: 250 248 244;
   --secondary-fixed: 242 235 228;
-  --on-tertiary-fixed-variant: 17 91 79;
+  --on-tertiary-fixed-variant: 65 82 46;
   --on-background: 42 35 31;
   --on-primary-container: 116 48 20;
   --success: 20 112 63;
@@ -78,14 +81,16 @@
 }
 
 html {
+  overflow-x: clip;
   scroll-behavior: smooth;
 }
 
 body {
   min-height: 100dvh;
-  overflow-x: hidden;
+  overflow-x: clip;
   background-color: rgb(var(--background));
   color: rgb(var(--on-background));
+  font-family: var(--font-body);
 }
 
 .skip-link {
@@ -99,7 +104,7 @@ body {
   color: rgb(var(--on-primary));
   padding: 0.75rem 1rem;
   font-weight: 700;
-  transition: transform var(--motion-fast) ease;
+  transition: transform var(--motion-fast) var(--ease-out);
 }
 
 .skip-link:focus {
@@ -108,7 +113,7 @@ body {
 
 body.mobile-menu-open,
 body.gallery-modal-open {
-  overflow: hidden;
+  overflow-y: hidden;
 }
 
 ::selection {
@@ -192,10 +197,10 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
   isolation: isolate;
   backface-visibility: hidden;
   transition:
-    background-color var(--motion-base) ease,
-    border-color var(--motion-base) ease,
-    box-shadow var(--motion-base) ease,
-    color var(--motion-base) ease;
+    background-color var(--motion-base) var(--ease-out),
+    border-color var(--motion-base) var(--ease-out),
+    box-shadow var(--motion-base) var(--ease-out),
+    color var(--motion-base) var(--ease-out);
 }
 
 .premium-button:hover {
@@ -219,10 +224,8 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
   isolation: isolate;
   backface-visibility: hidden;
   transition:
-    transform var(--motion-base) var(--ease-smooth),
-    box-shadow var(--motion-base) ease,
-    border-color var(--motion-base) ease,
-    filter var(--motion-base) ease;
+    box-shadow var(--motion-base) var(--ease-out),
+    border-color var(--motion-base) var(--ease-out);
 }
 
 .skeleton-shimmer {
@@ -251,7 +254,7 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 }
 
 .premium-card:active {
-  transform: translate3d(0, -1px, 0);
+  transform: none;
 }
 
 .motion-chip {
@@ -259,7 +262,7 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
   overflow: hidden;
   transition:
     transform var(--motion-fast) var(--ease-out),
-    background-color var(--motion-fast) ease;
+    background-color var(--motion-fast) var(--ease-out);
 }
 
 .motion-chip:hover {
@@ -348,7 +351,7 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
 /* Logo */
 .site-logo-container {
   position: relative;
-  transition: opacity var(--motion-fast) ease;
+  transition: opacity var(--motion-fast) var(--ease-out);
 }
 
 .site-logo-container:hover {
@@ -365,10 +368,10 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
   padding: 0.625rem 1rem;
   border-radius: 0.375rem;
   transition:
-    background-color var(--motion-fast) ease,
-    border-color var(--motion-fast) ease,
-    color var(--motion-fast) ease,
-    box-shadow var(--motion-fast) ease;
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out);
   color: rgb(var(--on-surface));
 }
 
@@ -406,9 +409,9 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
   border: 1px solid rgb(var(--outline-variant) / 0.7);
   color: rgb(var(--primary));
   transition:
-    background-color var(--motion-fast) ease,
-    border-color var(--motion-fast) ease,
-    box-shadow var(--motion-fast) ease;
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out);
   overflow: hidden;
 }
 
@@ -441,7 +444,7 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
   background: rgb(var(--surface-container-low));
   border: 1px solid rgb(var(--outline-variant) / 0.32);
   color: rgb(var(--primary));
-  transition: background-color var(--motion-fast) ease;
+  transition: background-color var(--motion-fast) var(--ease-out);
   overflow: hidden;
 }
 
@@ -460,9 +463,9 @@ button:focus-visible:not(.premium-button):not(.motion-chip) {
   border-radius: 8px;
   border: 1px solid transparent;
   transition:
-    background-color var(--motion-fast) ease,
-    border-color var(--motion-fast) ease,
-    color var(--motion-fast) ease;
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
   color: rgb(var(--on-surface));
 }
 

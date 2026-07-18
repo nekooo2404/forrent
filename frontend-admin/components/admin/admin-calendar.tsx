@@ -143,7 +143,11 @@ export function AdminCalendar() {
           <AdminLoadingState label="Đang tải lịch xem phòng..." />
         ) : appointments.length ? (
           <>
-            <div className="space-y-4 md:hidden">
+            <div className="space-y-4 md:hidden" data-calendar-view="agenda">
+              <div className="border-b border-outline-variant/70 pb-3">
+                <p className="text-xs font-semibold uppercase text-secondary">Ưu tiên trên điện thoại</p>
+                <h3 className="mt-1 font-headline-sm text-xl text-on-surface">Lịch theo danh sách</h3>
+              </div>
               {agendaGroups.map(([date, items]) => (
                 <section key={date}>
                   <h3 className="mb-2 text-sm font-semibold text-primary">{formatAgendaDate(date)}</h3>
@@ -168,8 +172,8 @@ export function AdminCalendar() {
                 </section>
               ))}
             </div>
-            <div className="hidden md:block">
-            <div className="min-w-[720px]">
+            <div className="hidden md:block" data-calendar-view="month-grid">
+            <div>
               <div className="grid grid-cols-7 border-b border-outline-variant/70">
                 {weekDays.map((day) => (
                   <div className="px-2 py-3 text-center text-xs font-semibold uppercase text-secondary" key={day}>

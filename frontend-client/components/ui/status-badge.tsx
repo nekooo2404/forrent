@@ -7,7 +7,7 @@ interface StatusBadgeProps {
 
 const roomStatusConfig: Record<string, { label: string; className: string }> = {
   DRAFT: { label: "Bản nháp", className: "bg-surface-variant/95 text-on-surface" },
-  PENDING_REVIEW: { label: "Chờ duyệt", className: "bg-warning text-on-warning" },
+  PENDING_REVIEW: { label: "Chờ duyệt", className: "bg-warning-container text-on-warning" },
   PUBLISHED: { label: "Còn trống", className: "border border-tertiary/20 bg-tertiary-container text-on-tertiary-container" },
   RENTED: { label: "Đã thuê", className: "bg-surface-variant/95 text-on-surface" },
   HIDDEN: { label: "Đã ẩn", className: "bg-surface-variant/70 text-on-surface" },
@@ -16,7 +16,7 @@ const roomStatusConfig: Record<string, { label: string; className: string }> = {
 
 const blogStatusConfig: Record<string, { label: string; className: string }> = {
   DRAFT: { label: "Nháp", className: "bg-surface-variant text-on-surface" },
-  PUBLISHED: { label: "Đã xuất bản", className: "bg-success text-on-success" },
+  PUBLISHED: { label: "Đã xuất bản", className: "bg-tertiary-container text-on-tertiary-container" },
   HIDDEN: { label: "Đã ẩn", className: "bg-warning text-on-warning" },
 };
 

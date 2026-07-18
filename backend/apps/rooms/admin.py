@@ -20,6 +20,7 @@ class RoomSubtypeAdmin(admin.ModelAdmin):
 class RoomImageInline(admin.TabularInline):
     model = RoomImage
     extra = 0
+    fields = ("image", "image_url", "media_type", "label", "sort_order")
 
 
 @admin.register(Room)
@@ -33,5 +34,5 @@ class RoomAdmin(admin.ModelAdmin):
 
 @admin.register(RoomImage)
 class RoomImageAdmin(admin.ModelAdmin):
-    list_display = ("room", "sort_order", "created_at")
-    list_filter = ("room",)
+    list_display = ("room", "media_type", "label", "sort_order", "created_at")
+    list_filter = ("room", "media_type", "label")

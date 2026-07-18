@@ -184,10 +184,20 @@ class RoomImage(models.Model):
         IMAGE = "IMAGE", "Image"
         VIDEO = "VIDEO", "Video"
 
+    class Label(models.TextChoices):
+        OVERVIEW = "OVERVIEW", "Toàn cảnh"
+        SLEEPING_AREA = "SLEEPING_AREA", "Góc ngủ"
+        KITCHEN = "KITCHEN", "Bếp"
+        BATHROOM = "BATHROOM", "WC"
+        BALCONY = "BALCONY", "Ban công"
+        VIDEO_TOUR = "VIDEO_TOUR", "Video tham quan"
+        OTHER = "OTHER", "Khác"
+
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="images")
     image = models.FileField(upload_to=room_media_upload_to, null=True, blank=True)
     image_url = models.URLField(blank=True)
     media_type = models.CharField(max_length=10, choices=MediaType.choices, default=MediaType.IMAGE)
+    label = models.CharField(max_length=24, choices=Label.choices, blank=True)
     sort_order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 

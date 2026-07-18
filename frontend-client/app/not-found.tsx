@@ -16,10 +16,10 @@ export default function NotFound() {
         </p>
         <div className="mt-7 flex flex-col gap-3 sm:flex-row">
           <Link className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-5 py-3 font-semibold text-on-primary transition-colors duration-200 hover:bg-primary/90" href="/rooms">
-            Xem danh sách phòng
+            Tìm phòng khác
           </Link>
-          <Link className="inline-flex min-h-11 items-center justify-center rounded-md border border-outline-variant px-5 py-3 font-semibold text-on-surface transition-colors duration-200 hover:bg-surface-container-low" href="/">
-            Về trang chủ
+          <Link className="inline-flex min-h-11 items-center justify-center rounded-md border border-outline-variant px-5 py-3 font-semibold text-on-surface transition-colors duration-200 hover:bg-surface-container-low" href="/contact">
+            Gửi nhu cầu
           </Link>
         </div>
       </section>

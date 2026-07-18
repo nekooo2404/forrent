@@ -17,6 +17,7 @@ import {
   type AdminCity,
   type AdminDepositType,
   type AdminRoom,
+  type AdminRoomImage,
   type AdminRoomSubtype,
   type AdminWard,
 } from "./admin-api";
@@ -121,6 +122,16 @@ const roomStatuses = [
   { label: "Ẩn khỏi public", value: "HIDDEN" },
   { label: "Lưu trữ", value: "ARCHIVED" },
 ];
+
+const mediaLabelOptions = [
+  { label: "Toàn cảnh", value: "OVERVIEW" },
+  { label: "Góc ngủ", value: "SLEEPING_AREA" },
+  { label: "Bếp", value: "KITCHEN" },
+  { label: "WC", value: "BATHROOM" },
+  { label: "Ban công", value: "BALCONY" },
+  { label: "Video tham quan", value: "VIDEO_TOUR" },
+  { label: "Khác", value: "OTHER" },
+] as const;
 
 const pageSize = 20;
 
@@ -594,6 +605,17 @@ export function AdminRoomManager() {
             });
             await loadRooms();
           }}
+          onImageLabelChange={async (imageId, label) => {
+            if (!editingRoom) return;
+            const updatedImage = await adminRequest<AdminRoomImage>(`rooms/${editingRoom.id}/images/${imageId}`, token, {
+              body: JSON.stringify({ label }),
+              method: "PATCH",
+            });
+            setEditingRoom({
+              ...editingRoom,
+              images: editingRoom.images.map((image) => (image.id === imageId ? updatedImage : image)),
+            });
+          }}
           onImageSwap={async (imageId, imageSortOrder, targetImageId, targetSortOrder) => {
             if (!editingRoom) return;
             await Promise.all([
@@ -632,6 +654,7 @@ function RoomFormModal({
   onClose,
   onFormChange,
   onImageDelete,
+  onImageLabelChange,
   onImageSwap,
   onSubmit,
 }: Readonly<{
@@ -642,6 +665,7 @@ function RoomFormModal({
   onClose: () => void;
   onFormChange: (next: RoomFormState) => void;
   onImageDelete: (imageId: number) => Promise<void>;
+  onImageLabelChange: (imageId: number, label: string) => Promise<void>;
   onImageSwap: (imageId: number, imageSortOrder: number, targetImageId: number, targetSortOrder: number) => Promise<void>;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }>) {
@@ -891,6 +915,20 @@ function RoomFormModal({
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs text-primary">{mediaItem.media_type === "VIDEO" ? "Video" : "Ảnh"} #{index + 1}</p>
                         <p className="text-xs text-secondary">Thứ tự {mediaItem.sort_order}</p>
+                        <label className="mt-2 block">
+                          <span className="sr-only">Nhãn cho {mediaItem.media_type === "VIDEO" ? "video" : "ảnh"} {index + 1}</span>
+                          <select
+                            aria-label={`Nhãn cho ${mediaItem.media_type === "VIDEO" ? "video" : "ảnh"} ${index + 1}`}
+                            className={`${adminSelectClass} min-h-9 py-1.5 text-xs`}
+                            onChange={(event) => void onImageLabelChange(mediaItem.id, event.target.value)}
+                            value={mediaItem.label || ""}
+                          >
+                            <option value="">Chưa gắn nhãn</option>
+                            {mediaLabelOptions.map((option) => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        </label>
                       </div>
                       <div className="flex gap-1">
                         <button

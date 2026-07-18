@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { mockAdminDashboard, mockAdminRoomInventory } from './admin-mocks';
+import { mockAdminCalendar, mockAdminDashboard, mockAdminRoomInventory } from './admin-mocks';
 
 const adminBaseURL = process.env.ADMIN_BASE_URL || 'http://localhost:3001';
 
@@ -96,7 +96,7 @@ test.describe('Public critical flows', () => {
     if (viewport && viewport.width >= 768) {
       await expect
         .poll(() => page.getByTestId('site-nav').evaluate((element) => element.getBoundingClientRect().height))
-        .toBeLessThan(initialNavHeight);
+        .toBe(initialNavHeight);
     }
   });
 
@@ -113,6 +113,15 @@ test.describe('Public critical flows', () => {
     await expect(hero.locator('[aria-hidden="true"]').first()).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await expect(hero.getByRole('button', { name: 'Tìm phòng' })).toBeVisible();
     await expect(page.getByText('Phòng mới sẽ được cập nhật tại đây')).toHaveCount(0);
+  });
+
+  test('homepage is led by marketplace search rather than a marketing banner', async ({ page }) => {
+    await page.goto('/');
+
+    const hero = page.getByTestId('homepage-hero');
+    await expect(hero).toHaveAttribute('data-search-led-marketplace', 'true');
+    await expect(hero.getByRole('search', { name: 'Tìm phòng thuê' })).toBeVisible();
+    await expect(hero.getByRole('button', { name: 'Tìm phòng' })).toBeVisible();
   });
 
   test('anonymous desktop navigation exposes no-wrap account actions', async ({ page }) => {
@@ -323,16 +332,30 @@ test.describe('Public critical flows', () => {
     await expect(advanced).not.toHaveAttribute('open', '');
     await expect(filterForm.getByRole('button', { name: 'Tìm phòng' })).toBeVisible();
     await expect(filterForm.locator('select[name="status"]')).toHaveCount(0);
+    await expect(filterForm.locator('select[name="room_type"]')).not.toHaveCount(0);
+    await expect(advanced.locator('select[name="room_type"]')).toHaveCount(0);
     await advanced.locator('summary').click();
     await expect(advanced).toHaveAttribute('open', '');
-    await expect(advanced.locator('input[name="room_type"]')).not.toHaveCount(0);
-    await advanced.getByLabel('Căn hộ dịch vụ').check();
-    await expect(advanced.locator('select[name="room_subtype"]')).toBeVisible();
-    await expect(advanced.locator('select[name="room_subtype"] option')).toContainText(['Tất cả kiểu phòng', 'Studio']);
+    await expect(advanced.locator('select[name="ward"]')).toBeVisible();
+    await filterForm.locator('select[name="room_type"]').selectOption('CCDV');
+    await expect(filterForm.locator('select[name="room_subtype"]')).toBeVisible();
+    await expect(filterForm.locator('select[name="room_subtype"] option')).toContainText(['Tất cả kiểu phòng', 'Studio']);
 
     const amenityLabel = advanced.locator('label').first();
     const box = await amenityLabel.boundingBox();
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(43.5);
+  });
+
+  test('room cards group decision costs and allow long prices to wrap', async ({ page }) => {
+    await page.goto('/rooms?search=visual-12');
+
+    const firstCard = page.locator('[data-room-card]').first();
+    const costs = firstCard.locator('[data-room-cost-summary]');
+    await expect(costs).toContainText('Giá thuê');
+    await expect(costs).toContainText('Cọc');
+    await expect(costs).toContainText('Phí cố định/tháng');
+    await expect(costs).toContainText('Điện / nước');
+    await expect(firstCard.locator('[data-room-price]')).not.toHaveClass(/whitespace-nowrap/);
   });
 
   test('room gallery adapts to zero, one, and multiple images', async ({ page }) => {
@@ -344,7 +367,7 @@ test.describe('Public critical flows', () => {
     const oneImageGallery = page.locator('[data-image-count="1"]');
     await expect(oneImageGallery).toHaveCount(1);
     await expect(oneImageGallery).toBeVisible();
-    await page.getByRole('button', { name: /Xem .*ảnh chính/ }).click();
+    await page.getByRole('button', { name: /Xem Toàn cảnh/ }).click();
     await expect(page.getByRole('button', { name: 'Nội dung tiếp theo' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Đóng thư viện' }).click();
 
@@ -353,7 +376,8 @@ test.describe('Public critical flows', () => {
     await expect(manyImageGallery).toHaveCount(1);
     await expect(manyImageGallery).toBeVisible();
     await expect(manyImageGallery).toContainText('3 ảnh');
-    await page.getByRole('button', { name: /Xem .*ảnh chính/ }).click();
+    await expect(manyImageGallery).toContainText('Toàn cảnh');
+    await page.getByRole('button', { name: /Xem Toàn cảnh/ }).click();
     await expect(page.getByRole('button', { name: 'Nội dung tiếp theo' })).toBeVisible();
   });
 
@@ -385,17 +409,17 @@ test.describe('Public critical flows', () => {
 
     const dialog = page.getByRole('dialog');
     const activeImage = dialog.locator('img').first();
-    await expect(activeImage).toHaveAttribute('alt', /ảnh 1/);
+    await expect(activeImage).toHaveAttribute('alt', /Toàn cảnh/);
     await expect(activeImage).toHaveAttribute('srcset', /w_480.*w_768.*w_960.*w_1200/);
     expect(Date.now() - openedAt).toBeLessThan(1000);
     const startedAt = Date.now();
     await page.getByRole('button', { name: 'Nội dung tiếp theo' }).click();
     await expect(dialog.getByRole('status')).toContainText('Đang tải nội dung');
-    await expect(activeImage).toHaveAttribute('alt', /ảnh 1/);
+    await expect(activeImage).toHaveAttribute('alt', /Toàn cảnh/);
 
     await page.waitForTimeout(400);
     releaseSecondImage();
-    await expect(activeImage).toHaveAttribute('alt', /ảnh 2/);
+    await expect(activeImage).toHaveAttribute('alt', /Bếp/);
     expect(Date.now() - startedAt).toBeLessThan(1000);
     expect(optimizedCloudinaryRequests).toEqual([]);
   });
@@ -426,7 +450,7 @@ test.describe('Public critical flows', () => {
     const stage = mobileDialog.locator('[data-gallery-stage]');
     await stage.dispatchEvent('pointerdown', { clientX: 320, pointerId: 1, pointerType: 'touch' });
     await stage.dispatchEvent('pointerup', { clientX: 40, pointerId: 1, pointerType: 'touch' });
-    await expect(activeImage).toHaveAttribute('alt', /ảnh 2/);
+    await expect(activeImage).toHaveAttribute('alt', /Bếp/);
     await expect(mobileDialog.getByLabel('Chọn nội dung')).toBeHidden();
   });
 
@@ -488,7 +512,7 @@ test.describe('Public critical flows', () => {
 
   test('dialog keyboard focus is trapped and restored to each trigger', async ({ page }) => {
     await page.goto('/rooms/e2e-room-many');
-    const galleryTrigger = page.getByRole('button', { name: /Xem .*ảnh chính/ });
+    const galleryTrigger = page.getByRole('button', { name: /Xem Toàn cảnh/ });
     await galleryTrigger.focus();
     await galleryTrigger.press('Enter');
     const galleryDialog = page.getByRole('dialog', { name: /Thư viện ảnh và video/ });
@@ -768,6 +792,96 @@ test.describe('Accessibility basics', () => {
 
     await expect(page.locator('html')).toHaveClass('light');
     await expect(page.getByRole('group', { name: /Ch.n giao di.n/ })).toHaveCount(0);
+  });
+
+  test('admin dashboard starts with a workflow queue', async ({ page }) => {
+    await mockAdminDashboard(page);
+    await page.goto(new URL('/admin', adminBaseURL).toString());
+
+    const queue = page.locator('[data-work-queue]');
+    await expect(queue).toBeVisible();
+    await expect(queue.getByRole('heading', { name: 'Việc cần xử lý' })).toBeVisible();
+    await expect(queue).toContainText('Yêu cầu chưa liên hệ');
+    await expect(queue).toContainText('Lịch xem hôm nay');
+    await expect(queue).toContainText('Phòng cần cập nhật');
+    await expect(queue).toContainText('Media cần kiểm tra');
+  });
+
+  test('admin work queue opens the uncontacted lead filter', async ({ page }) => {
+    await mockAdminDashboard(page);
+    let requestedStatus = '';
+    await page.route('**/api/admin/viewing-requests**', (route) => {
+      requestedStatus = new URL(route.request().url()).searchParams.get('status') ?? '';
+      route.fulfill({ json: { success: true, message: 'OK', data: { count: 0, next: null, previous: null, results: [] } } });
+    });
+    for (const resource of ['cities', 'wards', 'users']) {
+      await page.route(`**/api/admin/${resource}**`, (route) =>
+        route.fulfill({ json: { success: true, message: 'OK', data: { count: 0, next: null, previous: null, results: [] } } }),
+      );
+    }
+    await page.goto(new URL('/admin', adminBaseURL).toString());
+    await page.getByRole('link', { name: /Yêu cầu chưa liên hệ/ }).click();
+
+    await expect(page).toHaveURL(/\/admin\/leads\?status=NEW$/);
+    await expect(page.getByLabel('Lọc yêu cầu theo trạng thái')).toHaveValue('NEW');
+    await expect.poll(() => requestedStatus).toBe('NEW');
+  });
+
+  test('admin calendar uses agenda as the mobile primary view', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await mockAdminCalendar(page);
+    await page.goto(new URL('/admin/calendar', adminBaseURL).toString());
+
+    await expect(page.locator('[data-calendar-view="agenda"]')).toBeVisible();
+    await expect(page.locator('[data-calendar-view="month-grid"]')).toBeHidden();
+  });
+
+  test('mobile footer uses compact disclosures and keeps direct contact visible', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/');
+
+    const footer = page.getByRole('contentinfo');
+    await expect(footer.getByRole('link', { name: /0914032706/ })).toBeVisible();
+    await expect(footer.getByRole('link', { name: /support@forrent.io.vn/ })).toBeVisible();
+    await expect(footer.locator('details')).toHaveCount(3);
+    await expect(footer.locator('summary').filter({ hasText: 'Dịch vụ' })).toBeVisible();
+    await expect(footer.locator('summary').filter({ hasText: 'Hỗ trợ' })).toBeVisible();
+    await expect(footer.locator('summary').filter({ hasText: 'Pháp lý' })).toBeVisible();
+  });
+
+  test('root clips horizontal paint overflow without creating a scroll container', async ({ page }) => {
+    await page.goto('/rooms');
+
+    const overflow = await page.evaluate(() => ({
+      body: getComputedStyle(document.body).overflowX,
+      html: getComputedStyle(document.documentElement).overflowX,
+    }));
+    expect(overflow).toEqual({ body: 'clip', html: 'clip' });
+  });
+
+  test('marketplace layouts do not leak past 320, 375, or 414 pixel viewports', async ({ page }) => {
+    const routes = ['/', '/rooms', '/rooms/e2e-room-many', '/contact'];
+
+    for (const width of [320, 375, 414]) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const route of routes) {
+        await page.goto(route);
+        await expect(page.locator('[data-testid="site-nav"]:visible').first()).toHaveAttribute('data-ready', 'true');
+        const overflow = await page.evaluate(() => {
+          const viewportWidth = document.documentElement.clientWidth;
+          return Array.from(document.querySelectorAll<HTMLElement>('body *'))
+            .filter((element) => {
+              const style = getComputedStyle(element);
+              if (style.display === 'none' || style.visibility === 'hidden') return false;
+              const rect = element.getBoundingClientRect();
+              return rect.width > 0 && (rect.left < -1 || rect.right > viewportWidth + 1);
+            })
+            .slice(0, 8)
+            .map((element) => `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}.${Array.from(element.classList).slice(0, 3).join('.')}`);
+        });
+        expect(overflow, `${route} overflowed at ${width}px`).toEqual([]);
+      }
+    }
   });
 
   test('homepage visible buttons meet 44px touch target', async ({ page }) => {

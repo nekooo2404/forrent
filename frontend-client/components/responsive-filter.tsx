@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import type { ApiRoomSubtype } from "@/lib/api";
@@ -45,33 +45,29 @@ export function RoomTypeSubtypeFilter({
   return (
     <>
       <div className="border-b border-outline-variant/20 py-3">
-        <h3 className="mb-2 font-button text-button text-on-surface">Loại hình</h3>
-        <div className="space-y-1">
-          {[{ value: "", label: "Tất cả loại phòng" }, ...roomTypes].map((item) => (
-            <label className="group flex min-h-11 cursor-pointer items-center gap-3 py-2" key={item.value || "all"}>
-              <input
-                checked={roomType === item.value}
-                className="size-4 border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary"
-                name="room_type"
-                onChange={() => {
-                  setRoomType(item.value);
-                  setRoomSubtype("");
-                }}
-                type="radio"
-                value={item.value}
-              />
-              <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-on-surface">
-                {item.label}
-              </span>
-            </label>
-          ))}
+        <label className="mb-2 block font-button text-button text-on-surface" htmlFor="room-type-filter">Loại phòng</label>
+        <div className="relative">
+          <select
+            className="min-h-11 w-full appearance-none rounded-md border border-outline-variant/60 bg-surface-container-low px-3 py-3 pr-10 font-body-md text-on-surface focus:border-primary focus:ring-primary"
+            id="room-type-filter"
+            name="room_type"
+            onChange={(event) => {
+              setRoomType(event.target.value);
+              setRoomSubtype("");
+            }}
+            value={roomType}
+          >
+            <option value="">Tất cả loại phòng</option>
+            {roomTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+          </select>
+          <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-secondary" size={18} strokeWidth={1.8} />
         </div>
       </div>
       {visibleSubtypes.length ? (
         <div className="border-b border-outline-variant/20 py-3">
           <label className="mb-2 block font-button text-button text-on-surface" htmlFor="room-subtype-filter">Kiểu phòng</label>
           <select
-            className="min-h-11 w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-on-surface focus:border-primary focus:ring-primary"
+            className="min-h-11 w-full rounded-md border border-outline-variant/60 bg-surface-container-low px-3 py-3 font-body-md text-on-surface focus:border-primary focus:ring-primary"
             id="room-subtype-filter"
             name="room_subtype"
             onChange={(event) => setRoomSubtype(event.target.value)}

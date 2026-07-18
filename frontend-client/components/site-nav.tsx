@@ -78,10 +78,10 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
           ? "site-navbar-scrolled"
           : "site-navbar"
       }`}>
-      <div className={`relative mx-auto flex max-w-container-max items-center justify-between px-margin-mobile transition-[height] duration-200 md:px-margin-desktop lg:grid lg:grid-cols-[1fr_auto_1fr] ${scrolled ? "h-16" : "h-16 lg:h-20"}`}>
+      <div className="relative mx-auto flex h-16 max-w-container-max items-center justify-between px-margin-mobile md:px-margin-desktop lg:grid lg:grid-cols-[1fr_auto_1fr]">
         <Link
           aria-label="ForRent - Trang chủ"
-          className={`site-logo-container group relative z-10 inline-flex min-h-11 shrink-0 items-center transition-[width,height] duration-200 ${scrolled ? "h-11 w-32" : "h-11 w-32 lg:w-[142px]"}`}
+          className="site-logo-container group relative z-10 inline-flex h-11 min-h-11 w-32 shrink-0 items-center lg:w-[142px]"
           href="/"
         >
           <div className="relative">

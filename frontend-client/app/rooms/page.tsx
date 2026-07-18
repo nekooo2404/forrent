@@ -58,6 +58,8 @@ type RoomCardView = {
   deposit: string;
   depositLabel: string;
   fixedMonthlyCost: string;
+  serviceFee: string;
+  electricityWater: string;
   primaryMeta: string;
   area: string;
   status: string;
@@ -109,6 +111,16 @@ function mapRoom(room: ApiRoom): RoomCardView {
     `${primaryMeta} tại ${room.ward?.name || room.city?.name || "Hà Nội"}`,
   );
   const fixedMonthlyCost = Number(room.price) + Math.max(0, Number(room.service_fee) || 0);
+  const electricity = Number(room.electricity_price_per_kwh) > 0
+    ? `${formatOptionalVnd(room.electricity_price_per_kwh)} / kWh`
+    : "Điện: xác nhận khi tư vấn";
+  const waterValue = room.water_billing_type === "PER_CUBIC_METER"
+    ? room.water_price_per_cubic_meter
+    : room.water_price_per_person;
+  const waterUnit = room.water_billing_type === "PER_CUBIC_METER" ? "m³" : "người";
+  const water = Number(waterValue) > 0
+    ? `${formatOptionalVnd(waterValue)} / ${waterUnit}`
+    : "Nước: xác nhận khi tư vấn";
   return {
     id: room.id,
     slug: room.slug,
@@ -118,6 +130,8 @@ function mapRoom(room: ApiRoom): RoomCardView {
     deposit: formatOptionalVnd(room.deposit_amount),
     depositLabel: room.deposit_type_name || "Cọc",
     fixedMonthlyCost: formatMonthlyVnd(fixedMonthlyCost),
+    serviceFee: formatOptionalVnd(room.service_fee),
+    electricityWater: `${electricity} · ${water}`,
     primaryMeta,
     area: formatArea(room.actual_area),
     status: roomStatusLabel(room.status),
@@ -417,12 +431,12 @@ function FilterSidebar({
   const selectedSubtype = filters.room_subtypes.find((item) => String(item.id) === activeRoomSubtype);
   const selectedParentType = activeRoomType || selectedSubtype?.parent_type;
   const activeAmenitySet = new Set(activeAmenities);
-  const hasAdvancedFilters = Boolean(selectedParentType || activeRoomSubtype || activeAreaRange || activeAmenities.length);
+  const hasAdvancedFilters = Boolean(activeWard || activeAreaRange || activeAmenities.length);
 
   return (
     <aside className="w-full flex-shrink-0 lg:sticky lg:top-24 lg:w-[260px] lg:self-start">
       <ResponsiveFilter>
-        <form action="/rooms" className="mt-3 overflow-visible rounded-lg border border-outline-variant/60 bg-surface-container-lowest lg:mt-0" data-product-event="room_search_submitted">
+        <form action="/rooms" className="mt-3 overflow-visible rounded-lg border border-outline-variant/60 bg-surface-container-low lg:mt-0" data-product-event="room_search_submitted">
           <div className="p-4">
             <div className="mb-4 flex items-center justify-between border-b border-outline-variant/20 pb-4">
               <h2 className="text-xl font-semibold text-on-surface">Bộ lọc</h2>
@@ -465,23 +479,6 @@ function FilterSidebar({
               </FilterSection>
             ) : null}
 
-            {filters.wards.length ? (
-              <FilterSection title="Phường">
-                <select
-                  aria-label="Chọn phường"
-                  className="min-h-11 w-full rounded-md border border-outline-variant/60 bg-surface-container-low px-3 py-3 font-body-md text-on-surface focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
-                  defaultValue={activeWard ?? ""}
-                  disabled={!effectiveCity}
-                  name="ward"
-                >
-                  <option value="">{effectiveCity ? "Tất cả phường" : "Vui lòng chọn thành phố trước"}</option>
-                  {visibleWards.map((ward) => (
-                    <option key={ward.id} value={ward.id}>{ward.name}</option>
-                  ))}
-                </select>
-              </FilterSection>
-            ) : null}
-
             <FilterSection title="Khoảng giá">
               <div className="grid grid-cols-1 gap-3">
                 <input aria-label="Giá từ" className="min-h-11 w-full rounded-md border border-outline-variant/60 bg-surface-container-low px-3 py-3 font-body-md text-on-surface focus:border-primary focus:ring-primary" defaultValue={activeMinPrice} min="0" name="min_price" placeholder="Giá từ" type="number" />
@@ -489,18 +486,35 @@ function FilterSidebar({
               </div>
             </FilterSection>
 
+            <RoomTypeSubtypeFilter
+              initialRoomSubtype={activeRoomSubtype}
+              initialRoomType={selectedParentType}
+              roomSubtypes={filters.room_subtypes}
+              roomTypes={typeFilters.map((item) => ({ ...item, label: roomTypeLabel(item.value) || item.label }))}
+            />
+
             <details className="group border-b border-outline-variant/20 py-3" open={hasAdvancedFilters}>
               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between py-2 font-button text-button text-on-surface marker:content-none">
-                Loại phòng và bộ lọc thêm
+                Bộ lọc nâng cao
                 <ChevronDown aria-hidden="true" className="transition-transform group-open:rotate-180" size={18} strokeWidth={1.8} />
               </summary>
               <div className="pt-1">
-                <RoomTypeSubtypeFilter
-                  initialRoomSubtype={activeRoomSubtype}
-                  initialRoomType={selectedParentType}
-                  roomSubtypes={filters.room_subtypes}
-                  roomTypes={typeFilters.map((item) => ({ ...item, label: roomTypeLabel(item.value) || item.label }))}
-                />
+                {filters.wards.length ? (
+                  <FilterSection title="Phường">
+                    <select
+                      aria-label="Chọn phường"
+                      className="min-h-11 w-full rounded-md border border-outline-variant/60 bg-surface-container-lowest px-3 py-3 font-body-md text-on-surface focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
+                      defaultValue={activeWard ?? ""}
+                      disabled={!effectiveCity}
+                      name="ward"
+                    >
+                      <option value="">{effectiveCity ? "Tất cả phường" : "Vui lòng chọn thành phố trước"}</option>
+                      {visibleWards.map((ward) => (
+                        <option key={ward.id} value={ward.id}>{ward.name}</option>
+                      ))}
+                    </select>
+                  </FilterSection>
+                ) : null}
 
                 {filters.area_ranges.length ? (
                   <FilterSection title="Diện tích">
@@ -616,9 +630,6 @@ function RoomCard({
             </Link>
             <p className="mt-2 font-body-md text-base font-medium text-on-surface-variant">{room.primaryMeta} · {room.area}</p>
           </div>
-          <div className="text-left sm:shrink-0 sm:text-right">
-            <span className="block whitespace-nowrap text-xl font-bold tabular-nums text-on-surface">{room.price}</span>
-          </div>
         </div>
 
         {room.featuredAmenities.length ? (
@@ -631,18 +642,26 @@ function RoomCard({
           </div>
         ) : null}
 
-        <div className="mt-auto grid gap-3 border-t border-outline-variant/50 pt-5 sm:grid-cols-2">
-          <div className="rounded-md bg-surface-container-low p-3 text-sm text-on-surface-variant">
-            <span className="flex items-center gap-2 font-semibold text-on-surface">
-              <ShieldCheck aria-hidden="true" className="shrink-0 text-primary" size={18} strokeWidth={1.8} />
-              {room.depositLabel}
-            </span>
-            <span className="mt-1 block tabular-nums">{room.deposit}</span>
+        <div className="mt-auto grid grid-cols-2 gap-px overflow-hidden rounded-md border border-outline-variant/50 bg-outline-variant/50" data-room-cost-summary>
+          <div className="min-w-0 bg-surface-container-lowest p-3 text-sm text-on-surface-variant">
+            <span className="font-semibold text-on-surface">Giá thuê</span>
+            <span className="mt-1 block [overflow-wrap:anywhere] text-base font-bold tabular-nums text-on-surface" data-room-price>{room.price}</span>
           </div>
-          <div className="rounded-md bg-surface-container-low p-3 text-sm text-on-surface-variant">
-            <span className="font-semibold text-on-surface">Chi phí cố định/tháng</span>
-            <span className="mt-1 block tabular-nums">{room.fixedMonthlyCost}</span>
-            <span className="mt-1 block text-xs">Chưa gồm điện, nước</span>
+          <div className="min-w-0 bg-surface-container-lowest p-3 text-sm text-on-surface-variant">
+            <span className="flex items-center gap-2 font-semibold text-on-surface">
+              <ShieldCheck aria-hidden="true" className="shrink-0 text-primary" size={17} strokeWidth={1.8} />
+              Cọc
+            </span>
+            <span className="mt-1 block break-words tabular-nums">{room.depositLabel}: {room.deposit}</span>
+          </div>
+          <div className="min-w-0 bg-surface-container-lowest p-3 text-sm text-on-surface-variant">
+            <span className="font-semibold text-on-surface sm:hidden">Phí/tháng</span>
+            <span className="hidden font-semibold text-on-surface sm:inline">Phí cố định/tháng</span>
+            <span className="mt-1 block break-words tabular-nums">{room.serviceFee}</span>
+          </div>
+          <div className="min-w-0 bg-surface-container-lowest p-3 text-sm text-on-surface-variant">
+            <span className="font-semibold text-on-surface">Điện / nước</span>
+            <span className="mt-1 block break-words leading-5 tabular-nums">{room.electricityWater}</span>
           </div>
         </div>
         <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
