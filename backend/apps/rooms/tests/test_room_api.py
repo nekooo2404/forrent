@@ -40,6 +40,23 @@ class TestRoomAPI:
         assert data["water_price_per_person"] == "100000.00"
         assert data["service_fee"] == "150000.00"
 
+    def test_public_room_api_exposes_clean_public_title_without_changing_admin_title(self):
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        room.title = "P302 - Gác xép 🎉"
+        room.save(update_fields=("title", "updated_at"))
+
+        public_response = self.client.get(f"/api/rooms/{room.slug}/")
+        self.client.force_authenticate(admin)
+        admin_response = self.client.get(f"/api/admin/rooms/{room.id}/")
+
+        assert public_response.status_code == 200
+        assert public_response.data["data"]["title"] == "P302 - Gác xép 🎉"
+        assert public_response.data["data"]["public_title"] == "Gác xép"
+        assert admin_response.status_code == 200
+        assert admin_response.data["data"]["title"] == "P302 - Gác xép 🎉"
+        assert admin_response.data["data"]["public_title"] == "Gác xép"
+
     def test_building_code_is_admin_only_and_searchable(self):
         admin = create_admin()
         room = create_room(created_by=admin)
@@ -92,6 +109,27 @@ class TestRoomAPI:
         slugs = {room["slug"] for room in response.json()["data"]["results"]}
         assert available_room.slug in slugs
         assert unavailable_room.slug not in slugs
+
+    def test_public_room_list_uses_first_gallery_image_as_thumbnail_fallback(self):
+        room = create_room()
+        RoomImage.objects.create(
+            room=room,
+            image_url="https://res.cloudinary.com/demo/video/upload/v1/room-tour.mp4",
+            media_type=RoomImage.MediaType.VIDEO,
+            sort_order=0,
+        )
+        RoomImage.objects.create(
+            room=room,
+            image_url="https://res.cloudinary.com/demo/image/upload/v1/room-main.jpg",
+            media_type=RoomImage.MediaType.IMAGE,
+            sort_order=1,
+        )
+
+        response = self.client.get("/api/rooms/")
+
+        assert response.status_code == 200
+        item = next(item for item in response.json()["data"]["results"] if item["slug"] == room.slug)
+        assert item["thumbnail_url"] == "https://res.cloudinary.com/demo/image/upload/v1/room-main.jpg"
 
     def test_room_keeps_deposit_type_snapshot_after_type_rename(self):
         room = create_room()
@@ -270,6 +308,26 @@ class TestRoomAPI:
         assert response.status_code == 400
         room.refresh_from_db()
         assert room.status == Room.Status.RENTED
+
+    def test_admin_can_archive_rented_room(self):
+        admin = create_admin()
+        room = create_room(created_by=admin, status=Room.Status.RENTED)
+        self.client.force_authenticate(admin)
+
+        response = self.client.patch(
+            f"/api/admin/rooms/{room.id}/",
+            {"status": Room.Status.ARCHIVED},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        room.refresh_from_db()
+        assert room.status == Room.Status.ARCHIVED
+        assert AuditLog.objects.filter(
+            event="room.status_changed",
+            target_id=str(room.id),
+            metadata={"from": Room.Status.RENTED, "to": Room.Status.ARCHIVED},
+        ).exists()
 
     def test_admin_delete_room_with_viewing_history_returns_conflict(self):
         admin = create_admin()

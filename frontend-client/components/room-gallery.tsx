@@ -14,6 +14,7 @@ export type RoomGalleryMedia = Readonly<{
 }>;
 
 type RoomGalleryProps = Readonly<{
+  altText?: string;
   media: readonly RoomGalleryMedia[];
   title: string;
 }>;
@@ -21,21 +22,25 @@ type RoomGalleryProps = Readonly<{
 const modalMediaWidth = 1200;
 const galleryMediaLoads = new Map<string, Promise<void>>();
 
-export function RoomGallery({ media, title }: RoomGalleryProps) {
+export function RoomGallery({ altText, media, title }: RoomGalleryProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [pendingIndex, setPendingIndex] = useState<number | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [isActiveMediaLoading, setIsActiveMediaLoading] = useState(false);
   const transitionId = useRef(0);
   const pointerStartX = useRef<number | null>(null);
   const activeMedia = activeIndex === null ? null : media[activeIndex];
   const modalRef = useFocusTrap<HTMLDivElement>(activeIndex !== null);
   const visibleMedia = media.slice(0, 4);
+  const mediaLabel = mediaCountLabel(media);
+  const mediaDescription = altText || title;
 
   const closeGallery = useCallback(() => {
     transitionId.current += 1;
     setActiveIndex(null);
     setPendingIndex(null);
     setLoadError(false);
+    setIsActiveMediaLoading(false);
   }, []);
 
   const showIndex = useCallback(async (index: number | null) => {
@@ -47,7 +52,10 @@ export function RoomGallery({ media, title }: RoomGalleryProps) {
 
     try {
       await preloadGalleryMedia(media[index]);
-      if (transitionId.current === requestId) setActiveIndex(index);
+      if (transitionId.current === requestId) {
+        setActiveIndex(index);
+        setIsActiveMediaLoading(media[index].type === "video");
+      }
     } catch {
       if (transitionId.current === requestId) setLoadError(true);
     } finally {
@@ -82,21 +90,24 @@ export function RoomGallery({ media, title }: RoomGalleryProps) {
   useEffect(() => {
     if (activeIndex === null || media.length < 2) return;
 
-    const adjacent = [
-      nextIndex(activeIndex, media.length),
-      previousIndex(activeIndex, media.length),
-    ];
-    for (const index of new Set(adjacent)) {
-      if (index !== null && index !== activeIndex) {
-        void preloadGalleryMedia(media[index]).catch(() => undefined);
-      }
-    }
+    const next = nextIndex(activeIndex, media.length);
+    const previous = previousIndex(activeIndex, media.length);
+    if (next === null || next === activeIndex) return;
+
+    void preloadGalleryMedia(media[next])
+      .then(() => {
+        if (previous !== null && previous !== activeIndex && previous !== next) {
+          return preloadGalleryMedia(media[previous]);
+        }
+      })
+      .catch(() => undefined);
   }, [activeIndex, media]);
 
   const openGallery = (index: number) => {
     transitionId.current += 1;
     setPendingIndex(null);
     setLoadError(false);
+    setIsActiveMediaLoading(media[index]?.type === "video");
     setActiveIndex(index);
   };
 
@@ -111,14 +122,14 @@ export function RoomGallery({ media, title }: RoomGalleryProps) {
         {visibleMedia.length ? (
           visibleMedia.map((item, index) => (
             <GalleryTile
-              badge={index === visibleMedia.length - 1 && media.length > 1 ? `${media.length} mục` : undefined}
+              badge={index === visibleMedia.length - 1 && media.length > 1 ? mediaLabel : undefined}
               className={galleryTileClass(media.length, index)}
               index={index}
               item={item}
               key={`${item.type}-${item.src}`}
               onClick={() => openGallery(index)}
               priority={index === 0}
-              title={title}
+              title={mediaDescription}
             />
           ))
         ) : (
@@ -132,14 +143,14 @@ export function RoomGallery({ media, title }: RoomGalleryProps) {
         )}
         {media.length > 1 ? (
           <span className="absolute bottom-3 right-3 rounded-md border border-outline-variant/30 bg-surface-container-high/90 px-3 py-1 text-sm font-semibold text-on-surface shadow-soft md:hidden">
-            {media.length} mục
+            {mediaLabel}
           </span>
         ) : null}
       </section>
 
       {activeMedia && activeIndex !== null ? (
         <div
-          aria-busy={pendingIndex !== null}
+          aria-busy={pendingIndex !== null || isActiveMediaLoading}
           aria-label={`Thư viện ảnh và video: ${title}`}
           aria-modal="true"
           className="fixed inset-0 z-[100] bg-inverse-surface/95 p-4 text-inverse-on-surface"
@@ -189,7 +200,7 @@ export function RoomGallery({ media, title }: RoomGalleryProps) {
           >
             {activeMedia.type === "video" ? (
               <video
-                aria-label={`${title} - video ${activeIndex + 1}`}
+                aria-label={`${mediaDescription}, video ${activeIndex + 1}`}
                 className="h-full w-full object-contain"
                 controls
                 key={`${activeIndex}-${activeMedia.src}`}
@@ -197,21 +208,29 @@ export function RoomGallery({ media, title }: RoomGalleryProps) {
                 poster={videoPosterUrl(activeMedia.src, modalMediaWidth)}
                 preload="auto"
                 src={fastVideoUrl(activeMedia.src)}
+                onCanPlay={() => setIsActiveMediaLoading(false)}
+                onError={() => {
+                  setIsActiveMediaLoading(false);
+                  setLoadError(true);
+                }}
               />
             ) : (
               <img
-                alt={`${title} - ảnh ${activeIndex + 1}`}
+                alt={`${mediaDescription}, ảnh ${activeIndex + 1}`}
                 className="h-full w-full object-contain"
                 decoding="async"
                 draggable={false}
                 height={900}
+                onError={() => setLoadError(true)}
+                sizes="100vw"
                 src={modalImageUrl(activeMedia.src)}
+                srcSet={imageSrcSet(activeMedia.src)}
                 width={modalMediaWidth}
               />
             )}
           </div>
 
-          {pendingIndex !== null ? (
+          {pendingIndex !== null || isActiveMediaLoading ? (
             <div
               className="pointer-events-none absolute left-1/2 top-1/2 z-30 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-md bg-inverse-surface/90 px-4 py-3 text-sm font-semibold shadow-lg"
               role="status"
@@ -278,14 +297,33 @@ function GalleryTile({ badge, className, index, item, onClick, priority, title }
   priority?: boolean;
   title: string;
 }>) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const width = priority ? modalMediaWidth : 768;
   const quality = 78;
   const imageAlt = `${title} - ${index === 0 ? "ảnh chính" : `ảnh ${index + 1}`}`;
 
+  useEffect(() => {
+    if (item.type === "image") {
+      const image = imageRef.current;
+      if (!image?.complete) return;
+      if (image.naturalWidth > 0) setIsLoaded(true);
+      else setHasError(true);
+      return;
+    }
+
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.error) setHasError(true);
+    else if (video.readyState >= HTMLMediaElement.HAVE_METADATA) setIsLoaded(true);
+  }, [item.type]);
+
   return (
     <button
       aria-label={item.type === "video" ? `Xem video ${index + 1} của ${title}` : `Xem ${imageAlt}`}
-      className={`group relative overflow-hidden rounded-lg text-left ${className}`}
+      className={`group relative overflow-hidden rounded-lg bg-surface-container text-left ${className}`}
       onClick={onClick}
       onFocus={() => {
         void preloadGalleryMedia(item).catch(() => undefined);
@@ -298,6 +336,7 @@ function GalleryTile({ badge, className, index, item, onClick, priority, title }
       }}
       type="button"
     >
+      {!isLoaded && !hasError ? <span aria-hidden="true" className="absolute inset-0 skeleton-shimmer" /> : null}
       {item.type === "video" ? (
         <>
           <video
@@ -305,9 +344,12 @@ function GalleryTile({ badge, className, index, item, onClick, priority, title }
             className="absolute inset-0 h-full w-full object-cover"
             height={900}
             muted
+            onLoadedData={() => setIsLoaded(true)}
+            onError={() => setHasError(true)}
             playsInline
             poster={videoPosterUrl(item.src, width)}
             preload="metadata"
+            ref={videoRef}
             src={fastVideoUrl(item.src)}
             width={width}
           />
@@ -320,15 +362,26 @@ function GalleryTile({ badge, className, index, item, onClick, priority, title }
       ) : (
         <img
           alt={imageAlt}
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+          className={`absolute inset-0 h-full w-full object-cover transition-[opacity,transform] duration-200 group-hover:scale-[1.02] ${isLoaded ? "opacity-100" : "opacity-0"}`}
           decoding="async"
           fetchPriority={priority ? "high" : "auto"}
           height={900}
           loading={priority ? "eager" : "lazy"}
+          onError={() => setHasError(true)}
+          onLoad={() => setIsLoaded(true)}
+          ref={imageRef}
+          sizes={priority ? "(min-width: 768px) 50vw, 100vw" : "(min-width: 768px) 25vw, 100vw"}
           src={fastImageUrl(item.src, width, quality)}
+          srcSet={imageSrcSet(item.src)}
           width={width}
         />
       )}
+      {hasError ? (
+        <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-surface-container-low px-4 text-center text-sm font-semibold text-on-surface-variant">
+          <ImageOff aria-hidden="true" size={24} />
+          Không tải được {item.type === "video" ? "video" : "ảnh"}
+        </span>
+      ) : null}
       {badge ? (
         <span className="absolute bottom-3 right-3 hidden rounded-md border border-outline-variant/30 bg-surface-container-high/90 px-3 py-1 text-sm font-semibold text-on-surface shadow-soft md:block">
           {badge}
@@ -345,7 +398,7 @@ function FilmstripButton({ active, disabled, index, item, onClick }: Readonly<{
   item: RoomGalleryMedia;
   onClick: () => void;
 }>) {
-  const poster = item.type === "video" ? videoPosterUrl(item.src, 160) : modalImageUrl(item.src);
+  const poster = item.type === "video" ? videoPosterUrl(item.src, 160) : fastImageUrl(item.src, 160, 70);
 
   return (
     <button
@@ -357,7 +410,7 @@ function FilmstripButton({ active, disabled, index, item, onClick }: Readonly<{
       type="button"
     >
       {poster ? (
-        <img alt="" className="h-full w-full object-cover" decoding="async" height={56} loading="eager" src={poster} width={80} />
+        <img alt="" className="h-full w-full object-cover" decoding="async" height={56} loading="lazy" src={poster} width={80} />
       ) : (
         <span className="grid h-full w-full place-items-center bg-inverse-surface text-inverse-on-surface">
           <Video aria-hidden="true" size={20} />
@@ -377,6 +430,12 @@ function galleryGridClass(total: number) {
   if (total === 1) return "grid grid-cols-1";
   if (total === 2) return "grid grid-cols-1 gap-2 md:grid-cols-3";
   return "grid grid-cols-1 gap-2 md:grid-cols-4 md:grid-rows-2";
+}
+
+function mediaCountLabel(media: readonly RoomGalleryMedia[]) {
+  const imageCount = media.filter((item) => item.type === "image").length;
+  const videoCount = media.length - imageCount;
+  return [imageCount ? `${imageCount} ảnh` : "", videoCount ? `${videoCount} video` : ""].filter(Boolean).join(" · ");
 }
 
 function galleryTileClass(total: number, index: number) {
@@ -401,6 +460,14 @@ function modalImageUrl(src: string) {
   return fastImageUrl(src, modalMediaWidth, 78);
 }
 
+function imageSrcSet(src: string) {
+  const widths = [480, 768, 960, modalMediaWidth];
+  const urls = widths.map((width) => fastImageUrl(src, width, 78));
+  return new Set(urls).size > 1
+    ? urls.map((url, index) => `${url} ${widths[index]}w`).join(", ")
+    : undefined;
+}
+
 function preloadGalleryMedia(item?: RoomGalleryMedia) {
   if (!item || typeof window === "undefined") return Promise.resolve();
   if (item.type === "video") {
@@ -408,17 +475,21 @@ function preloadGalleryMedia(item?: RoomGalleryMedia) {
     void preloadVideoMetadata(fastVideoUrl(item.src)).catch(() => undefined);
     return poster ? preloadImage(poster) : preloadVideoMetadata(fastVideoUrl(item.src));
   }
-  return preloadImage(modalImageUrl(item.src));
+  return preloadImage(modalImageUrl(item.src), imageSrcSet(item.src));
 }
 
-function preloadImage(url: string) {
-  const key = `image:${url}`;
+function preloadImage(url: string, srcSet?: string) {
+  const key = `image:${srcSet || url}`;
   const cached = galleryMediaLoads.get(key);
   if (cached) return cached;
 
   const request = new Promise<void>((resolve, reject) => {
     const image = new window.Image();
     image.decoding = "async";
+    if (srcSet) {
+      image.sizes = "100vw";
+      image.srcset = srcSet;
+    }
     image.onload = () => {
       image.decode().then(resolve).catch(resolve);
     };

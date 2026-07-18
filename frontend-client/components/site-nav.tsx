@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { ProfileMenu } from "@/components/profile-menu";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
@@ -13,20 +13,24 @@ export type NavKey = "home" | "rooms" | "blogs" | "contact";
 const navItems: Array<{ key: NavKey; label: string; href: string }> = [
   { key: "home", label: "Trang chủ", href: "/" },
   { key: "rooms", label: "Danh sách phòng", href: "/rooms" },
-  { key: "blogs", label: "Blog", href: "/blogs" },
+  { key: "blogs", label: "Cẩm nang", href: "/blogs" },
   { key: "contact", label: "Liên hệ", href: "/contact" },
 ];
+
+const subscribeToHydration = () => () => undefined;
+const getClientHydrationSnapshot = () => true;
+const getServerHydrationSnapshot = () => false;
 
 export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    subscribeToHydration,
+    getClientHydrationSnapshot,
+    getServerHydrationSnapshot,
+  );
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileMenuRef = useFocusTrap<HTMLDivElement>(isMobileMenuOpen);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -69,7 +73,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
   }, [isMobileMenuOpen]);
 
   return (
-    <nav aria-label="Điều hướng chính" data-ready={mounted ? "true" : "false"} data-testid="site-nav" className={`fixed top-0 z-50 w-full transition-colors duration-200 ${
+    <header data-ready={mounted ? "true" : "false"} data-testid="site-nav" className={`fixed top-0 z-50 w-full transition-colors duration-200 ${
         scrolled
           ? "site-navbar-scrolled"
           : "site-navbar"
@@ -77,7 +81,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
       <div className={`relative mx-auto flex max-w-container-max items-center justify-between px-margin-mobile transition-[height] duration-200 md:px-margin-desktop lg:grid lg:grid-cols-[1fr_auto_1fr] ${scrolled ? "h-16" : "h-16 lg:h-20"}`}>
         <Link
           aria-label="ForRent - Trang chủ"
-          className={`site-logo-container group relative z-10 inline-flex shrink-0 items-center transition-[width,height] duration-200 ${scrolled ? "h-10 w-32" : "h-10 w-32 lg:h-11 lg:w-[142px]"}`}
+          className={`site-logo-container group relative z-10 inline-flex min-h-11 shrink-0 items-center transition-[width,height] duration-200 ${scrolled ? "h-11 w-32" : "h-11 w-32 lg:w-[142px]"}`}
           href="/"
         >
           <div className="relative">
@@ -93,7 +97,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
           </div>
         </Link>
 
-        <div className="hidden items-center gap-1 lg:flex">
+        <nav aria-label="Điều hướng chính" className="hidden items-center gap-1 lg:flex">
           {navItems.map((item) => (
             <Link
               aria-current={item.key === active ? "page" : undefined}
@@ -108,7 +112,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
               </span>
             </Link>
           ))}
-        </div>
+        </nav>
 
         <div className="flex items-center gap-3 md:gap-4 lg:justify-self-end">
           <button
@@ -139,7 +143,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
             <div className="relative z-10 flex h-16 items-center justify-between border-b border-outline-variant/20 px-margin-mobile">
               <Link
                 aria-label="ForRent - Trang chủ"
-                className="site-logo-container inline-flex h-10 w-32 shrink-0 items-center"
+                className="site-logo-container inline-flex h-11 w-32 shrink-0 items-center"
                 href="/"
                 onClick={() => closeMenu({ restoreFocus: false })}
               >
@@ -193,6 +197,6 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
             </div>
           </div>
       ) : null}
-    </nav>
+    </header>
   );
 }

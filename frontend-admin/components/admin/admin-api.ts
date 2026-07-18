@@ -3,6 +3,22 @@
 import type { ApiAreaRange, ApiUser } from "@/lib/api";
 import { authFetch } from "@/lib/auth-storage";
 
+const adminDateTimeFormatter = new Intl.DateTimeFormat("vi-VN", {
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  month: "2-digit",
+  timeZone: "Asia/Ho_Chi_Minh",
+  year: "numeric",
+});
+const adminDateFormatter = new Intl.DateTimeFormat("vi-VN", {
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: "Asia/Ho_Chi_Minh",
+  year: "numeric",
+});
+const adminVndFormatter = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 });
+
 export type AdminEnvelope<T> = {
   success: boolean;
   message: string;
@@ -325,13 +341,7 @@ export async function adminList<T>(
 
 export function formatAdminDate(value?: string | null) {
   if (!value) return "Chưa có";
-  return new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(value));
+  return adminDateTimeFormatter.format(new Date(value));
 }
 
 export function adminRoleLabel(role: string) {
@@ -340,16 +350,12 @@ export function adminRoleLabel(role: string) {
 
 export function formatAdminDateOnly(value?: string | null) {
   if (!value) return "Chưa chọn";
-  return new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(new Date(value));
+  return adminDateFormatter.format(new Date(value));
 }
 
 export function formatAdminVnd(value?: string | number | null) {
   const numeric = Number(value ?? 0);
-  return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(Number.isFinite(numeric) ? numeric : 0)} VNĐ`;
+  return `${adminVndFormatter.format(Number.isFinite(numeric) ? numeric : 0)} VNĐ`;
 }
 
 export function leadStatusLabel(status: string) {
@@ -387,7 +393,7 @@ export function canManuallyTransitionLead(currentStatus: string, nextStatus: str
 }
 
 export function roomStatusTone(status: string) {
-  if (status === "PUBLISHED") return "bg-success-container text-success ring-success/20";
+  if (status === "PUBLISHED") return "bg-tertiary-container text-on-tertiary-container ring-tertiary/20";
   if (status === "RENTED") return "bg-warning-container text-on-warning-container ring-warning/30";
   if (status === "PENDING_REVIEW") return "bg-primary/10 text-primary ring-primary/10";
   return "bg-surface-container-high text-secondary ring-outline-variant/30";
@@ -399,6 +405,7 @@ export function canManuallyTransitionRoom(currentStatus: string, nextStatus: str
     DRAFT: ["PENDING_REVIEW", "PUBLISHED", "HIDDEN", "ARCHIVED"],
     PENDING_REVIEW: ["DRAFT", "PUBLISHED", "HIDDEN", "ARCHIVED"],
     PUBLISHED: ["HIDDEN", "ARCHIVED"],
+    RENTED: ["ARCHIVED"],
     HIDDEN: ["DRAFT", "PENDING_REVIEW", "PUBLISHED", "ARCHIVED"],
     ARCHIVED: ["DRAFT"],
   };

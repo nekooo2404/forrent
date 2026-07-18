@@ -50,17 +50,26 @@ export default defineConfig({
       timeout: 10000,
     },
     {
-      command: 'cd ../frontend-client && node -e "require(\'node:fs\').rmSync(\'.next\',{recursive:true,force:true})" && npm run build && npm run start',
+      command: 'cd ../frontend-client && node -e "require(\'node:fs\').rmSync(\'.next\',{recursive:true,force:true})" && npm run build && node -e "const fs=require(\'node:fs\');fs.cpSync(\'.next/static\',\'.next/standalone/.next/static\',{recursive:true});if(fs.existsSync(\'public\'))fs.cpSync(\'public\',\'.next/standalone/public\',{recursive:true})" && node .next/standalone/server.js',
       env: {
         API_BASE_URL: mockApiURL,
+        HOSTNAME: '127.0.0.1',
         NEXT_PUBLIC_API_BASE_URL: mockApiURL,
+        PORT: '3000',
       },
       url: 'http://localhost:3000',
       reuseExistingServer: false,
       timeout: 180000,
     },
     {
-      command: 'cd ../frontend-admin && node -e "require(\'node:fs\').rmSync(\'.next\',{recursive:true,force:true})" && npm run build && npm run start',
+      command: 'cd ../frontend-admin && node -e "require(\'node:fs\').rmSync(\'.next\',{recursive:true,force:true})" && npm run build && node -e "const fs=require(\'node:fs\');fs.cpSync(\'.next/static\',\'.next/standalone/.next/static\',{recursive:true});if(fs.existsSync(\'public\'))fs.cpSync(\'public\',\'.next/standalone/public\',{recursive:true})" && node .next/standalone/server.js',
+      env: {
+        API_BASE_URL: mockApiURL,
+        HOSTNAME: '127.0.0.1',
+        NEXT_PUBLIC_API_BASE_URL: mockApiURL,
+        NEXT_PUBLIC_CLIENT_URL: 'http://localhost:3000',
+        PORT: '3001',
+      },
       url: adminBaseURL,
       reuseExistingServer: false,
       timeout: 180000,

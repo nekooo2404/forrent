@@ -43,6 +43,108 @@ docker compose up -d --build
 docker compose exec backend python manage.py check --settings=config.settings.production
 ```
 
+Neu deploy theo commit SHA da CI xanh, dung script nay tu root repo:
+
+```bash
+cd /opt/forrent
+git fetch origin main
+MAIN_SHA="$(git rev-parse origin/main)"
+RELEASE_NOTE_PATH="/opt/forrent-release-notes/$MAIN_SHA.md" \
+  sh deploy/ops/deploy-sha.sh "$MAIN_SHA"
+```
+
+Script deploy se tu kiem tra homepage co `data-hero-source="listing"` de tranh
+production van serve hero fallback cu sau khi code da merge. Chi dat
+`REQUIRE_LISTING_HERO=0` trong tinh huong deploy khan cap hoac inventory that su
+rong, va phai ghi no UI/UX evidence vao release note.
+
+Script cung kiem tra URL cu `/homepage` phai redirect ve canonical `/`. Neu
+`https://forrent.io.vn/homepage` van tra `200`, production dang serve build
+frontend cu hoac cache cu, vi source hien tai da redirect `/homepage` ve `/`.
+
+Neu check hero fail, script se tu thu mot lan:
+
+```bash
+docker compose -f backend/docker-compose.yml build --no-cache frontend_client
+docker compose -f backend/docker-compose.yml up -d frontend_client
+```
+
+Sau do script kiem tra lai `data-hero-source="listing"`. Neu van fail thi deploy
+se dung, vi khi do frontend production van dang serve build/cache cu hoac reverse
+proxy/CDN chua duoc lam moi. Co the tat co che thu lai bang
+`AUTO_REBUILD_FRONTEND_ON_HERO_FAIL=0`, nhung khong nen dung cho release UI/UX.
+
+Neu API production da co anh phong nhung homepage van dung
+`/brand/forrent-hero-old-quarter.jpg`, frontend dang chay build cu hoac cache
+image cu. Chay chan doan truoc de phan biet loi data va loi build/cache:
+
+```bash
+cd /opt/forrent
+python3 scripts/diagnose-production-hero.py \
+  --output output/production-hero-diagnostic.json
+```
+
+Neu ket qua la `STALE_FRONTEND_BUILD`, sau khi checkout dung SHA, rebuild rieng
+frontend client va restart:
+
+```bash
+cd /opt/forrent
+docker compose -f backend/docker-compose.yml build --no-cache frontend_client
+docker compose -f backend/docker-compose.yml up -d frontend_client
+python3 scripts/diagnose-production-hero.py \
+  --output output/production-hero-diagnostic.json
+curl -fsSL https://forrent.io.vn/ | grep -F 'data-hero-source="listing"'
+```
+
+Lenh `grep` phai thay `data-hero-source="listing"`. Neu van thay
+`forrent-hero-old-quarter.jpg`, dung deploy va kiem tra lai
+`git rev-parse --short HEAD`, log `frontend_client`, va reverse proxy/cache
+truoc khi claim UI/UX hero gate pass.
+
+Truoc khi nghiem thu title public, chay dry-run de tim phong con lo ma noi bo,
+emoji hoac noi dung chien dich trong tieu de. Chi chay `--apply` sau khi da xem
+diff va thay cac tieu de moi van dung voi nguoi thue:
+
+```bash
+cd /opt/forrent
+docker compose -f backend/docker-compose.yml exec backend \
+  python manage.py sanitize_public_room_titles --status PUBLISHED
+docker compose -f backend/docker-compose.yml exec backend \
+  python manage.py sanitize_public_room_titles --status PUBLISHED --apply
+docker compose -f backend/docker-compose.yml exec backend \
+  python manage.py audit_public_room_quality --require-cloudinary
+```
+
+Neu lenh audit con bao title co ma phong/noi dung van hanh, dung deploy UI/UX
+va sua du lieu phong truoc. API public co `public_title` de FE khong lo title
+raw, nhung DB production van nen sach de admin/search/SEO khong bi lech.
+
+Script `deploy/ops/deploy-sha.sh` cung da co public-room quality gate:
+
+- Mac dinh `RUN_PUBLIC_ROOM_QUALITY_AUDIT=1`: chay dry-run sanitize title, neu
+  co title can sua thi dung deploy de tranh public title loi.
+- Neu muon deploy don gian cho site nho va chap nhan auto clean title, them
+  `AUTO_SANITIZE_PUBLIC_ROOM_TITLES=1`.
+- Chi tat bang `RUN_PUBLIC_ROOM_QUALITY_AUDIT=0` khi emergency deploy va da ghi
+  ro UI/UX evidence debt trong release note.
+
+Vi du deploy voi auto sanitize:
+
+```bash
+AUTO_SANITIZE_PUBLIC_ROOM_TITLES=1 \
+RELEASE_NOTE_PATH=/opt/forrent-release-notes/$MAIN_SHA.md \
+  sh deploy/ops/deploy-sha.sh "$MAIN_SHA"
+```                                                                      N
+                    
+Kiem tra nhanh canonical homepage:
+
+```bash
+curl -fsSI https://forrent.io.vn/homepage | grep -Ei 'HTTP/|location:'
+```
+
+Ket qua dung phai la `301` hoac `308` va `Location: /` hoac
+`Location: https://forrent.io.vn/`.
+
 ## 5. Nginx va HTTPS
 
 Copy file mau:
@@ -51,6 +153,35 @@ Copy file mau:
 sudo cp /opt/forrent/deploy/nginx/forrent.conf /etc/nginx/sites-available/forrent.conf
 sudo ln -s /etc/nginx/sites-available/forrent.conf /etc/nginx/sites-enabled/forrent.conf
 sudo nginx -t
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                    
 sudo systemctl reload nginx
 ```
 
@@ -66,8 +197,8 @@ Bat buoc truoc khi mo public:
 
 - Bat Cloudflare proxy cho `forrent.io.vn`, `admin.forrent.io.vn`, `api.forrent.io.vn`.
 - Cloudflare SSL mode: Full strict. Bat Always Use HTTPS, WAF managed rules, rate limit cho `/api/auth/*`.
-- DB Postgres khong public internet. Chi backend container/app server duoc noi vao port 5432.
 - Dung user DB rieng cho app, khong dung `postgres` superuser trong `DATABASE_URL`.
+- DB Postgres khong public internet. Chi backend container/app server duoc noi vao port 5432.
 - `DJANGO_SECRET_KEY` phai random dai hon 32 ky tu. Doi ngay neu tung day len Git/chat/log.
 - Khong luu token JWT trong localStorage. App hien dung access token trong memory va refresh token httpOnly cookie.
 - Backup DB hang ngay, ma hoa backup, va test restore moi thang toi thieu 1 lan.
@@ -84,6 +215,49 @@ curl https://admin.forrent.io.vn
 ```
 
 API health phai tra ve `{"status":"ok"}`.
+
+## 7.1. UI/UX field gates sau deploy
+
+Doc `docs/ui-ux-hallmark-handoff.md` truoc khi nghiem thu giao dien. Hallmark
+la quality gate cho taste/UI polish; cac gate can thiet bi that, provider that
+hoac production telemetry van phai co artifact rieng.
+
+Sau khi deploy SHA moi, chay workflow GitHub Actions **UI/UX Field Gates**:
+
+- `base_url`: `https://forrent.io.vn`
+- `room_path`: mot URL phong production co it nhat 2 anh/video, vi du `/rooms/p502-studio-kh%C3%A9p-k%C3%ADn`
+- `transitions`: `20`
+- `throttle`: `true`
+- `strict`: `true`
+
+Tai artifact `ui-ux-field-evidence`, dinh kem JSON, Markdown,
+`ui-ux-release-evidence.md`, `production-hero-diagnostic.md`,
+`room-photo-review.md` va `homepage-hero.png` vao release note.
+Workflow nay chi chung minh duoc cac gate do lap lai duoc tren production
+nhu hero image va gallery transition. Cac gate thiet bi that, screen reader,
+Sendify inbox, usability test va RUM/Core Web Vitals van phai co bang chung
+rieng trong `docs/releases/ui-ux-field-evidence-template.md`.
+
+Neu chay field probe local hoac da tai artifact ve server/may dev, tao file
+evidence release bang:
+
+```bash
+python scripts/prepare-ui-ux-release-evidence.py \
+  --field-evidence output/ui-ux-field-evidence.md \
+  --output docs/releases/$MAIN_SHA-ui-ux-field-evidence.md \
+  --release-note docs/releases/$MAIN_SHA.md \
+  --sha $MAIN_SHA \
+  --tester "Ten nguoi kiem tra" \
+  --environment production
+python scripts/check-ui-ux-field-evidence.py docs/releases/$MAIN_SHA-ui-ux-field-evidence.md
+python scripts/check-ui-ux-field-evidence.py docs/releases/$MAIN_SHA-ui-ux-field-evidence.md --summary
+```
+
+Chi khi moi dong da co bang chung that moi duoc chay strict mode:
+
+```bash
+python scripts/check-ui-ux-field-evidence.py docs/releases/$MAIN_SHA-ui-ux-field-evidence.md --require-all-pass
+```
 
 ## 8. Backup
 
@@ -187,6 +361,7 @@ docker compose exec backend python manage.py check --settings=config.settings.pr
 
 - [ ] Backend: `python manage.py check --settings=config.settings.production`.
 - [ ] Backend: `pytest apps/accounts apps/blogs apps/contacts apps/commissions apps/rooms apps/viewing_requests`.
+- [ ] Backend content gate: `python manage.py audit_public_room_quality --require-cloudinary`.
 - [ ] Client: `npm run lint && npm run build`.
 - [ ] Admin: `npm run lint && npm run build`.
 - [ ] Smoke test các luồng chính: xem phòng, lọc phòng, gửi liên hệ, đăng ký/đăng nhập, đặt lịch xem phòng, admin xử lý lead.

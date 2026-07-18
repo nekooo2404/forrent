@@ -1,0 +1,141 @@
+name: UI/UX Field Gates
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Production or staging base URL"
+        required: true
+        default: "https://forrent.io.vn"
+      api_url:
+        description: "Matching API base URL for hero data diagnostics"
+        required: true
+        default: "https://api.forrent.io.vn"
+      room_path:
+        description: "Room detail path with at least two gallery media items"
+        required: true
+        default: "/rooms/p502-studio-kh%C3%A9p-k%C3%ADn"
+      transitions:
+        description: "Number of gallery transitions to measure"
+        required: true
+        default: "20"
+      throttle:
+        description: "Use mobile 4G throttling"
+        required: true
+        type: boolean
+        default: true
+      strict:
+        description: "Fail the workflow when a measurable gate fails"
+        required: true
+        type: boolean
+        default: true
+
+jobs:
+  field-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - run: npm ci
+        working-directory: e2e
+        timeout-minutes: 3
+
+      - run: npx playwright install --with-deps chromium
+        working-directory: e2e
+        timeout-minutes: 8
+
+      - name: Run production UI/UX field probe
+        working-directory: e2e
+        timeout-minutes: 6
+        env:
+          FIELD_BASE_URL: ${{ inputs.base_url }}
+          FIELD_ROOM_PATH: ${{ inputs.room_path }}
+          FIELD_TRANSITIONS: ${{ inputs.transitions }}
+          FIELD_OUTPUT: ../output/ui-ux-field-evidence.json
+        run: |
+          args=(
+            --base-url "$FIELD_BASE_URL"
+            --room-path "$FIELD_ROOM_PATH"
+            --transitions "$FIELD_TRANSITIONS"
+            --output "$FIELD_OUTPUT"
+          )
+
+          if [[ "${{ inputs.strict }}" == "true" ]]; then
+            args+=(--strict)
+          fi
+
+          if [[ "${{ inputs.throttle }}" != "true" ]]; then
+            args+=(--no-throttle)
+          fi
+
+          npm run field:ui-ux -- "${args[@]}"
+
+      - name: Validate generated evidence format
+        if: always()
+        timeout-minutes: 1
+        run: |
+          if [ -f output/ui-ux-field-evidence.md ]; then
+            python3 scripts/check-ui-ux-field-evidence.py output/ui-ux-field-evidence.md
+          else
+            echo "No generated UI/UX evidence file found to validate."
+          fi
+
+      - name: Diagnose production hero data source
+        if: always()
+        timeout-minutes: 1
+        run: |
+          python3 scripts/diagnose-production-hero.py \
+            --base-url "${{ inputs.base_url }}" \
+            --api-url "${{ inputs.api_url }}" \
+            --output output/production-hero-diagnostic.json || true
+
+      - name: Prepare room photo review contact sheet
+        if: always()
+        timeout-minutes: 1
+        run: |
+          python3 scripts/prepare-room-photo-review.py \
+            --api-url "${{ inputs.api_url }}" \
+            --limit 10 \
+            --output output/room-photo-review.json || true
+
+      - name: Prepare release evidence draft
+        if: always()
+        timeout-minutes: 1
+        env:
+          RELEASE_NOTE: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TESTER: ${{ github.actor }}
+        run: |
+          if [ -f output/ui-ux-field-evidence.md ]; then
+            python3 scripts/prepare-ui-ux-release-evidence.py \
+              --field-evidence output/ui-ux-field-evidence.md \
+              --output output/ui-ux-release-evidence.md \
+              --release-note "$RELEASE_NOTE" \
+              --sha "${GITHUB_SHA}" \
+              --tester "$TESTER" \
+              --environment production
+            python3 scripts/check-ui-ux-field-evidence.py output/ui-ux-release-evidence.md
+            python3 scripts/check-ui-ux-field-evidence.py output/ui-ux-release-evidence.md --summary | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No field evidence Markdown was generated." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: ui-ux-field-evidence
+          path: |
+            output/ui-ux-field-evidence.json
+            output/ui-ux-field-evidence.md
+            output/ui-ux-release-evidence.md
+            output/production-hero-diagnostic.json
+            output/production-hero-diagnostic.md
+            output/room-photo-review.json
+            output/room-photo-review.md
+            output/homepage-hero.png

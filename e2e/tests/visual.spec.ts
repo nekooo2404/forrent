@@ -59,8 +59,8 @@ test('rooms listing visual regression', async ({ page }, testInfo) => {
   await page.goto('/rooms');
   await expect(page.locator('[data-room-card]:visible').first()).toHaveAttribute('data-layout', 'wide');
   const themedOption = page.getByRole('option', { name: 'Tất cả phường' });
-  await expect(themedOption).toHaveCSS('background-color', 'rgb(255, 252, 248)');
-  await expect(themedOption).toHaveCSS('color', 'rgb(41, 23, 12)');
+  await expect(themedOption).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(themedOption).toHaveCSS('color', 'rgb(42, 35, 31)');
   await expect(page.locator('main')).toHaveScreenshot('rooms-list-light.png', {
     maxDiffPixelRatio: 0.01,
     threshold: 0.2,
@@ -79,15 +79,28 @@ test('rooms mobile visual regression', async ({ page }, testInfo) => {
   });
 });
 
-test('rooms grid with twelve results visual regression', async ({ page }, testInfo) => {
+test('room card remains readable at 320px visual regression', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium', 'Screenshot baseline is tracked for the Chromium project only.');
+
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto('/rooms');
+  const card = page.locator('[data-room-card]').first();
+  await expect(card).toBeVisible();
+  await expect(card).toHaveScreenshot('room-card-light-mobile-320.png', {
+    maxDiffPixelRatio: 0.01,
+    threshold: 0.2,
+  });
+});
+
+test('rooms grid with six results visual regression', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Screenshot baseline is tracked for the desktop Chromium project only.');
 
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/rooms?search=visual-12');
   await page.waitForLoadState('networkidle');
   await expect(page.locator('[data-testid="site-nav"]:visible').first()).toHaveAttribute('data-ready', 'true');
-  await expect(page.locator('[data-room-card]')).toHaveCount(12);
-  await expect(page).toHaveScreenshot('rooms-list-12-light.png', {
+  await expect(page.locator('[data-room-card]')).toHaveCount(6);
+  await expect(page).toHaveScreenshot('rooms-list-6-light.png', {
     maxDiffPixelRatio: 0.01,
     threshold: 0.2,
   });
@@ -108,7 +121,10 @@ test('rooms empty state visual regression', async ({ page }, testInfo) => {
 test('contact page visual regression', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Screenshot baseline is tracked for the desktop Chromium project only.');
 
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/contact');
+  await expect(page.locator('[data-testid="site-nav"]:visible').first()).toHaveAttribute('data-ready', 'true');
+  await expect(page.getByRole('button', { name: 'Gửi nhu cầu thuê phòng' })).toBeVisible();
   await expect(page.locator('main')).toHaveScreenshot('contact-light.png', {
     maxDiffPixelRatio: 0.01,
     threshold: 0.2,
@@ -118,7 +134,9 @@ test('contact page visual regression', async ({ page }, testInfo) => {
 test('login page visual regression', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Screenshot baseline is tracked for the desktop Chromium project only.');
 
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/log-in');
+  await expect(page.locator('form')).toHaveAttribute('data-ready', 'true');
   await expect(page.locator('main')).toHaveScreenshot('login-light.png', {
     maxDiffPixelRatio: 0.01,
     threshold: 0.2,
@@ -128,9 +146,22 @@ test('login page visual regression', async ({ page }, testInfo) => {
 test('admin login page visual regression', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Screenshot baseline is tracked for the desktop Chromium project only.');
 
-  await page.addInitScript(() => localStorage.setItem('forrent-admin-theme', 'dark'));
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto(new URL('/log-in', adminBaseURL).toString());
-  await expect(page.locator('main')).toHaveScreenshot('admin-login-dark.png', {
+  await expect(page.locator('form')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('main')).toHaveScreenshot('admin-login-light.png', {
+    maxDiffPixelRatio: 0.01,
+    threshold: 0.2,
+  });
+});
+
+test('admin login mobile visual regression', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium', 'Screenshot baseline is tracked for the Chromium project only.');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(new URL('/log-in', adminBaseURL).toString());
+  await expect(page.locator('form')).toHaveAttribute('data-ready', 'true');
+  await expect(page).toHaveScreenshot('admin-login-light-mobile.png', {
     maxDiffPixelRatio: 0.01,
     threshold: 0.2,
   });
@@ -141,12 +172,11 @@ test('admin dashboard visual regression', async ({ page }, testInfo) => {
 
   await mockAdminDashboard(page);
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.addInitScript(() => localStorage.setItem('forrent-admin-theme', 'dark'));
   await page.goto(new URL('/admin', adminBaseURL).toString());
   await expect(page.locator('#admin-main')).toContainText('Tổng quan vận hành');
   await expect(page.locator('#admin-main')).toContainText('Yêu cầu');
   await expect(page.locator('#admin-main')).toContainText('Hoa');
-  await expect(page).toHaveScreenshot('admin-dashboard-dark.png', {
+  await expect(page).toHaveScreenshot('admin-dashboard-light.png', {
     maxDiffPixelRatio: 0.01,
     threshold: 0.2,
   });
@@ -157,12 +187,11 @@ test('admin create room modal visual regression', async ({ page }, testInfo) => 
 
   await mockAdminRoomInventory(page);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.addInitScript(() => localStorage.setItem('forrent-admin-theme', 'dark'));
   await page.goto(new URL('/admin/rooms', adminBaseURL).toString());
   await page.getByRole('button', { name: 'Thêm phòng', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Tạo phòng' });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toHaveScreenshot('admin-create-room-modal-dark-mobile.png', {
+  await expect(dialog).toHaveScreenshot('admin-create-room-modal-light-mobile.png', {
     maxDiffPixelRatio: 0.01,
     threshold: 0.2,
   });

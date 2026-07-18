@@ -27,14 +27,15 @@ import {
 import type { ReactNode } from "react";
 
 import { LazyViewingRequestPanel } from "@/components/lazy-viewing-request-panel";
+import { ProductMetric } from "@/components/product-insights";
 import { RoomGallery } from "@/components/room-gallery";
 import { PublicShell } from "@/components/public-shell";
 import { StructuredData } from "@/components/structured-data";
 import {
   formatDate,
   formatArea,
+  formatMonthlyVnd,
   formatOptionalVnd,
-  formatVnd,
   getCachedRoomDetail,
   resolveMediaUrl,
   roomStatusLabel,
@@ -48,6 +49,8 @@ import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/site-config";
 type RoomSlugPageProps = {
   params: Promise<{ slug: string }>;
 };
+
+type ProductMetricAttributes = Record<string, boolean | number | string>;
 
 function decodeRouteSlug(slug: string) {
   try {
@@ -68,6 +71,7 @@ type DetailView = {
   water: string;
   waterLabel: string;
   serviceFee: string;
+  fixedMonthlyCost: string;
   location: string;
   area: string;
   status: string;
@@ -76,7 +80,7 @@ type DetailView = {
   secondaryDescription: string;
   amenities: ApiAmenity[];
   gallery: Array<{ src: string; type: "image" | "video" }>;
-  alt: string;
+  galleryAlt: string;
   updatedAt: string;
 };
 
@@ -95,9 +99,14 @@ export async function generateMetadata({ params }: RoomSlugPageProps): Promise<M
   }
 
   const location = [room.ward?.name, room.city?.name].filter(Boolean).join(", ");
-  const title = cleanRoomTitle(room.title, [room.ward?.name, room.city?.name]);
+  const descriptor = room.room_subtype_name || roomTypeLabel(room.room_type);
+  const title = cleanRoomTitle(
+    room.public_title || room.title,
+    [room.ward?.name, room.city?.name],
+    `${descriptor} tại ${room.ward?.name || room.city?.name || "Hà Nội"}`,
+  );
   const description = shortDescription(
-    `${room.short_description || room.description || title}. Giá ${formatVnd(room.price)}/tháng, diện tích ${formatArea(room.actual_area)}${location ? ` tại ${location}` : ""}.`,
+    `${room.short_description || room.description || title}. Giá ${formatMonthlyVnd(room.price)}, diện tích ${formatArea(room.actual_area)}${location ? ` tại ${location}` : ""}.`,
   );
   const image = galleryFor(room).find((item) => item.type === "image")?.src;
   const canonical = `/rooms/${encodeURIComponent(room.slug)}`;
@@ -132,7 +141,12 @@ function galleryFor(room: ApiRoomDetail) {
 
 function mapDetail(room: ApiRoomDetail): DetailView {
   const location = [room.address, room.ward?.name, room.city?.name].filter(Boolean).join(", ");
-  const title = cleanRoomTitle(room.title, [room.ward?.name, room.city?.name]);
+  const collection = room.room_subtype_name || roomTypeLabel(room.room_type);
+  const title = cleanRoomTitle(
+    room.public_title || room.title,
+    [room.ward?.name, room.city?.name],
+    `${collection} tại ${room.ward?.name || room.city?.name || "Hà Nội"}`,
+  );
   const description =
     room.description ||
     room.short_description ||
@@ -141,8 +155,8 @@ function mapDetail(room: ApiRoomDetail): DetailView {
   return {
     id: room.id,
     title,
-    collection: room.room_subtype_name || roomTypeLabel(room.room_type),
-    price: `${formatVnd(room.price)} / tháng`,
+    collection,
+    price: formatMonthlyVnd(room.price),
     deposit: formatOptionalVnd(room.deposit_amount),
     depositLabel: room.deposit_type_name || "Cọc",
     electricity: formatOptionalVnd(room.electricity_price_per_kwh),
@@ -153,6 +167,7 @@ function mapDetail(room: ApiRoomDetail): DetailView {
     ),
     waterLabel: room.water_billing_type === "PER_CUBIC_METER" ? "Tiền nước / m³" : "Tiền nước / người",
     serviceFee: formatOptionalVnd(room.service_fee),
+    fixedMonthlyCost: formatMonthlyVnd(Number(room.price) + Number(room.service_fee || 0)),
     location,
     area: formatArea(room.actual_area),
     status: roomStatusLabel(room.status),
@@ -163,13 +178,18 @@ function mapDetail(room: ApiRoomDetail): DetailView {
       "Phòng thuê theo tháng với tiện ích thiết yếu, phù hợp lịch sinh hoạt ổn định và nhu cầu xem phòng trực tiếp.",
     amenities: room.amenities,
     gallery: galleryFor(room),
-    alt: room.short_description || title,
+    galleryAlt: `${collection} tại ${room.ward?.name || room.city?.name || "Hà Nội"}`,
     updatedAt: formatDate(room.updated_at),
   };
 }
 
 function roomStructuredData(room: ApiRoomDetail) {
-  const title = cleanRoomTitle(room.title, [room.ward?.name, room.city?.name]);
+  const descriptor = room.room_subtype_name || roomTypeLabel(room.room_type);
+  const title = cleanRoomTitle(
+    room.public_title || room.title,
+    [room.ward?.name, room.city?.name],
+    `${descriptor} tại ${room.ward?.name || room.city?.name || "Hà Nội"}`,
+  );
   const description = shortDescription(room.short_description || room.description || title);
   const url = absoluteUrl(`/rooms/${encodeURIComponent(room.slug)}`);
 
@@ -180,7 +200,7 @@ function roomStructuredData(room: ApiRoomDetail) {
         "@type": "Offer",
         price: room.price,
         priceCurrency: "VND",
-        availability: "https://schema.org/InStock",
+        availability: room.status === "PUBLISHED" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
         url,
         seller: {
           "@type": "Organization",
@@ -243,9 +263,24 @@ export default async function RoomSlugPage({ params }: RoomSlugPageProps) {
   const slug = decodeRouteSlug((await params).slug);
   const room = await getCachedRoomDetail(slug).catch(() => null);
   const detail = room ? mapDetail(room) : null;
+  const detailMetricAttributes: ProductMetricAttributes = detail
+    ? {
+        available: detail.isAvailable,
+        image_count: detail.gallery.filter((item) => item.type === "image").length,
+        room_id: detail.id,
+        slug,
+        video_count: detail.gallery.filter((item) => item.type === "video").length,
+      }
+    : {
+        slug,
+      };
 
   return (
     <PublicShell active="rooms">
+      <ProductMetric
+        attributes={detailMetricAttributes}
+        stage={detail ? "room_detail_loaded" : "room_detail_unavailable"}
+      />
       {room ? <StructuredData data={roomStructuredData(room)} /> : null}
       <div className="mx-auto w-full max-w-container-max flex-grow px-margin-mobile pb-24 pt-28 md:px-margin-desktop md:pt-32">
         {!detail ? (
@@ -266,9 +301,9 @@ export default async function RoomSlugPage({ params }: RoomSlugPageProps) {
         ) : (
           <>
         <nav aria-label="Đường dẫn trang" className="mb-8 flex flex-wrap items-center gap-2 text-sm font-medium text-on-surface-variant">
-          <Link className="transition-colors hover:text-primary" href="/">Trang chủ</Link>
+          <Link className="inline-flex min-h-11 items-center transition-colors hover:text-primary" href="/">Trang chủ</Link>
           <ChevronRight aria-hidden="true" size={15} strokeWidth={1.8} />
-          <Link className="transition-colors hover:text-primary" href="/rooms">Phòng thuê</Link>
+          <Link className="inline-flex min-h-11 items-center transition-colors hover:text-primary" href="/rooms">Phòng thuê</Link>
           <ChevronRight aria-hidden="true" size={15} strokeWidth={1.8} />
           <span aria-current="page" className="max-w-full truncate text-on-surface">{detail.title}</span>
         </nav>
@@ -277,9 +312,14 @@ export default async function RoomSlugPage({ params }: RoomSlugPageProps) {
         <div className="mb-5 hidden md:block">
           <ListingHeader detail={detail} />
         </div>
-        <RoomGallery media={detail.gallery} title={detail.title} />
+        <RoomGallery
+          altText={detail.galleryAlt}
+          media={detail.gallery}
+          title={detail.title}
+        />
 
         <ListingBody detail={detail} />
+        <MobileStickyBookingAction detail={detail} />
           </>
         )}
       </div>
@@ -312,7 +352,7 @@ function MobileListingSummary({ detail }: Readonly<{ detail: DetailView }>) {
   return (
     <section className="mb-5 rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-4 shadow-sm md:hidden">
       <div className="mb-3 flex items-start justify-between gap-4">
-        <span className={`rounded-md px-2.5 py-1 text-xs font-semibold ${detail.isAvailable ? "bg-success-container text-success" : "bg-surface-container text-on-surface-variant"}`}>
+        <span className={`rounded-md px-2.5 py-1 text-sm font-semibold ${detail.isAvailable ? "bg-tertiary-container text-tertiary" : "bg-surface-container text-on-surface-variant"}`}>
           {detail.isAvailable ? "Còn trống" : detail.status}
         </span>
         <p className="whitespace-nowrap text-lg font-bold tabular-nums text-on-surface">{detail.price}</p>
@@ -355,7 +395,7 @@ function ListingHeader({ detail }: Readonly<{ detail: DetailView }>) {
 function ListingStat({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
     <div className="px-4 py-4">
-      <p className="text-xs font-semibold uppercase text-on-surface-variant">{label}</p>
+      <p className="text-sm font-medium text-on-surface-variant">{label}</p>
       <p className="mt-1 text-base font-semibold text-on-surface">{value}</p>
     </div>
   );
@@ -396,8 +436,8 @@ function DetailRow({ icon, label, value }: Readonly<{ icon: ReactNode; label: st
     <div className="flex items-center gap-3 border-b border-outline-variant/20 px-4 py-4 last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0">
       <span className="text-primary">{icon}</span>
       <div>
-        <p className="text-xs text-on-surface-variant">{label}</p>
-        <p className="mt-0.5 text-sm font-semibold text-on-surface">{value}</p>
+        <p className="text-sm text-on-surface-variant">{label}</p>
+        <p className="mt-0.5 text-base font-semibold text-on-surface">{value}</p>
       </div>
     </div>
   );
@@ -439,24 +479,47 @@ function ContactCard({ detail }: Readonly<{ detail: DetailView }>) {
       <div className="my-4 rounded-lg bg-surface-container-low p-4">
         <p className="text-xs font-semibold uppercase text-on-surface-variant">Giá thuê</p>
         <p className="mt-1 text-2xl font-bold text-primary">{detail.price}</p>
+        <div className="mt-3 border-t border-outline-variant/50 pt-3">
+          <p className="text-sm text-on-surface-variant">Chi phí cố định dự kiến</p>
+          <p className="mt-1 text-base font-semibold text-on-surface">{detail.fixedMonthlyCost}</p>
+          <p className="mt-1 text-xs leading-5 text-on-surface-variant">Gồm tiền thuê và phí dịch vụ; chưa gồm điện, nước.</p>
+        </div>
         <p className="mt-2 text-sm text-on-surface-variant">{detail.isAvailable ? "Phòng còn trống, có thể đặt lịch xem." : detail.status}</p>
       </div>
 
       <div className="grid gap-2">
-        <a className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-semibold text-on-primary transition hover:bg-surface-tint" href={`tel:${CONTACT_PHONE}`}>
+        <a className="flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 font-semibold text-on-primary transition-colors duration-200 hover:bg-primary/90" href={`tel:${CONTACT_PHONE}`}>
           <Phone size={18} strokeWidth={1.8} />
           {CONTACT_PHONE}
         </a>
-        <a className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-primary px-4 py-3 font-semibold text-primary transition hover:bg-primary/5" href={`mailto:${CONTACT_EMAIL}`}>
+        <a className="flex min-h-11 items-center justify-center gap-2 rounded-md border border-primary px-4 py-3 font-semibold text-primary transition-colors duration-200 hover:bg-primary/5" href={`mailto:${CONTACT_EMAIL}`}>
           <Mail size={18} strokeWidth={1.8} />
           Gửi email
         </a>
-        <Link className="flex items-center justify-center gap-2 rounded-lg border border-outline-variant/25 px-4 py-3 font-semibold text-on-surface transition hover:bg-surface-container-low" href={`/contact?room_id=${detail.id}&room_title=${encodeURIComponent(detail.title)}`}>
+        <Link className="flex min-h-11 items-center justify-center gap-2 rounded-md border border-outline-variant px-4 py-3 font-semibold text-on-surface transition-colors duration-200 hover:bg-surface-container-low" href={`/contact?room_id=${detail.id}&room_title=${encodeURIComponent(detail.title)}`}>
           <MessageCircle size={18} strokeWidth={1.8} />
           Tư vấn phòng này
         </Link>
       </div>
     </section>
+  );
+}
+
+function MobileStickyBookingAction({ detail }: Readonly<{ detail: DetailView }>) {
+  if (!detail.isAvailable) return null;
+
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-outline-variant/70 bg-surface-container-lowest px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-elevated md:hidden">
+      <div className="mx-auto flex max-w-container-max items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm text-on-surface-variant">Giá thuê</p>
+          <p className="truncate text-base font-bold text-on-surface">{detail.price}</p>
+        </div>
+        <Link className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-md bg-primary px-5 py-3 font-semibold text-on-primary transition-colors duration-200 hover:bg-primary/90" href="#viewing-request">
+          Đặt lịch xem
+        </Link>
+      </div>
+    </div>
   );
 }
 

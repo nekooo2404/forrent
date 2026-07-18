@@ -1,6 +1,26 @@
 from pathlib import Path
 
-SKIP_DIRS = {".git", ".next", "node_modules", "staticfiles", "venv", ".venv", "playwright-report", "test-results"}
+SKIP_DIRS = {
+    ".git",
+    ".mypy_cache",
+    ".next",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "coverage",
+    "dist",
+    "build",
+    "media",
+    "node_modules",
+    "out",
+    "output",
+    "playwright-report",
+    "staticfiles",
+    "storybook-static",
+    "test-results",
+    "venv",
+}
 EXTENSIONS = {".css", ".json", ".md", ".py", ".ts", ".tsx", ".yml", ".yaml"}
 PATTERNS = (
     "Ã¡", "Ã ", "Ã¢", "Ã£", "Ã©", "Ã¨", "Ãª", "Ã­", "Ã¬", "Ã³", "Ã²", "Ã´", "Ãµ",

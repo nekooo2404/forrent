@@ -103,9 +103,9 @@ export async function mockAdminDashboard(page: Page) {
   );
 }
 
-export async function mockAdminRoomInventory(page: Page) {
+export async function mockAdminRoomInventory(page: Page, rooms: unknown[] = []) {
   await mockAdminSession(page);
-  await page.route('**/api/admin/rooms**', (route) => route.fulfill({ json: adminList([]) }));
+  await page.route('**/api/admin/rooms**', (route) => route.fulfill({ json: adminList(rooms) }));
   await page.route('**/api/admin/cities**', (route) =>
     route.fulfill({ json: adminList([{ id: 1, name: 'Ha Noi', slug: 'ha-noi', is_active: true }]) }),
   );
@@ -124,4 +124,52 @@ export async function mockAdminRoomInventory(page: Page) {
   await page.route('**/api/admin/room-subtypes**', (route) =>
     route.fulfill({ json: adminList([{ id: 1, parent_type: 'CCDV', name: 'Studio', is_active: true }]) }),
   );
+}
+
+export async function mockAdminWorkspace(page: Page) {
+  await mockAdminSession(page);
+  await page.route('**/api/admin/**', (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname.endsWith('/dashboard/summary')) {
+      route.fulfill({
+        json: {
+          success: true,
+          message: 'OK',
+          data: {
+            total_rooms: 0,
+            active_rooms: 0,
+            total_viewing_requests: 0,
+            total_new_leads: 0,
+            total_moved_in_leads: 0,
+            total_estimated_commission: 0,
+            total_received_commission: 0,
+            status_counts: {},
+            latest_leads: [],
+          },
+        },
+      });
+      return;
+    }
+    if (pathname.endsWith('/commissions/summary')) {
+      route.fulfill({
+        json: {
+          success: true,
+          message: 'OK',
+          data: {
+            total_received_commission: 0,
+            total_estimated_commission: 0,
+            total_pending_payout: 0,
+            total_approved_payout: 0,
+            total_paid_payout: 0,
+            total_moved_in_leads: 0,
+            total_pending_leads: 0,
+            by_room: [],
+            by_month: [],
+          },
+        },
+      });
+      return;
+    }
+    route.fulfill({ json: adminList([]) });
+  });
 }

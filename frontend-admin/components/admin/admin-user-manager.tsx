@@ -227,9 +227,9 @@ export function AdminUserManager() {
             >
               <label className="relative min-w-[260px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-secondary" size={17} strokeWidth={1.8} />
-                <input className={`${adminInputClass} pl-9`} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm tên, email, số điện thoại..." type="search" value={search} />
+                <input aria-label="Tìm người dùng" className={`${adminInputClass} pl-9`} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm tên, email, số điện thoại..." type="search" value={search} />
               </label>
-              <select className={adminSelectClass} onChange={(event) => setRole(event.target.value)} value={role}>
+              <select aria-label="Lọc theo vai trò người dùng" className={adminSelectClass} onChange={(event) => setRole(event.target.value)} value={role}>
                 <option value="">Tất cả vai trò</option>
                 <option value="TENANT">Người thuê</option>
                 <option value="SALER">Nhân viên tư vấn</option>
@@ -244,7 +244,7 @@ export function AdminUserManager() {
           ) : users.length ? (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-primary/10 text-xs uppercase text-secondary">
+                <thead className="border-b border-outline-variant/70 text-xs uppercase text-secondary">
                   <tr>
                     <th className="py-3 pr-5 font-semibold">Người dùng</th>
                     <th className="py-3 pr-5 font-semibold">Vai trò</th>
@@ -269,7 +269,7 @@ export function AdminUserManager() {
                       <td className="py-4 pr-5 text-secondary">{formatAdminDate(user.created_at)}</td>
                       <td className="py-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <button aria-label={`Sửa ${user.full_name}`} className="inline-flex size-11 items-center justify-center rounded-md border border-primary/10 bg-surface-container-lowest text-secondary transition hover:border-primary/25 hover:text-primary" onClick={() => editUser(user)} type="button">
+                          <button aria-label={`Sửa ${user.full_name}`} className="inline-flex size-11 items-center justify-center rounded-md border border-outline-variant/70 bg-surface-container-lowest text-secondary transition-colors duration-200 hover:border-primary/40 hover:text-primary" onClick={() => editUser(user)} type="button">
                             <Pencil size={16} strokeWidth={1.8} />
                           </button>
                           <button className={adminButtonSecondary} disabled={isSaving} onClick={() => toggleActive(user)} type="button">

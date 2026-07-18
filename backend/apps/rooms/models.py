@@ -64,7 +64,7 @@ class Room(TimeStampedModel):
             cls.Status.DRAFT: {cls.Status.PENDING_REVIEW, cls.Status.PUBLISHED, cls.Status.HIDDEN, cls.Status.ARCHIVED},
             cls.Status.PENDING_REVIEW: {cls.Status.DRAFT, cls.Status.PUBLISHED, cls.Status.HIDDEN, cls.Status.ARCHIVED},
             cls.Status.PUBLISHED: {cls.Status.HIDDEN, cls.Status.ARCHIVED},
-            cls.Status.RENTED: set(),
+            cls.Status.RENTED: {cls.Status.ARCHIVED},
             cls.Status.HIDDEN: {cls.Status.DRAFT, cls.Status.PENDING_REVIEW, cls.Status.PUBLISHED, cls.Status.ARCHIVED},
             cls.Status.ARCHIVED: {cls.Status.DRAFT},
         }

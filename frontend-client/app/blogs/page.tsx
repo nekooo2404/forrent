@@ -1,19 +1,39 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, CalendarCheck, ChevronLeft, ChevronRight, ReceiptText, ShieldCheck } from "lucide-react";
+import { Fragment } from "react";
 
 import { BlogSubmitForm } from "@/components/blog-submit-form";
 import { PublicShell } from "@/components/public-shell";
 import { formatDate, getBlogs, resolveMediaUrl, type ApiBlog } from "@/lib/api";
+import { fastImageUrl, isCloudinaryImage, ROOM_IMAGE_BLUR_DATA_URL } from "@/lib/image";
 
 export const metadata: Metadata = {
-  title: "Blog kinh nghiệm thuê phòng",
+  title: "Cẩm nang thuê phòng Hà Nội",
   description: "Kinh nghiệm thuê phòng theo tháng, chọn khu vực, xem phòng và chuẩn bị hồ sơ thuê.",
   alternates: {
     canonical: "/blogs",
   },
 };
+
+const rentalGuides = [
+  {
+    icon: CalendarCheck,
+    title: "Xác nhận trước khi đi xem",
+    description: "Hỏi lại tình trạng phòng, địa chỉ, giờ hẹn và người phụ trách để tránh di chuyển khi phòng vừa có người thuê.",
+  },
+  {
+    icon: ReceiptText,
+    title: "Ghi rõ toàn bộ chi phí",
+    description: "Đối chiếu giá thuê, cọc, phí dịch vụ, điện, nước và thời điểm thanh toán trước khi quyết định.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Không chuyển cọc quá sớm",
+    description: "Chỉ chuyển tiền sau khi đã xem phòng, xác minh người cho thuê và đọc rõ điều kiện hoàn trả cọc.",
+  },
+];
 
 type BlogPostView = {
   id: number | string;
@@ -23,7 +43,6 @@ type BlogPostView = {
   author: string;
   date: string;
   image: string | null;
-  alt: string;
   href?: string;
 };
 
@@ -44,7 +63,6 @@ function mapBlog(post: ApiBlog, index: number): BlogPostView {
     author: post.author_name || "ForRent",
     date: formatDate(post.published_at || post.created_at),
     image: resolveMediaUrl(post.thumbnail),
-    alt: post.short_description || post.title,
     href: `/blogs/${post.slug}`,
   };
 }
@@ -60,19 +78,17 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
 
   return (
     <PublicShell active="blogs">
-      <header className="scroll-reveal mx-auto max-w-container-max px-margin-mobile pb-16 pt-36 text-center md:px-margin-desktop md:pb-20 md:pt-44">
+      <header className="scroll-reveal mx-auto max-w-container-max px-margin-mobile pb-12 pt-28 text-center md:px-margin-desktop md:pb-16 md:pt-32">
         <span className="mb-4 block font-label-caps text-label-caps uppercase text-on-primary-container">
           Kinh nghiệm thuê phòng
         </span>
-        <h1 className="mb-6 font-display-lg-mobile text-display-lg-mobile text-on-surface md:font-display-lg md:text-7xl">
-          Blog ForRent
+        <h1 className="mb-5 font-display-lg-mobile text-display-lg-mobile text-on-surface md:text-5xl md:font-extrabold">
+          Cẩm nang thuê phòng
         </h1>
         <p className="mx-auto max-w-2xl font-body-lg text-body-lg leading-relaxed text-secondary">
           Kinh nghiệm thuê phòng thực tế: chọn khu vực, hỏi phí/cọc, kiểm tra phòng và chuẩn bị trước khi ký thuê.
         </p>
       </header>
-
-      <BlogSubmitForm />
 
       {featuredPost ? (
         <section className="mx-auto mb-24 max-w-container-max px-margin-mobile md:px-margin-desktop">
@@ -80,13 +96,16 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
             <div className="relative aspect-[16/10] overflow-hidden rounded-lg shadow-soft md:col-span-7">
               {featuredPost.image ? (
                 <Image
-                  alt={featuredPost.alt}
-                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  alt={featuredPost.title}
+                  blurDataURL={ROOM_IMAGE_BLUR_DATA_URL}
+                  className="object-cover transition-transform duration-250 group-hover:scale-[1.02]"
                   fill
                   priority
+                  placeholder="blur"
                   quality={82}
                   sizes="(min-width: 1024px) 760px, 100vw"
-                  src={featuredPost.image}
+                  src={fastImageUrl(featuredPost.image, 1200, 82)}
+                  unoptimized={isCloudinaryImage(featuredPost.image)}
                 />
               ) : (
                 <ImagePlaceholder label="Chưa có ảnh bài viết" />
@@ -110,7 +129,7 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
               </div>
 
               <Link
-                className="group/button flex items-center border-b border-primary pb-1 font-button text-button uppercase text-primary"
+                className="group/button inline-flex min-h-11 items-center border-b border-primary font-button text-button uppercase text-primary"
                 href={featuredPost.href ?? "/blogs"}
               >
                 Đọc thêm
@@ -120,22 +139,7 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
           </article>
         </section>
       ) : (
-        <section className="mx-auto mb-24 max-w-3xl px-margin-mobile text-center md:px-margin-desktop">
-          <div className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-8 shadow-soft md:p-10">
-            <h2 className="font-headline-sm text-headline-sm text-on-surface">Thư viện kinh nghiệm đang được biên tập</h2>
-            <p className="mx-auto mt-3 max-w-xl font-body-md text-body-md leading-7 text-on-surface-variant">
-              Trong lúc chờ bài mới, bạn có thể xem phòng đang trống hoặc gửi nhu cầu để được tư vấn theo khu vực và ngân sách.
-            </p>
-            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-              <Link className="premium-button urban-cta inline-flex min-h-11 items-center justify-center rounded px-5 py-3 font-button text-button" href="/rooms">
-                Xem phòng đang trống
-              </Link>
-              <Link className="premium-button inline-flex min-h-11 items-center justify-center rounded border border-primary px-5 py-3 font-button text-button text-primary" href="/contact">
-                Gửi nhu cầu
-              </Link>
-            </div>
-          </div>
-        </section>
+        <RentalGuideFallback />
       )}
 
       {gridPosts.length ? (
@@ -156,13 +160,48 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
           <p className="mb-10 font-body-md text-body-md text-secondary">
             Gửi nhu cầu thuê phòng, nhân viên tư vấn sẽ lọc phòng theo khu vực, giá và lịch xem.
           </p>
-          <Link className="premium-button inline-flex rounded bg-primary px-10 py-4 font-button text-button uppercase text-on-primary" href="/contact">
+          <Link className="premium-button inline-flex min-h-11 items-center rounded-md bg-primary px-8 py-3 font-button text-button uppercase text-on-primary" href="/contact">
             Liên hệ tư vấn
           </Link>
         </div>
       </section> : null}
 
+      <BlogSubmitForm />
+
     </PublicShell>
+  );
+}
+
+function RentalGuideFallback() {
+  return (
+    <section className="mx-auto mb-20 max-w-container-max px-margin-mobile md:px-margin-desktop">
+      <div className="border-y border-outline-variant/60 py-8 md:py-10">
+        <div className="mb-8 max-w-2xl">
+          <p className="text-sm font-semibold text-primary">Bắt đầu từ những điều quan trọng</p>
+          <h2 className="mt-2 text-2xl font-semibold text-on-surface md:text-3xl">Ba kiểm tra cơ bản trước khi thuê phòng</h2>
+        </div>
+        <div className="grid gap-8 md:grid-cols-3">
+          {rentalGuides.map((guide) => {
+            const GuideIcon = guide.icon;
+            return (
+              <article className="border-t border-outline-variant/50 pt-5" key={guide.title}>
+                <GuideIcon aria-hidden="true" className="text-tertiary" size={24} strokeWidth={1.8} />
+                <h3 className="mt-4 text-lg font-semibold text-on-surface">{guide.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-on-surface-variant">{guide.description}</p>
+              </article>
+            );
+          })}
+        </div>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <Link className="premium-button urban-cta inline-flex min-h-11 items-center justify-center rounded-md px-5 py-3 font-button text-button" href="/rooms">
+            Xem phòng đang trống
+          </Link>
+          <Link className="premium-button inline-flex min-h-11 items-center justify-center rounded-md border border-outline-variant/70 px-5 py-3 font-button text-button text-on-surface" href="/contact">
+            Gửi nhu cầu tư vấn
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -173,13 +212,16 @@ function BlogCard({ post }: Readonly<{ post: BlogPostView }>) {
         <div className="relative mb-6 aspect-[4/5] overflow-hidden rounded-lg shadow-soft">
           {post.image ? (
             <Image
-              alt={post.alt}
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
+              alt={post.title}
+              blurDataURL={ROOM_IMAGE_BLUR_DATA_URL}
+              className="object-cover transition-transform duration-250 group-hover:scale-[1.02]"
               fill
               loading="lazy"
+              placeholder="blur"
               quality={78}
               sizes="(min-width: 1024px) 390px, (min-width: 768px) 33vw, 100vw"
-              src={post.image}
+              src={fastImageUrl(post.image, 768, 78)}
+              unoptimized={isCloudinaryImage(post.image)}
             />
           ) : (
             <ImagePlaceholder label="Chưa có ảnh bài viết" />
@@ -226,48 +268,41 @@ function ImagePlaceholder({ label }: Readonly<{ label: string }>) {
 }
 
 function Pagination({ currentPage, totalPages }: Readonly<{ currentPage: number; totalPages: number }>) {
-  const pages = Array.from({ length: Math.min(totalPages, 3) }, (_, index) => index + 1);
+  const pages = Array.from(new Set([1, currentPage - 1, currentPage, currentPage + 1, totalPages]))
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((left, right) => left - right);
 
   return (
     <div className="mb-24 flex items-center justify-center gap-4 px-margin-mobile">
       <Link
         aria-label="Trang trước"
         aria-disabled={currentPage <= 1}
-        className={`motion-chip flex size-11 items-center justify-center rounded-full border border-outline-variant/20 text-on-surface-variant transition-colors hover:border-primary hover:text-primary ${currentPage <= 1 ? "pointer-events-none opacity-45" : ""}`}
+        className={`motion-chip flex size-11 items-center justify-center rounded-md border border-outline-variant/60 text-on-surface-variant transition-colors hover:border-primary hover:text-primary ${currentPage <= 1 ? "pointer-events-none opacity-45" : ""}`}
         href={`/blogs?page=${Math.max(1, currentPage - 1)}`}
       >
         <ChevronLeft size={20} strokeWidth={1.8} />
       </Link>
-      {pages.map((page) => (
-        <Link
-          aria-label={`Trang ${page}`}
-          className={
-            page === currentPage
-              ? "motion-chip flex size-11 items-center justify-center rounded-full bg-primary font-semibold text-on-primary"
-              : "motion-chip flex size-11 items-center justify-center rounded-full border border-outline-variant/20 text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
-          }
-          href={`/blogs?page=${page}`}
-          key={page}
-        >
-          {page}
-        </Link>
-      ))}
-      {totalPages > 3 ? (
-        <>
-          <span className="text-on-surface-variant">...</span>
+      {pages.map((page, index) => (
+        <Fragment key={page}>
+          {index > 0 && page - pages[index - 1] > 1 ? <span aria-hidden="true" className="text-on-surface-variant">…</span> : null}
           <Link
-            aria-label={`Trang ${totalPages}`}
-            className="motion-chip flex size-11 items-center justify-center rounded-full border border-outline-variant/20 text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
-            href={`/blogs?page=${totalPages}`}
+            aria-current={page === currentPage ? "page" : undefined}
+            aria-label={`Trang ${page}`}
+            className={
+              page === currentPage
+                ? "motion-chip flex size-11 items-center justify-center rounded-md bg-primary font-semibold text-on-primary"
+                : "motion-chip flex size-11 items-center justify-center rounded-md border border-outline-variant/60 text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
+            }
+            href={`/blogs?page=${page}`}
           >
-            {totalPages}
+            {page}
           </Link>
-        </>
-      ) : null}
+        </Fragment>
+      ))}
       <Link
         aria-label="Trang sau"
         aria-disabled={currentPage >= totalPages}
-        className={`motion-chip flex size-11 items-center justify-center rounded-full border border-outline-variant/20 text-on-surface-variant transition-colors hover:border-primary hover:text-primary ${currentPage >= totalPages ? "pointer-events-none opacity-45" : ""}`}
+        className={`motion-chip flex size-11 items-center justify-center rounded-md border border-outline-variant/60 text-on-surface-variant transition-colors hover:border-primary hover:text-primary ${currentPage >= totalPages ? "pointer-events-none opacity-45" : ""}`}
         href={`/blogs?page=${Math.min(totalPages, currentPage + 1)}`}
       >
         <ChevronRight size={20} strokeWidth={1.8} />

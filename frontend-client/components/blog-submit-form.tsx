@@ -129,7 +129,7 @@ export function BlogSubmitForm() {
         </div>
 
         <button
-          className="premium-button mt-6 inline-flex items-center gap-2 rounded bg-primary px-6 py-3 font-button text-button text-on-primary transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+          className="premium-button mt-6 inline-flex min-h-11 items-center gap-2 rounded bg-primary px-6 py-3 font-button text-button text-on-primary transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
           disabled={state === "submitting"}
           type="submit"
         >

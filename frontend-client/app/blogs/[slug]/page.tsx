@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, CalendarDays, UserRound } from "lucide-react";
 
 import { PublicShell } from "@/components/public-shell";
 import { formatDate, getBlogs, getCachedBlogDetail, resolveMediaUrl, type ApiBlog } from "@/lib/api";
+import { fastImageUrl, isCloudinaryImage } from "@/lib/image";
 import { shortDescription } from "@/lib/seo";
 
 type BlogDetailPageProps = {
@@ -73,7 +74,7 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
           </Link>
 
           <span className="mb-5 inline-flex rounded-sm bg-surface-container-high px-3 py-1 font-label-caps text-label-caps uppercase text-on-primary-container">
-            Blog ForRent
+            Cẩm nang ForRent
           </span>
           <h1 className="font-display-lg-mobile text-display-lg-mobile leading-tight text-on-surface md:font-display-lg md:text-6xl">
             {post.title}
@@ -98,13 +99,14 @@ export default async function BlogDetailPage({ params }: BlogDetailPageProps) {
           <div className="relative aspect-[16/8] overflow-hidden rounded-lg shadow-soft">
             {image ? (
               <Image
-                alt={post.short_description || post.title}
+                alt={post.title}
                 className="object-cover"
                 fill
                 priority
                 quality={82}
                 sizes="(min-width: 1280px) 1280px, 100vw"
-                src={image}
+                src={fastImageUrl(image, 1600, 82)}
+                unoptimized={isCloudinaryImage(image)}
               />
             ) : (
               <ImagePlaceholder label="Chưa có ảnh bài viết" />
@@ -160,20 +162,21 @@ function RelatedPosts({ posts }: Readonly<{ posts: ApiBlog[] }>) {
             const image = resolveMediaUrl(post.thumbnail);
             return (
               <Link
-                className="group rounded-lg border border-primary/10 bg-surface-container-lowest/85 p-4 shadow-soft transition hover:-translate-y-0.5 hover:border-primary/25"
+                className="group rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-4 shadow-soft transition-colors duration-200 hover:border-primary/40"
                 href={`/blogs/${post.slug}`}
                 key={post.id}
               >
                 <div className="relative mb-5 aspect-[4/3] overflow-hidden rounded-md">
                   {image ? (
                     <Image
-                      alt={post.short_description || post.title}
-                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      alt={post.title}
+                      className="object-cover transition-transform duration-250 group-hover:scale-[1.02]"
                       fill
                       loading="lazy"
                       quality={78}
                       sizes="(min-width: 768px) 33vw, 100vw"
-                      src={image}
+                      src={fastImageUrl(image, 768, 78)}
+                      unoptimized={isCloudinaryImage(image)}
                     />
                   ) : (
                     <ImagePlaceholder label="Chưa có ảnh bài viết" />

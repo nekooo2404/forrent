@@ -40,7 +40,7 @@ from apps.rooms.services import RoomService
 
 class RoomHistoryConflict(APIException):
     status_code = status.HTTP_409_CONFLICT
-    default_detail = "Room has viewing or rental history. Archive or hide it instead."
+    default_detail = "Phòng đã có lịch sử xem hoặc thuê. Hãy chuyển phòng sang trạng thái lưu trữ."
 
 
 @method_decorator(cache_control(public=True, max_age=30), name="list")

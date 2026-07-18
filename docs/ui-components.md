@@ -298,49 +298,9 @@ toast({
 
 ## Theme System
 
-### ThemeProvider
-
-**Location:** `components/theme-provider.tsx`
-
-Context provider for dark mode support.
-
-**Setup:**
-```tsx
-import { ThemeProvider } from '@/components/theme-provider';
-
-<ThemeProvider>{children}</ThemeProvider>
-```
-
-**Usage:**
-```tsx
-import { useTheme } from '@/components/theme-provider';
-
-function MyComponent() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
-
-  return (
-    <div>
-      <button onClick={() => setTheme('light')}>Light</button>
-      <button onClick={() => setTheme('dark')}>Dark</button>
-      <button onClick={() => setTheme('system')}>System</button>
-    </div>
-  );
-}
-```
-
-### ThemeToggle
-
-**Location:** `components/theme-toggle.tsx`
-
-Pre-built theme toggle with 3 buttons (Light/Dark/System).
-
-**Usage:**
-```tsx
-import { ThemeToggle } from '@/components/theme-toggle';
-
-// In your navigation
-<ThemeToggle />
-```
+ForRent uses one light, warm-neutral theme. Use semantic surface, text, outline,
+status, and action tokens from the Tailwind configuration; do not introduce a
+runtime theme provider or per-component raw colors.
 
 ---
 
@@ -501,7 +461,7 @@ npm run storybook
 ### Styling
 
 1. **Use Tailwind classes** - avoid inline styles
-2. **Dark mode support** - use `dark:` prefix for all colored elements
+2. **Semantic colors** - use the shared surface, text, status, and action tokens
 3. **Touch targets** - add `.touch-target` or ensure min 44×44px
 4. **Focus indicators** - rely on global styles, don't override
 

@@ -12,6 +12,7 @@ coverage/
 playwright-report/
 test-results/
 storybook-static/
+output/
 
 # Python local environment and generated files
 venv/

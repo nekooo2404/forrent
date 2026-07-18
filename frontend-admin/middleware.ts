@@ -12,6 +12,7 @@ const styleAttributeSources = [
   "'sha256-AR6+SB6vXqI9ZnmFvzPZfnCWxZN0sWZ+p+jIVwvhjFk='",
   "'sha256-32t0bJPIyxns/QqsW8RE3JGUERKnHL5RygHBgJvEanc='",
   "'sha256-aqNNdDLnnrDOnTNdkJpYlAxKVJtLt9CtFLklmInuUAE='",
+  "'sha256-Ql3WwXxZeQ8kMXpFIb+I/Zv7LFnp1BOWJTEGiMRqdsE='",
 ].join(" ");
 
 function nonce() {
@@ -81,9 +82,9 @@ export function middleware(request: NextRequest) {
   const csp = [
     "default-src 'self'",
     `script-src ${scriptSources}`,
-    `style-src 'self' 'nonce-${requestNonce}' https://fonts.googleapis.com`,
+    `style-src 'self' 'nonce-${requestNonce}'`,
     `style-src-attr ${styleAttributeSources}`,
-    "font-src 'self' https://fonts.gstatic.com",
+    "font-src 'self'",
     `img-src 'self' data: blob: https://${cloudinaryHost} ${apiOrigin} ${localApiSources.join(" ")}`,
     `media-src 'self' blob: https://${cloudinaryHost} ${apiOrigin} ${localApiSources.join(" ")}`,
     `connect-src 'self' ${apiOrigin} ${sentryOrigin} ${localApiSources.join(" ")}`,

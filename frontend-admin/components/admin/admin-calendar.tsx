@@ -21,6 +21,17 @@ const timeSlotLabels: Record<string, string> = {
   afternoon: "Chiều",
   evening: "Tối",
 };
+const monthTitleFormatter = new Intl.DateTimeFormat("vi-VN", {
+  month: "long",
+  timeZone: "Asia/Ho_Chi_Minh",
+  year: "numeric",
+});
+const agendaDateFormatter = new Intl.DateTimeFormat("vi-VN", {
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: "Asia/Ho_Chi_Minh",
+  weekday: "long",
+});
 
 export function AdminCalendar() {
   const { token } = useAdminAuth();
@@ -116,7 +127,7 @@ export function AdminCalendar() {
 
       <AdminPanel
         className="mt-5"
-        title={new Intl.DateTimeFormat("vi-VN", { month: "long", year: "numeric" }).format(month)}
+        title={monthTitleFormatter.format(month)}
         toolbar={
           <div className="flex items-center gap-2">
             <button aria-label="Tháng trước" className={calendarIconButton} onClick={() => moveMonth(-1)} type="button">
@@ -139,7 +150,7 @@ export function AdminCalendar() {
                   <div className="space-y-2">
                     {items.map((appointment) => (
                       <Link
-                        className="block min-h-11 rounded-md border border-primary/10 bg-surface-container-lowest p-3 transition hover:border-primary/30"
+                        className="block min-h-11 rounded-md border border-outline-variant/70 bg-surface-container-lowest p-3 transition-colors duration-200 hover:border-primary/40"
                         href={`/admin/leads/${appointment.id}`}
                         key={appointment.id}
                       >
@@ -159,21 +170,21 @@ export function AdminCalendar() {
             </div>
             <div className="hidden md:block">
             <div className="min-w-[720px]">
-              <div className="grid grid-cols-7 border-b border-primary/10">
+              <div className="grid grid-cols-7 border-b border-outline-variant/70">
                 {weekDays.map((day) => (
                   <div className="px-2 py-3 text-center text-xs font-semibold uppercase text-secondary" key={day}>
                     {day}
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 border-l border-t border-primary/10">
+              <div className="grid grid-cols-7 border-l border-t border-outline-variant/70">
                 {calendarDays.map((day) => {
                   const dayAppointments = appointmentsByDate.get(formatDateKey(day)) ?? [];
                   const isCurrentMonth = day.getMonth() === month.getMonth();
                   const isToday = formatDateKey(day) === formatDateKey(new Date());
                   return (
                     <div
-                      className={`min-h-32 border-b border-r border-primary/10 p-2 ${isCurrentMonth ? "bg-surface-container-lowest" : "bg-surface-container-low/40"}`}
+                      className={`min-h-32 border-b border-r border-outline-variant/70 p-2 ${isCurrentMonth ? "bg-surface-container-lowest" : "bg-surface-container-low/60"}`}
                       key={formatDateKey(day)}
                     >
                       <span className={`inline-flex size-7 items-center justify-center rounded-full text-xs font-semibold ${isToday ? "bg-primary text-on-primary" : isCurrentMonth ? "text-primary" : "text-secondary"}`}>
@@ -182,7 +193,7 @@ export function AdminCalendar() {
                       <div className="mt-2 space-y-1.5">
                         {dayAppointments.map((appointment) => (
                           <Link
-                            className={`block rounded-md border border-primary/10 bg-surface-container-low px-2 py-1.5 text-xs transition hover:border-primary/30 hover:bg-surface-container ${appointment.status === "CANCELLED" || appointment.status === "NO_SHOW" ? "opacity-60" : ""}`}
+                            className={`block rounded-md border border-outline-variant/70 bg-surface-container-low px-2 py-1.5 text-xs transition-colors duration-200 hover:border-primary/40 hover:bg-surface-container ${appointment.status === "CANCELLED" || appointment.status === "NO_SHOW" ? "opacity-60" : ""}`}
                             href={`/admin/leads/${appointment.id}`}
                             key={appointment.id}
                             title={`${appointment.full_name} - ${appointment.room_title}`}
@@ -219,7 +230,7 @@ export function AdminCalendar() {
   );
 }
 
-const calendarIconButton = "inline-flex size-10 items-center justify-center rounded-md border border-primary/10 bg-surface-container-lowest text-primary transition hover:border-primary/30";
+const calendarIconButton = "inline-flex size-11 items-center justify-center rounded-md border border-outline-variant/70 bg-surface-container-lowest text-on-surface transition-colors duration-200 hover:border-primary/40 hover:text-primary";
 
 function formatDateKey(date: Date) {
   const year = date.getFullYear();
@@ -236,9 +247,5 @@ function buildCalendarDays(month: Date) {
 }
 
 function formatAgendaDate(value: string) {
-  return new Intl.DateTimeFormat("vi-VN", {
-    weekday: "long",
-    day: "2-digit",
-    month: "2-digit",
-  }).format(new Date(`${value}T00:00:00`));
+  return agendaDateFormatter.format(new Date(`${value}T00:00:00`));
 }

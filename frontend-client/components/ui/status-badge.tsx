@@ -8,7 +8,7 @@ interface StatusBadgeProps {
 const roomStatusConfig: Record<string, { label: string; className: string }> = {
   DRAFT: { label: "Bản nháp", className: "bg-surface-variant/95 text-on-surface" },
   PENDING_REVIEW: { label: "Chờ duyệt", className: "bg-warning text-on-warning" },
-  PUBLISHED: { label: "Còn trống", className: "bg-success text-on-success" },
+  PUBLISHED: { label: "Còn trống", className: "border border-tertiary/20 bg-tertiary-container text-on-tertiary-container" },
   RENTED: { label: "Đã thuê", className: "bg-surface-variant/95 text-on-surface" },
   HIDDEN: { label: "Đã ẩn", className: "bg-surface-variant/70 text-on-surface" },
   ARCHIVED: { label: "Lưu trữ", className: "bg-surface-variant/70 text-on-surface" },

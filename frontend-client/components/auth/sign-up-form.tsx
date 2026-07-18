@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
 import type { ChangeEvent, FormEvent, InputHTMLAttributes } from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { useToast } from "@/hooks/use-toast";
 import { saveAuthSession, type BrowserAuthSession } from "@/lib/auth-storage";
@@ -87,6 +87,8 @@ export function SignUpForm() {
   const [touched, setTouched] = useState<Partial<Record<keyof SignUpFields, boolean>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const registrationInFlight = useRef(false);
+  const otpInFlight = useRef(false);
   const { toast } = useToast();
   const strength = useMemo(() => passwordStrength(fields.password), [fields.password]);
 
@@ -133,6 +135,8 @@ export function SignUpForm() {
       return;
     }
 
+    if (registrationInFlight.current) return;
+    registrationInFlight.current = true;
     setIsSubmitting(true);
 
     try {
@@ -188,6 +192,7 @@ export function SignUpForm() {
         message: "Không thể kết nối hệ thống đăng ký. Vui lòng thử lại sau.",
       });
     } finally {
+      registrationInFlight.current = false;
       setIsSubmitting(false);
     }
   }
@@ -205,6 +210,8 @@ export function SignUpForm() {
       });
       return;
     }
+    if (otpInFlight.current) return;
+    otpInFlight.current = true;
     setIsSendingOtp(true);
     try {
       const response = await fetch("/api/auth/otp", {
@@ -233,12 +240,13 @@ export function SignUpForm() {
         message: "Không thể gửi mã OTP lúc này.",
       });
     } finally {
+      otpInFlight.current = false;
       setIsSendingOtp(false);
     }
   }
 
   return (
-    <div className="w-full max-w-md rounded-xl bg-surface-container-lowest p-8 shadow-elevated md:p-10">
+    <div className="w-full max-w-md rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-8 shadow-soft md:p-10">
       <div className="mb-10 text-center">
         <h1 className="mb-3 font-headline-md text-headline-md text-on-surface">Đăng ký tài khoản</h1>
         <p className="font-body-md text-body-md text-on-surface-variant">Tạo tài khoản để đặt lịch xem phòng và theo dõi yêu cầu của bạn.</p>
@@ -309,7 +317,7 @@ export function SignUpForm() {
             value={fields.otp}
           />
           <button
-            className="mt-7 rounded border border-primary px-4 py-2 font-button text-button text-primary transition-colors hover:bg-primary hover:text-on-primary disabled:cursor-wait disabled:opacity-60"
+            className="mt-7 inline-flex min-h-11 items-center justify-center rounded-md border border-primary px-4 py-2 font-button text-button text-primary transition-colors duration-200 hover:bg-primary hover:text-on-primary disabled:cursor-wait disabled:opacity-60"
             disabled={isSendingOtp}
             onClick={handleSendOtp}
             type="button"
@@ -335,7 +343,7 @@ export function SignUpForm() {
             <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-variant">
               <div className={`h-full transition-all duration-300 ${strength.className} ${strengthWidthClass(strength.width)}`} />
             </div>
-            <span className={`min-w-16 text-right text-[10px] uppercase ${strength.textClassName}`}>
+            <span className={`min-w-16 text-right text-xs font-semibold ${strength.textClassName}`}>
               {strength.label}
             </span>
           </div>
@@ -354,7 +362,7 @@ export function SignUpForm() {
         />
 
         <button
-          className="premium-button mt-4 flex w-full items-center justify-center gap-2 rounded bg-primary py-4 font-button text-button uppercase text-on-primary shadow-lg hover:opacity-90 disabled:cursor-wait disabled:opacity-70"
+          className="premium-button mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 font-button text-button uppercase text-on-primary transition-colors duration-200 hover:bg-primary/90 disabled:cursor-wait disabled:opacity-70"
           disabled={isSubmitting}
           type="submit"
         >
@@ -363,10 +371,10 @@ export function SignUpForm() {
         </button>
       </form>
 
-      <div className="mt-10 border-t border-outline-variant/10 pt-8 text-center">
+      <div className="mt-10 border-t border-outline-variant/70 pt-6 text-center">
         <p className="font-body-md text-body-md text-on-surface-variant">
           Đã có tài khoản?{" "}
-          <Link className="font-medium text-primary transition-colors hover:underline" href="/log-in">
+          <Link className="inline-flex min-h-11 items-center font-semibold text-primary transition-colors duration-200 hover:text-primary/80" href="/log-in">
             Đăng nhập
           </Link>
         </p>
@@ -382,16 +390,16 @@ function AuthInput({
 }: Readonly<InputHTMLAttributes<HTMLInputElement> & { error?: string; label: string }>) {
   return (
     <div className="relative">
-      <label className="mb-2 block font-label-caps text-label-caps uppercase text-primary" htmlFor={props.id}>
+      <label className="mb-2 block text-sm font-semibold text-on-surface" htmlFor={props.id}>
         {label}
       </label>
-      <div className="border-b border-outline-variant transition-colors focus-within:border-primary">
+      <div className="rounded-md border border-outline-variant/70 bg-surface-container-low transition-colors duration-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10">
         <input
-          className="w-full border-none bg-transparent px-0 py-2 font-body-md text-body-md text-on-surface placeholder:text-outline-variant focus:ring-0"
+          className="min-h-11 w-full rounded-md border-none bg-transparent px-3 py-3 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/70 focus:ring-0"
           {...props}
         />
       </div>
-      <p className="mt-1 min-h-4 font-body-md text-[12px] text-error">{error}</p>
+      <p className="mt-1 min-h-5 font-body-md text-xs leading-5 text-error">{error}</p>
     </div>
   );
 }

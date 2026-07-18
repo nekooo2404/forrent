@@ -44,18 +44,19 @@ class AuthService:
 
     @staticmethod
     def login(*, identifier, password):
+        invalid_credentials_message = "Email/số điện thoại hoặc mật khẩu không đúng."
         normalized_identifier = (identifier or "").strip()
         user = User.objects.filter(email__iexact=normalized_identifier).first()
         if user is None:
             user = User.objects.filter(phone=normalize_vietnamese_phone(normalized_identifier)).first()
         if user is None:
-            raise AuthenticationFailed("Invalid credentials.")
+            raise AuthenticationFailed(invalid_credentials_message)
 
         authenticated_user = authenticate(username=user.email, password=password)
         if authenticated_user is None:
-            raise AuthenticationFailed("Invalid credentials.")
+            raise AuthenticationFailed(invalid_credentials_message)
         if not authenticated_user.is_active:
-            raise AuthenticationFailed("User account is inactive.")
+            raise AuthenticationFailed("Tài khoản đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.")
 
         refresh = RefreshToken.for_user(authenticated_user)
         return {

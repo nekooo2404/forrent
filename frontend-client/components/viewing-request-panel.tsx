@@ -1,10 +1,12 @@
 "use client";
 
-import { CalendarDays, Clock, X, Info } from "lucide-react";
+import Link from "next/link";
+import { CalendarDays, CheckCircle2, Clock, Info, LoaderCircle, X } from "lucide-react";
 import type { FormEvent } from "react";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { MotionModal } from "@/components/motion";
+import { recordProductDistribution, recordProductMetric } from "@/components/product-insights";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useToast } from "@/hooks/use-toast";
 import { authFetch } from "@/lib/auth-storage";
@@ -60,11 +62,21 @@ function errorText(payload: ViewingRequestApiResponse) {
 export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequestPanelProps) {
   const [state, setState] = useState<SubmitState>("idle");
   const [formSnapshot, setFormSnapshot] = useState<{ date: string; timeSlot: ViewingTimeSlot } | null>(null);
+  const [submittedRequest, setSubmittedRequest] = useState<{ date: string; timeSlot: ViewingTimeSlot } | null>(null);
   const today = useSyncExternalStore(subscribeToDate, getTodaySnapshot, getServerTodaySnapshot);
   const { toast } = useToast();
   const confirmModalRef = useFocusTrap<HTMLDivElement>(state === "confirming" || state === "submitting");
+  const formStartedAt = useRef<number | null>(null);
+  const submissionInFlight = useRef(false);
 
   const isReady = useMemo(() => !disabled && Number.isInteger(roomId) && Number(roomId) > 0, [disabled, roomId]);
+  const metricAttributes = useMemo(
+    () => ({
+      has_room_id: Number.isInteger(roomId) && Number(roomId) > 0,
+      ...(Number.isInteger(roomId) && Number(roomId) > 0 ? { room_id: Number(roomId) } : {}),
+    }),
+    [roomId],
+  );
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -95,12 +107,14 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
       toast({
         type: "error",
         title: "Thiếu dữ liệu phòng",
-        message: "Phòng này chưa có dữ liệu backend để đặt lịch xem.",
+        message: "Phòng này chưa đủ thông tin để đặt lịch trực tuyến. Vui lòng liên hệ để được hỗ trợ.",
       });
       setState("idle");
       return;
     }
 
+    if (submissionInFlight.current) return;
+    submissionInFlight.current = true;
     setState("submitting");
 
     try {
@@ -126,14 +140,24 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
           title: "Gửi yêu cầu thất bại",
           message: nextMessage,
         });
+        recordProductMetric("viewing_request_failed", {
+          ...metricAttributes,
+          reason: response.status === 401 ? "authentication" : "api",
+        });
         return;
       }
 
       setState("idle");
+      setSubmittedRequest(formSnapshot);
+      recordProductMetric("viewing_request_submitted", metricAttributes);
+      if (formStartedAt.current !== null) {
+        recordProductDistribution("viewing_request_completion_time", performance.now() - formStartedAt.current);
+      }
+      formStartedAt.current = null;
       toast({
         type: "success",
-        title: "Đã gửi yêu cầu xem phòng",
-        message: "Yêu cầu xem phòng của bạn đã được xác nhận. Nhân viên hỗ trợ sẽ sớm liên hệ.",
+        title: "Đã ghi nhận yêu cầu",
+        message: "Nhân viên tư vấn sẽ liên hệ để xác nhận ngày và giờ xem phòng.",
       });
     } catch {
       setState("idle");
@@ -142,16 +166,19 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
         title: "Lỗi kết nối",
         message: "Không thể gửi yêu cầu xem phòng lúc này. Vui lòng thử lại sau.",
       });
+      recordProductMetric("viewing_request_failed", { ...metricAttributes, reason: "network" });
+    } finally {
+      submissionInFlight.current = false;
     }
   }
 
   return (
     <>
-      <div className="rounded-2xl border border-outline-variant/10 bg-surface-container-lowest p-6 shadow-elevated md:p-7">
+      <div className="rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-5 shadow-soft md:p-6">
         <div className="mb-6">
-          <span className="mb-2 block font-headline-sm text-headline-sm text-primary">Đặt lịch xem phòng</span>
+          <span className="mb-2 block font-headline-sm text-headline-sm text-on-surface">Đặt lịch xem phòng</span>
           {!disabled && (
-            <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <div className="mt-4 rounded-md border-l-2 border-tertiary bg-tertiary-container/50 p-4">
               <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-on-surface">
                 <Info size={16} strokeWidth={1.8} />
                 Quy trình xem phòng
@@ -179,20 +206,50 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
           )}
         </div>
 
-        <form className="space-y-6" onSubmit={handleSubmit}>
+        {submittedRequest ? (
+          <div className="rounded-md border border-tertiary/30 bg-tertiary-container/50 p-4" data-testid="viewing-request-submitted" role="status">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-tertiary" size={21} strokeWidth={1.8} />
+              <div>
+                <h3 className="font-semibold text-on-surface">Yêu cầu đã được ghi nhận</h3>
+                <p className="mt-1 text-sm leading-6 text-on-surface-variant">
+                  Lịch mong muốn: {submittedRequest.date} · {timeSlotLabels[submittedRequest.timeSlot]}. Nhân viên tư vấn sẽ liên hệ trước khi lịch được xác nhận.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <Link className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 py-3 text-sm font-semibold text-on-primary transition-colors duration-200 hover:bg-primary/90" href="/profile">
+                Theo dõi yêu cầu
+              </Link>
+              <button className="inline-flex min-h-11 items-center justify-center rounded-md border border-outline-variant px-4 py-3 text-sm font-semibold text-on-surface transition-colors duration-200 hover:bg-surface-container-low" onClick={() => setSubmittedRequest(null)} type="button">
+                Chọn lịch khác
+              </button>
+            </div>
+          </div>
+        ) : (
+        <form
+          className="space-y-5"
+          onFocusCapture={() => {
+            if (formStartedAt.current === null) {
+              formStartedAt.current = performance.now();
+              recordProductMetric("viewing_request_started", metricAttributes);
+            }
+          }}
+          onSubmit={handleSubmit}
+        >
           <div>
-            <label className="mb-2 block font-label-caps text-label-caps text-primary" htmlFor="viewing-date">
+            <label className="mb-2 block text-sm font-semibold text-on-surface" htmlFor="viewing-date">
               Ngày mong muốn
             </label>
-            <div className="relative border-b border-outline-variant transition-colors focus-within:border-gold">
+            <div className="relative">
               <CalendarDays
                 aria-hidden="true"
-                className="absolute left-0 top-1/2 -translate-y-1/2 text-secondary"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
                 size={18}
                 strokeWidth={1.8}
               />
               <input
-                className="w-full border-none bg-transparent py-2 pl-8 font-body-md text-primary focus:ring-0"
+                className="min-h-11 w-full rounded-md border border-outline-variant/70 bg-surface-container-low px-3 py-3 pl-10 text-base text-on-surface outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary/10"
                 id="viewing-date"
                 min={today || undefined}
                 name="date"
@@ -204,18 +261,18 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
           </div>
 
           <div>
-            <label className="mb-2 block font-label-caps text-label-caps text-primary" htmlFor="viewing-time">
+            <label className="mb-2 block text-sm font-semibold text-on-surface" htmlFor="viewing-time">
               Thời gian
             </label>
-            <div className="relative border-b border-outline-variant transition-colors focus-within:border-gold">
+            <div className="relative">
               <Clock
                 aria-hidden="true"
-                className="absolute left-0 top-1/2 -translate-y-1/2 text-secondary"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
                 size={18}
                 strokeWidth={1.8}
               />
               <select
-                className="w-full border-none bg-transparent py-2 pl-8 font-body-md text-primary focus:ring-0"
+                className="min-h-11 w-full rounded-md border border-outline-variant/70 bg-surface-container-low px-3 py-3 pl-10 text-base text-on-surface outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary/10"
                 defaultValue=""
                 id="viewing-time"
                 name="time_slot"
@@ -238,14 +295,16 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
               <span className="font-body-md text-body-md text-primary">Miễn phí</span>
             </div>
             <button
-              className="w-full rounded bg-primary py-4 font-button text-button text-on-primary transition-colors duration-300 hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 font-button text-button text-on-primary transition-colors duration-200 hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={!isReady || state === "submitting"}
               type="submit"
             >
-              {disabled ? "Phòng đã thuê" : "Yêu cầu xem ngay"}
+              {state === "submitting" ? <LoaderCircle aria-hidden="true" className="animate-spin" size={18} /> : null}
+              {disabled ? "Phòng đã thuê" : state === "submitting" ? "Đang gửi..." : "Yêu cầu xem ngay"}
             </button>
           </div>
         </form>
+        )}
 
       </div>
 
@@ -253,7 +312,7 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
         <MotionModal>
           <button
             aria-label="Đóng xác nhận"
-            className="absolute inset-0 bg-primary/40"
+            className="absolute inset-0 bg-on-surface/45"
             onClick={() => setState("idle")}
             type="button"
           />
@@ -261,7 +320,10 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
             aria-describedby="confirm-modal-description"
             aria-labelledby="confirm-modal-title"
             aria-modal="true"
-            className="scroll-reveal relative w-full max-w-md rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-8 shadow-elevated"
+            className="scroll-reveal relative w-full max-w-md rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-6 shadow-elevated md:p-8"
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setState("idle");
+            }}
             ref={confirmModalRef}
             role="dialog"
           >
@@ -286,7 +348,7 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
             ) : null}
             <div className="flex justify-end gap-4">
               <button
-                className="rounded border border-outline-variant px-6 py-3 font-button text-button text-primary transition-colors hover:bg-surface-container"
+                className="inline-flex min-h-11 items-center rounded-md border border-outline-variant px-6 py-3 font-button text-button text-on-surface transition-colors duration-200 hover:bg-surface-container-low"
                 disabled={state === "submitting"}
                 onClick={() => setState("idle")}
                 type="button"
@@ -294,7 +356,7 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
                 Hủy
               </button>
               <button
-                className="rounded bg-gold px-6 py-3 font-button text-button text-primary transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex min-h-11 items-center rounded-md bg-primary px-6 py-3 font-button text-button text-on-primary transition-colors duration-200 hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={state === "submitting"}
                 onClick={confirmRequest}
                 type="button"

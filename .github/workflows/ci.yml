@@ -57,6 +57,15 @@ jobs:
       - run: python scripts/check-browser-auth-storage.py
         working-directory: .
         timeout-minutes: 1
+      - run: |
+          python scripts/check-ui-ux-field-evidence.py --self-test
+          python scripts/check-ui-ux-field-evidence.py --check-docs
+          python scripts/check-ui-ux-field-evidence.py docs/releases/ui-ux-field-evidence-template.md
+          python scripts/prepare-ui-ux-release-evidence.py --self-test
+          python scripts/diagnose-production-hero.py --self-test
+          python scripts/prepare-room-photo-review.py --self-test
+        working-directory: .
+        timeout-minutes: 1
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"

@@ -83,7 +83,7 @@ export function ForgotPasswordClient() {
   }
 
   return (
-    <div className="w-full max-w-md rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-8 shadow-elevated md:p-10">
+    <div className="w-full max-w-md rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-8 shadow-soft md:p-10">
       <div className="mb-10 text-center">
         <h1 className="mb-3 font-headline-md text-headline-md text-on-surface">Quên mật khẩu</h1>
         <p className="font-body-md text-body-md text-on-surface-variant">Nhập email để nhận OTP, sau đó đặt lại mật khẩu.</p>
@@ -102,8 +102,8 @@ export function ForgotPasswordClient() {
         <SubmitButton loading={state.loading}>Đặt lại mật khẩu</SubmitButton>
       </form>
 
-      <div className="mt-8 border-t border-outline-variant/10 pt-6 text-center">
-        <Link className="font-body-md text-body-md text-primary transition-colors hover:text-gold" href="/log-in">
+      <div className="mt-8 border-t border-outline-variant/70 pt-6 text-center">
+        <Link className="inline-flex min-h-11 items-center font-body-md text-body-md font-semibold text-primary transition-colors duration-200 hover:text-primary/80" href="/log-in">
           Quay lại đăng nhập
         </Link>
       </div>
@@ -120,9 +120,9 @@ function AuthInput({
 }: Readonly<{ label: string; maxLength?: number; onChange: (value: string) => void; type?: string; value: string }>) {
   return (
     <label className="block">
-      <span className="mb-2 block font-label-caps text-label-caps uppercase text-primary">{label}</span>
+      <span className="mb-2 block text-sm font-semibold text-on-surface">{label}</span>
       <input
-        className="w-full border-0 border-b border-outline-variant bg-transparent px-0 py-3 font-body-md text-primary transition-colors focus:border-primary focus:ring-0"
+        className="min-h-11 w-full rounded-md border border-outline-variant/70 bg-surface-container-low px-3 py-3 text-base text-on-surface outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary/10"
         maxLength={maxLength}
         minLength={type === "password" ? 8 : undefined}
         onChange={(event) => onChange(event.target.value)}
@@ -138,7 +138,7 @@ function Status({ error, message }: Readonly<{ error: string; message: string }>
   if (!error && !message) return null;
   const isError = Boolean(error);
   return (
-    <div className={`flex gap-3 border p-4 ${isError ? "border-error bg-error-container/30 text-error" : "border-success/30 bg-success-container/40 text-success"}`}>
+    <div className={`flex gap-3 rounded-md border p-4 ${isError ? "border-error/40 bg-error-container text-error" : "border-tertiary/30 bg-tertiary-container text-tertiary"}`}>
       {isError ? <AlertCircle size={18} strokeWidth={1.8} /> : <CheckCircle size={18} strokeWidth={1.8} />}
       <p className="font-body-md text-sm">{error || message}</p>
     </div>
@@ -148,7 +148,7 @@ function Status({ error, message }: Readonly<{ error: string; message: string }>
 function SubmitButton({ children, loading }: Readonly<{ children: string; loading: boolean }>) {
   return (
     <button
-      className="flex w-full items-center justify-center gap-2 rounded bg-primary py-4 font-button text-button uppercase text-on-primary transition-colors hover:bg-surface-tint disabled:cursor-wait disabled:opacity-70"
+      className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 font-button text-button text-on-primary transition-colors duration-200 hover:bg-primary/90 disabled:cursor-wait disabled:opacity-70"
       disabled={loading}
       type="submit"
     >

@@ -6,6 +6,14 @@ export const STATIC_LOOKUP_REVALIDATE_SECONDS = 1800;
 export const DETAIL_REVALIDATE_SECONDS = 600;
 export const AVAILABILITY_REVALIDATE_SECONDS = 30;
 const DEFAULT_API_TIMEOUT_MS = 5000;
+const vndFormatter = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 });
+const areaFormatter = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 });
+const publicDateFormatter = new Intl.DateTimeFormat("vi-VN", {
+  day: "2-digit",
+  month: "short",
+  timeZone: "Asia/Ho_Chi_Minh",
+  year: "numeric",
+});
 
 export const API_BASE_URL =
   process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL;
@@ -86,6 +94,7 @@ export type ApiRoomSubtype = {
 export type ApiRoom = {
   id: number;
   title: string;
+  public_title?: string;
   slug: string;
   room_type: "CCMN" | "CCDV" | "HOUSE" | string;
   room_subtype: number | null;
@@ -301,7 +310,7 @@ async function apiFetch<T>(
 
   const payload = (await response.json().catch(() => null)) as ApiEnvelope<T> | null;
   if (!response.ok || !payload?.success) {
-    throw new ApiError(payload?.message || "Không thể kết nối backend.", response.status, payload?.errors);
+    throw new ApiError(payload?.message || "Không thể kết nối dịch vụ. Vui lòng thử lại.", response.status, payload?.errors);
   }
 
   return payload.data;
@@ -470,7 +479,11 @@ export function formatVnd(value: string | number, suffix = "VNĐ") {
   if (Number.isNaN(numeric)) {
     return `${value} ${suffix}`;
   }
-  return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(numeric)} ${suffix}`;
+  return `${vndFormatter.format(numeric)} ${suffix}`;
+}
+
+export function formatMonthlyVnd(value: string | number) {
+  return `${formatVnd(value)}/tháng`;
 }
 
 export function formatOptionalVnd(value?: string | number | null, fallback = "Xác nhận khi tư vấn") {
@@ -486,18 +499,14 @@ export function formatArea(value: string | number) {
   if (Number.isNaN(numeric)) {
     return `${value} m²`;
   }
-  return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 }).format(numeric)} m²`;
+  return `${areaFormatter.format(numeric)} m²`;
 }
 
 export function formatDate(value?: string | null) {
   if (!value) {
     return "Chưa công bố";
   }
-  return new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
+  return publicDateFormatter.format(new Date(value));
 }
 
 export function roomTypeLabel(value: string) {

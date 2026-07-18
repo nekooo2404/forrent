@@ -280,11 +280,11 @@ export function AdminLeadDetail({ id }: Readonly<{ id: string }>) {
                 </label>
               </div>
 
-              <div className="rounded-lg border border-primary/10 bg-surface-container-lowest p-4">
+              <div className="rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-4">
                 <p className="mb-3 text-xs font-semibold uppercase text-secondary">Xác nhận lịch xem riêng</p>
                 <div className="grid gap-3 md:grid-cols-2">
-                  <input className={adminInputClass} onChange={(event) => setAppointmentDate(event.target.value)} type="date" value={appointmentDate} />
-                  <select className={adminSelectClass} onChange={(event) => setAppointmentTimeSlot(event.target.value)} value={appointmentTimeSlot}>
+                  <input aria-label="Ngày xem đã xác nhận" className={adminInputClass} onChange={(event) => setAppointmentDate(event.target.value)} type="date" value={appointmentDate} />
+                  <select aria-label="Khung giờ xem đã xác nhận" className={adminSelectClass} onChange={(event) => setAppointmentTimeSlot(event.target.value)} value={appointmentTimeSlot}>
                     <option value="">Chọn khung giờ</option>
                     <option value="morning">Buổi sáng</option>
                     <option value="afternoon">Buổi chiều</option>

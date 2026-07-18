@@ -171,7 +171,7 @@ export function AdminSettings() {
           </button>
         }
         eyebrow="System configuration"
-        subtitle="Quản trị dữ liệu nền dùng chung cho phòng, public filter và workflow admin. Các thay đổi ghi thẳng vào backend."
+        subtitle="Quản trị dữ liệu dùng chung cho phòng, bộ lọc và quy trình vận hành."
         title="Cấu hình Hệ thống"
       />
 
@@ -179,15 +179,17 @@ export function AdminSettings() {
         <AdminInlineMessage error={error} message={message} />
       </div>
 
-      <div className="mb-6 overflow-x-auto border-b border-primary/10">
-        <div className="flex min-w-max gap-8">
+      <div className="mb-6 border-b border-outline-variant/70">
+        <div aria-label="Nhóm cài đặt" className="grid grid-cols-2 gap-x-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:gap-x-8" role="tablist">
           {tabs.map((tab) => (
             <button
-              className={`border-b-2 px-1 pb-4 text-sm font-semibold transition ${
+              aria-selected={activeTab === tab.key}
+              className={`min-h-11 border-b-2 px-2 py-3 text-left text-sm font-semibold transition ${
                 activeTab === tab.key ? "border-primary text-primary" : "border-transparent text-secondary hover:text-primary"
               }`}
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
+              role="tab"
               type="button"
             >
               {tab.label}
@@ -341,7 +343,11 @@ export function AdminSettings() {
           ) : null}
 
           {activeTab === "account" ? (
-            <AccountSecurityPanel refreshUser={refreshUser} user={user} />
+            <AccountSecurityPanel
+              key={[user.id, user.full_name, user.email, user.phone, user.date_of_birth].join(":")}
+              refreshUser={refreshUser}
+              user={user}
+            />
           ) : null}
         </>
       )}
@@ -367,7 +373,7 @@ function CityPanel(props: Readonly<{
         <form className="space-y-4" onSubmit={props.onSubmit}>
           <FormTitle editing={Boolean(props.form.id)} title="Thành phố" />
           <TextField label="Tên thành phố" onChange={(name) => props.onFormChange({ ...props.form, name })} required value={props.form.name} />
-          <TextField label="Slug" onChange={(slug) => props.onFormChange({ ...props.form, slug })} placeholder="Để trống để backend tự tạo" value={props.form.slug} />
+          <TextField label="Slug" onChange={(slug) => props.onFormChange({ ...props.form, slug })} placeholder="Để trống để hệ thống tự tạo" value={props.form.slug} />
           <ActiveCheckbox checked={props.form.is_active} onChange={(is_active) => props.onFormChange({ ...props.form, is_active })} />
           <FormActions editing={Boolean(props.form.id)} isSaving={props.isSaving} onReset={props.onReset} />
         </form>
@@ -425,7 +431,7 @@ function WardPanel(props: Readonly<{
             </select>
           </label>
           <TextField label="Tên phường" onChange={(name) => props.onFormChange({ ...props.form, name })} required value={props.form.name} />
-          <TextField label="Slug" onChange={(slug) => props.onFormChange({ ...props.form, slug })} placeholder="Để trống để backend tự tạo" value={props.form.slug} />
+          <TextField label="Slug" onChange={(slug) => props.onFormChange({ ...props.form, slug })} placeholder="Để trống để hệ thống tự tạo" value={props.form.slug} />
           <ActiveCheckbox checked={props.form.is_active} onChange={(is_active) => props.onFormChange({ ...props.form, is_active })} />
           <FormActions editing={Boolean(props.form.id)} isSaving={props.isSaving} onReset={props.onReset} />
         </form>
@@ -790,7 +796,7 @@ function AccountSecurityPanel({
         <AdminPanel title="Quên mật khẩu">
           <form className="space-y-4" onSubmit={submitPasswordReset}>
             <p className="text-sm leading-6 text-secondary">
-              Gửi email đặt lại mật khẩu qua Celery. Trong local, email được in ra console backend; trong Docker, worker lấy job từ Redis.
+              Gửi email đặt lại mật khẩu cho tài khoản. Email được xử lý trong nền và có thể mất vài phút.
             </p>
             <TextField label="Email nhận liên kết" onChange={setResetEmail} required type="email" value={resetEmail} />
             <AdminInlineMessage error={resetState.error} message={resetState.message} />
@@ -841,7 +847,7 @@ function ResourceTable<T extends { id: number; is_active: boolean }>({
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-left text-sm">
-        <thead className="border-b border-primary/10 text-xs uppercase text-secondary">
+        <thead className="border-b border-outline-variant/70 text-xs uppercase text-secondary">
           <tr>
             {columns.map((column) => (
               <th className="py-3 pr-5 font-semibold" key={column}>{column}</th>
@@ -849,7 +855,7 @@ function ResourceTable<T extends { id: number; is_active: boolean }>({
             <th className="py-3 text-right font-semibold">Thao tác</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-primary/10">
+        <tbody className="divide-y divide-outline-variant/70">
           {rows.map((row) => (
             <tr className="transition hover:bg-surface-container-low/70" key={row.id}>
               {row.cells.map((cell, index) => (
@@ -857,17 +863,18 @@ function ResourceTable<T extends { id: number; is_active: boolean }>({
               ))}
               <td className="py-4 text-right">
                 <div className="flex justify-end gap-2">
-                  <button className="rounded-md border border-primary/10 bg-surface-container-lowest p-2 text-secondary transition hover:border-primary/25 hover:text-primary" onClick={() => onEdit(row.item)} type="button">
+                  <button aria-label={`Sửa bản ghi ${row.id}`} className="inline-flex size-11 items-center justify-center rounded-md border border-outline-variant/70 bg-surface-container-lowest text-secondary transition-colors duration-200 hover:border-primary/40 hover:text-primary" onClick={() => onEdit(row.item)} type="button">
                     <Pencil size={16} strokeWidth={1.8} />
                   </button>
-                  <button className="rounded-md border border-primary/10 bg-surface-container-lowest p-2 text-secondary transition hover:border-primary/25 hover:text-primary" onClick={() => onToggleActive(row.item)} type="button">
+                  <button aria-label={`${row.item.is_active ? "Vô hiệu hóa" : "Kích hoạt"} bản ghi ${row.id}`} className="inline-flex size-11 items-center justify-center rounded-md border border-outline-variant/70 bg-surface-container-lowest text-secondary transition-colors duration-200 hover:border-primary/40 hover:text-primary" onClick={() => onToggleActive(row.item)} type="button">
                     {row.item.is_active ? <X size={16} strokeWidth={1.8} /> : <Check size={16} strokeWidth={1.8} />}
                   </button>
                   <button
-                    className={`rounded-md border p-2 transition ${
+                    aria-label={`Xóa bản ghi ${row.id}`}
+                    className={`inline-flex size-11 items-center justify-center rounded-md border transition-colors duration-200 ${
                       pendingDelete === `${path}:${row.id}`
                         ? "border-error/30 bg-error-container text-error"
-                        : "border-primary/10 bg-surface-container-lowest text-secondary hover:border-error/25 hover:text-error"
+                        : "border-outline-variant/70 bg-surface-container-lowest text-secondary hover:border-error/40 hover:text-error"
                     }`}
                     onClick={() => onDelete(row.item)}
                     type="button"

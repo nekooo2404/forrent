@@ -13,7 +13,7 @@ const ViewingRequestPanel = dynamic(
     loading: () => (
       <div
         aria-busy="true"
-        className="min-h-[360px] rounded-2xl border border-outline-variant/10 bg-surface-container-lowest p-6 shadow-elevated md:p-7"
+        className="min-h-[360px] rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-5 shadow-soft md:p-6"
       />
     ),
   },

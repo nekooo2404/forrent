@@ -1,7 +1,10 @@
 const cloudinaryUploadPath = "/image/upload/";
 const cloudinaryVideoUploadPath = "/video/upload/";
 
-function isCloudinaryImage(src: string) {
+export const ROOM_IMAGE_BLUR_DATA_URL =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6'%3E%3Crect width='8' height='6' fill='%23eee9e4'/%3E%3C/svg%3E";
+
+export function isCloudinaryImage(src: string) {
   try {
     const url = new URL(src);
     return url.hostname === "res.cloudinary.com" && url.pathname.includes(cloudinaryUploadPath);

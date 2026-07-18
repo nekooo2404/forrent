@@ -53,6 +53,13 @@ const room = {
   created_at: '2026-07-01T08:00:00Z',
   updated_at: '2026-07-10T08:00:00Z',
 };
+const heroRoomWithImage = {
+  ...room,
+  id: 2,
+  title: 'Studio gan Sakura',
+  slug: 'e2e-room-hero',
+  thumbnail_url: imageDataUrl('#3f7664'),
+};
 
 function envelope(data, message = 'OK') {
   return { success: true, message, data };
@@ -95,7 +102,7 @@ const server = http.createServer((request, response) => {
   }
   const cloudinaryRoomMatch = decodedPathname.match(/^\/api\/rooms\/(e2e-room-cloudinary)\/$/);
   const roomDetailMatch = cloudinaryRoomMatch ?? decodedPathname.match(
-    /^\/api\/rooms\/(e2e-room(?:-(?:one|many|water-meter))?|phòng-đẹp-hà-nội)\/$/,
+    /^\/api\/rooms\/(e2e-room(?:-(?:one|many|water-meter|operational-title)|-\d+)?|phòng-đẹp-hà-nội)\/$/,
   );
   if (roomDetailMatch) {
     const slug = roomDetailMatch[1];
@@ -110,6 +117,7 @@ const server = http.createServer((request, response) => {
       ...room,
       slug,
       title: slug === 'phòng-đẹp-hà-nội' ? '🎉 PHÒNG ĐẸP HÀ NỘI 🎉' : room.title,
+      ...(slug.endsWith('-operational-title') ? { title: 'P801 - KHAI TRƯƠNG SIÊU PHẨM CCMN MỚI TINH 🎉' } : {}),
       city: slug === 'phòng-đẹp-hà-nội' ? { ...city, name: 'Hà Nội' } : city,
       ...(slug.endsWith('-water-meter')
         ? { water_billing_type: 'PER_CUBIC_METER', water_price_per_cubic_meter: '25000' }
@@ -121,24 +129,57 @@ const server = http.createServer((request, response) => {
   }
   if (url.pathname === '/api/rooms/') {
     const search = url.searchParams.get('search');
+    if (!search && url.searchParams.get('status') === 'PUBLISHED') {
+      sendJson(response, 200, envelope({
+        count: 2,
+        next: null,
+        previous: null,
+        results: [room, heroRoomWithImage],
+      }));
+      return;
+    }
     if (search === 'visual-empty') {
       sendJson(response, 200, envelope({ count: 0, next: null, previous: null, results: [] }));
       return;
     }
-    if (search === 'visual-12') {
-      const rooms = Array.from({ length: 12 }, (_, index) => ({
+    if (search === 'visual-12' || search === 'pagination-125') {
+      const roomCount = search === 'pagination-125' ? 125 : 12;
+      const rooms = Array.from({ length: roomCount }, (_, index) => ({
         ...room,
         id: index + 1,
         slug: `e2e-room-${index + 1}`,
         title: `Can ho dich vu ${index + 1}`,
       }));
-      sendJson(response, 200, envelope({ count: rooms.length, next: null, previous: null, results: rooms }));
+      const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
+      const pageSize = Math.max(1, Number(url.searchParams.get('page_size')) || 6);
+      const offset = (page - 1) * pageSize;
+      sendJson(response, 200, envelope({
+        count: rooms.length,
+        next: offset + pageSize < rooms.length ? `?page=${page + 1}` : null,
+        previous: page > 1 ? `?page=${page - 1}` : null,
+        results: rooms.slice(offset, offset + pageSize),
+      }));
       return;
     }
     sendJson(response, 200, envelope({ count: 1, next: null, previous: null, results: [room] }));
     return;
   }
   if (url.pathname === '/api/blogs/') {
+    if (url.searchParams.get('page') === '4') {
+      const posts = Array.from({ length: 7 }, (_, index) => ({
+        id: index + 22,
+        slug: `cam-nang-${index + 22}`,
+        title: `Cam nang thue phong ${index + 22}`,
+        short_description: 'Kinh nghiem thue phong thuc te.',
+        content: 'Noi dung cam nang thue phong.',
+        author_name: 'ForRent',
+        thumbnail: null,
+        published_at: '2026-07-10T08:00:00Z',
+        created_at: '2026-07-10T08:00:00Z',
+      }));
+      sendJson(response, 200, envelope({ count: 28, next: null, previous: '?page=3', results: posts }));
+      return;
+    }
     sendJson(response, 200, envelope({ count: 0, next: null, previous: null, results: [] }));
     return;
   }
