@@ -3,7 +3,6 @@ import { cache } from "react";
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
 export const PUBLIC_REVALIDATE_SECONDS = 300;
 export const STATIC_LOOKUP_REVALIDATE_SECONDS = 1800;
-export const DETAIL_REVALIDATE_SECONDS = 600;
 export const AVAILABILITY_REVALIDATE_SECONDS = 30;
 const DEFAULT_API_TIMEOUT_MS = 5000;
 const vndFormatter = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 });
@@ -345,11 +344,11 @@ export async function getRoomFilters() {
 }
 
 export async function getBlogs(params?: { page?: number; page_size?: number; search?: string; ordering?: string }) {
-  return apiFetch<Paginated<ApiBlog>>("/api/blogs/", { next: { revalidate: PUBLIC_REVALIDATE_SECONDS } }, params);
+  return apiFetch<Paginated<ApiBlog>>("/api/blogs/", { cache: "no-store" }, params);
 }
 
 export async function getBlogDetail(slug: string) {
-  return apiFetch<ApiBlog>(`/api/blogs/${encodeURIComponent(slug)}/`, { next: { revalidate: DETAIL_REVALIDATE_SECONDS } });
+  return apiFetch<ApiBlog>(`/api/blogs/${encodeURIComponent(slug)}/`, { cache: "no-store" });
 }
 
 export async function createTenantBlog(payload: TenantBlogPayload, authorization?: string | null) {

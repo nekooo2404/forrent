@@ -41,3 +41,21 @@ def test_anonymous_user_cannot_submit_blog():
     )
 
     assert response.status_code == 401
+
+
+@pytest.mark.django_db
+def test_public_list_returns_published_blog_without_cacheable_response():
+    author = create_user()
+    blog = Blog.objects.create(
+        author=author,
+        content="Noi dung huong dan thue phong.",
+        short_description="Kinh nghiem thue phong.",
+        status=Blog.Status.PUBLISHED,
+        title="Cam nang thue phong Ha Noi",
+    )
+
+    response = APIClient().get("/api/blogs/")
+
+    assert response.status_code == 200
+    assert response.json()["data"]["results"][0]["id"] == blog.id
+    assert "no-store" in response.headers["Cache-Control"]
