@@ -73,7 +73,15 @@ const config: Config = {
         "margin-desktop": "24px",
       },
       fontFamily: {
-        sans: ["var(--font-open-sans)", "sans-serif"],
+        sans: ["var(--font-body)", "sans-serif"],
+        "body-lg": ["var(--font-body)", "sans-serif"],
+        button: ["var(--font-body)", "sans-serif"],
+        "body-md": ["var(--font-body)", "sans-serif"],
+        "label-caps": ["var(--font-body)", "sans-serif"],
+        "display-lg": ["var(--font-display)", "serif"],
+        "display-lg-mobile": ["var(--font-display)", "serif"],
+        "headline-sm": ["var(--font-display)", "serif"],
+        "headline-md": ["var(--font-display)", "serif"],
       },
       fontSize: {
         "display-lg": ["52px", { lineHeight: "1.12", letterSpacing: "0", fontWeight: "800" }],

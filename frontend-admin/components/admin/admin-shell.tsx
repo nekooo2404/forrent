@@ -186,7 +186,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
 
         <div className="flex min-h-[100dvh]">
           <aside
-            className={`sticky top-0 hidden h-[100dvh] shrink-0 border-r border-outline-variant/70 bg-surface-container-lowest transition-[width] duration-200 lg:block ${
+            className={`sticky top-0 hidden h-[100dvh] shrink-0 border-r border-outline-variant/70 bg-surface-container-low lg:block ${
               isSidebarCollapsed ? "w-[88px]" : "w-[284px]"
             }`}
           >
@@ -322,10 +322,10 @@ function SidebarContent({
           const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
           return (
             <Link
-              className={`group flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium transition ${
+              className={`group flex items-center gap-3 rounded-md border-l-2 px-3 py-3 text-sm font-medium transition-colors duration-200 ${
                 isActive
-                  ? "bg-primary text-on-primary shadow-soft"
-                  : "text-secondary hover:bg-surface-container-lowest hover:text-primary"
+                  ? "border-primary bg-primary-container text-on-primary-container"
+                  : "border-transparent text-secondary hover:bg-surface-container-lowest hover:text-on-surface"
               } ${collapsed ? "justify-center" : ""}`}
               href={item.href}
               key={item.href}

@@ -4,6 +4,7 @@ import pytest
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.rooms.models import Room, RoomImage
 from apps.rooms.tests.factories import create_admin, create_room, create_user
 from apps.viewing_requests.models import ViewingRequest
 from apps.commissions.models import CommissionPayout
@@ -14,6 +15,45 @@ from apps.common.models import AuditLog
 class TestCommissionAPI:
     def setup_method(self):
         self.client = APIClient()
+
+    def test_dashboard_summary_exposes_work_queue_counts(self):
+        admin = create_admin()
+        tenant = create_user()
+        ready_room = create_room(created_by=admin)
+        draft_room = create_room(created_by=admin, status=Room.Status.DRAFT)
+        RoomImage.objects.create(
+            room=ready_room,
+            image_url="https://res.cloudinary.com/demo/image/upload/v1/ready-room.jpg",
+            media_type=RoomImage.MediaType.IMAGE,
+        )
+        ViewingRequest.objects.create(
+            user=tenant,
+            room=ready_room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
+            appointment_date=timezone.localdate(),
+            appointment_time_slot="morning",
+        )
+        ViewingRequest.objects.create(
+            user=tenant,
+            room=draft_room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+            status=ViewingRequest.Status.NEW,
+        )
+        self.client.force_authenticate(admin)
+
+        response = self.client.get("/api/admin/dashboard/summary/")
+
+        assert response.status_code == 200
+        data = response.data["data"]
+        assert data["today_appointments"] == 1
+        assert data["leads_not_contacted"] == 1
+        assert data["rooms_needing_update"] == 1
+        assert data["media_needing_review"] == 1
 
     def test_confirm_moved_in_creates_pending_payout_record(self):
         tenant = create_user()

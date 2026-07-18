@@ -388,6 +388,28 @@ class TestRoomAPI:
         assert media.media_type == RoomImage.MediaType.VIDEO
         assert media.image.name.startswith("room-videos/")
 
+    def test_admin_can_label_room_media_for_renter_facing_gallery(self):
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        media = RoomImage.objects.create(
+            room=room,
+            image_url="https://res.cloudinary.com/demo/image/upload/v1/room-kitchen.jpg",
+            media_type=RoomImage.MediaType.IMAGE,
+        )
+        self.client.force_authenticate(admin)
+
+        response = self.client.patch(
+            f"/api/admin/rooms/{room.id}/images/{media.id}/",
+            {"label": "KITCHEN"},
+            format="json",
+        )
+        public_response = self.client.get(f"/api/rooms/{room.slug}/")
+
+        assert response.status_code == 200
+        assert response.data["data"]["label"] == "KITCHEN"
+        assert public_response.data["data"]["images"][0]["label"] == "KITCHEN"
+        assert AuditLog.objects.filter(event="room.image_updated", target_id=str(room.id)).exists()
+
     def test_admin_rejected_room_upload_writes_audit_log(self):
         admin = create_admin()
         room = create_room(created_by=admin)

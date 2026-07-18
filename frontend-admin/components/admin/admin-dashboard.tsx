@@ -1,7 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Building2, CalendarClock, CircleDollarSign, Mail, Newspaper, Sparkles, UsersRound } from "lucide-react";
+import {
+  ArrowRight,
+  Building2,
+  CalendarClock,
+  CalendarDays,
+  CircleDollarSign,
+  ImageOff,
+  Mail,
+  Newspaper,
+  PhoneCall,
+  RefreshCcw,
+  UsersRound,
+  WalletCards,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -85,6 +98,36 @@ export function AdminDashboard() {
   const commission = state.commission;
   const statusCounts = summary?.status_counts ?? {};
   const totalRequestStatusCount = Math.max(summary?.total_viewing_requests ?? 0, 1);
+  const workQueue = [
+    {
+      caption: "Liên hệ và xác nhận nhu cầu",
+      href: "/admin/leads?status=NEW",
+      icon: <PhoneCall size={19} strokeWidth={1.8} />,
+      label: "Yêu cầu chưa liên hệ",
+      value: summary?.leads_not_contacted ?? 0,
+    },
+    {
+      caption: "Theo dõi lịch đã xác nhận",
+      href: "/admin/calendar",
+      icon: <CalendarDays size={19} strokeWidth={1.8} />,
+      label: "Lịch xem hôm nay",
+      value: summary?.today_appointments ?? 0,
+    },
+    {
+      caption: "Hoàn thiện trước khi hiển thị",
+      href: "/admin/rooms",
+      icon: <RefreshCcw size={19} strokeWidth={1.8} />,
+      label: "Phòng cần cập nhật",
+      value: summary?.rooms_needing_update ?? 0,
+    },
+    {
+      caption: "Bổ sung hoặc sửa ảnh/video",
+      href: "/admin/rooms",
+      icon: <ImageOff size={19} strokeWidth={1.8} />,
+      label: "Media cần kiểm tra",
+      value: summary?.media_needing_review ?? 0,
+    },
+  ];
 
   return (
     <div>
@@ -108,6 +151,34 @@ export function AdminDashboard() {
 
       <AdminInlineMessage error={state.error} />
 
+      <section className="mb-7" data-work-queue>
+        <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase text-secondary">Ưu tiên hôm nay</p>
+            <h2 className="mt-1 font-headline-sm text-2xl text-on-surface">Việc cần xử lý</h2>
+          </div>
+          <p className="text-sm text-secondary">Mở từng hàng đợi để xử lý theo mức độ khẩn cấp.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {workQueue.map((item) => (
+            <Link
+              className="group flex min-h-28 items-start justify-between gap-4 rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-4 shadow-soft transition-colors duration-200 hover:border-primary/40 hover:bg-surface-container-low"
+              href={item.href}
+              key={item.label}
+            >
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-on-surface">{item.label}</span>
+                <span className="mt-1 block text-xs leading-5 text-secondary">{item.caption}</span>
+              </span>
+              <span className="flex shrink-0 flex-col items-end gap-3">
+                <span className="grid size-9 place-items-center rounded-md bg-primary-container text-primary">{item.icon}</span>
+                <span className="text-2xl font-bold tabular-nums text-on-surface">{item.value}</span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       <section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <AdminStatCard
           caption={`${summary?.active_rooms ?? 0} phòng đang mở bán/cho thuê`}
@@ -129,7 +200,7 @@ export function AdminDashboard() {
         />
         <AdminStatCard
           caption="Hoa hồng đã ghi nhận từ khách chuyển vào"
-          icon={<Sparkles size={20} strokeWidth={1.8} />}
+          icon={<WalletCards size={20} strokeWidth={1.8} />}
           label="Hoa hồng đã ghi nhận"
           value={formatAdminVnd(summary?.total_received_commission ?? 0)}
         />

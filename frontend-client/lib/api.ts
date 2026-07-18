@@ -127,6 +127,8 @@ export type ApiRoomImage = {
   image: string | null;
   image_url: string;
   media_type: "IMAGE" | "VIDEO";
+  label: "OVERVIEW" | "SLEEPING_AREA" | "KITCHEN" | "BATHROOM" | "BALCONY" | "VIDEO_TOUR" | "OTHER" | "";
+  label_display: string;
   sort_order: number;
   created_at: string;
 };

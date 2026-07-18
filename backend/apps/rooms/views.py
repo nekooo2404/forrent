@@ -27,6 +27,7 @@ from apps.rooms.filters import RoomFilter
 from apps.rooms.models import DepositType, Room, RoomSubtype
 from apps.rooms.selectors import admin_rooms_queryset, public_room_details_queryset, public_rooms_queryset
 from apps.rooms.serializers import (
+    AdminRoomImageWriteSerializer,
     AdminRoomSerializer,
     DepositTypeSerializer,
     PublicRoomDetailSerializer,
@@ -188,9 +189,16 @@ class AdminRoomViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
         room = self.get_object()
         image = room.images.get(pk=image_id)
         if request.method == "PATCH":
-            image.sort_order = request.data.get("sort_order", image.sort_order)
-            image.save(update_fields=["sort_order"])
-            audit_event("room.image_reordered", request=request, target=room, metadata={"image_id": image.id})
+            serializer = AdminRoomImageWriteSerializer(image, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            changed_fields = sorted(serializer.validated_data)
+            image = serializer.save()
+            audit_event(
+                "room.image_updated",
+                request=request,
+                target=room,
+                metadata={"image_id": image.id, "fields": changed_fields},
+            )
             return success_response(data=RoomImageSerializer(image, context=self.get_serializer_context()).data)
         image.delete()
         audit_event("room.image_deleted", request=request, target=room, metadata={"image_id": image_id})

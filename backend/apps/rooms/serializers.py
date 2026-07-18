@@ -71,9 +71,11 @@ class RoomSubtypeSerializer(serializers.ModelSerializer):
 
 
 class RoomImageSerializer(serializers.ModelSerializer):
+    label_display = serializers.CharField(source="get_label_display", read_only=True)
+
     class Meta:
         model = RoomImage
-        fields = ("id", "image", "image_url", "media_type", "sort_order", "created_at")
+        fields = ("id", "image", "image_url", "media_type", "label", "label_display", "sort_order", "created_at")
         read_only_fields = ("id", "created_at")
 
 
@@ -155,11 +157,13 @@ class PublicRoomDetailSerializer(PublicRoomListSerializer):
 class AdminRoomImageWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = RoomImage
-        fields = ("image", "image_url", "media_type", "sort_order")
+        fields = ("image", "image_url", "media_type", "label", "sort_order")
         read_only_fields = ("media_type",)
 
     def validate(self, attrs):
-        if not attrs.get("image") and not attrs.get("image_url"):
+        image = attrs.get("image", getattr(self.instance, "image", None))
+        image_url = attrs.get("image_url", getattr(self.instance, "image_url", ""))
+        if not image and not image_url:
             raise serializers.ValidationError("Either image or image_url is required.")
         return attrs
 

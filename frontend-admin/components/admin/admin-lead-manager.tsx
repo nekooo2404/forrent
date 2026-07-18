@@ -47,8 +47,9 @@ const leadStatuses = [
 const editableLeadStatuses = leadStatuses.filter((item) => item.value && item.value !== "CONVERTED");
 const pageSize = 20;
 
-export function AdminLeadManager() {
+export function AdminLeadManager({ initialStatus = "" }: Readonly<{ initialStatus?: string }>) {
   const { token } = useAdminAuth();
+  const safeInitialStatus = leadStatuses.some((item) => item.value === initialStatus) ? initialStatus : "";
   const [leads, setLeads] = useState<AdminViewingRequest[]>([]);
   const [cities, setCities] = useState<AdminCity[]>([]);
   const [wards, setWards] = useState<AdminWard[]>([]);
@@ -56,7 +57,7 @@ export function AdminLeadManager() {
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(safeInitialStatus);
   const [city, setCity] = useState("");
   const [ward, setWard] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -106,7 +107,8 @@ export function AdminLeadManager() {
   }
 
   useEffect(() => {
-    loadLeads("", "", 1);
+    setStatus(safeInitialStatus);
+    loadLeads("", safeInitialStatus, 1);
     Promise.all([
       adminList<AdminCity>("cities", token, { page_size: 100, ordering: "name" }),
       adminList<AdminWard>("wards", token, { page_size: 100, ordering: "name" }),
@@ -119,7 +121,7 @@ export function AdminLeadManager() {
       })
       .catch(() => null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [safeInitialStatus, token]);
 
   const statusCounts = useMemo(() => {
     return leads.reduce<Record<string, number>>((accumulator, lead) => {

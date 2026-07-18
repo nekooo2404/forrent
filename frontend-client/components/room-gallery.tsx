@@ -9,6 +9,8 @@ import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { fastImageUrl, fastVideoUrl, videoPosterUrl } from "@/lib/image";
 
 export type RoomGalleryMedia = Readonly<{
+  label?: string;
+  labelText?: string;
   src: string;
   type: "image" | "video";
 }>;
@@ -25,8 +27,10 @@ const galleryMediaLoads = new Map<string, Promise<void>>();
 export function RoomGallery({ altText, media, title }: RoomGalleryProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [pendingIndex, setPendingIndex] = useState<number | null>(null);
+  const [failedIndex, setFailedIndex] = useState<number | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [isActiveMediaLoading, setIsActiveMediaLoading] = useState(false);
+  const [reloadVersion, setReloadVersion] = useState(0);
   const transitionId = useRef(0);
   const pointerStartX = useRef<number | null>(null);
   const activeMedia = activeIndex === null ? null : media[activeIndex];
@@ -39,8 +43,10 @@ export function RoomGallery({ altText, media, title }: RoomGalleryProps) {
     transitionId.current += 1;
     setActiveIndex(null);
     setPendingIndex(null);
+    setFailedIndex(null);
     setLoadError(false);
     setIsActiveMediaLoading(false);
+    setReloadVersion(0);
   }, []);
 
   const showIndex = useCallback(async (index: number | null) => {
@@ -48,6 +54,7 @@ export function RoomGallery({ altText, media, title }: RoomGalleryProps) {
 
     const requestId = ++transitionId.current;
     setPendingIndex(index);
+    setFailedIndex(null);
     setLoadError(false);
 
     try {
@@ -55,9 +62,13 @@ export function RoomGallery({ altText, media, title }: RoomGalleryProps) {
       if (transitionId.current === requestId) {
         setActiveIndex(index);
         setIsActiveMediaLoading(media[index].type === "video");
+        setReloadVersion(0);
       }
     } catch {
-      if (transitionId.current === requestId) setLoadError(true);
+      if (transitionId.current === requestId) {
+        setFailedIndex(index);
+        setLoadError(true);
+      }
     } finally {
       if (transitionId.current === requestId) setPendingIndex(null);
     }
@@ -106,9 +117,23 @@ export function RoomGallery({ altText, media, title }: RoomGalleryProps) {
   const openGallery = (index: number) => {
     transitionId.current += 1;
     setPendingIndex(null);
+    setFailedIndex(null);
     setLoadError(false);
     setIsActiveMediaLoading(media[index]?.type === "video");
+    setReloadVersion(0);
     setActiveIndex(index);
+  };
+
+  const retryFailedMedia = () => {
+    const targetIndex = failedIndex;
+    setLoadError(false);
+    setFailedIndex(null);
+    if (targetIndex !== null && targetIndex !== activeIndex) {
+      void showIndex(targetIndex);
+      return;
+    }
+    setIsActiveMediaLoading(true);
+    setReloadVersion((current) => current + 1);
   };
 
   return (
@@ -177,6 +202,9 @@ export function RoomGallery({ altText, media, title }: RoomGalleryProps) {
               <ChevronLeft size={26} strokeWidth={1.8} />
             </button>
           ) : null}
+          <p className="absolute left-1/2 top-4 z-20 max-w-[calc(100%-9rem)] -translate-x-1/2 truncate rounded-md border border-inverse-on-surface/20 bg-inverse-surface/80 px-3 py-2 text-sm font-semibold">
+            {mediaSemanticLabel(activeMedia, activeIndex)}
+          </p>
 
           <div
             className="relative mx-auto h-full max-w-6xl touch-pan-y select-none pb-14 md:px-16 md:pb-24"
@@ -203,28 +231,35 @@ export function RoomGallery({ altText, media, title }: RoomGalleryProps) {
                 aria-label={`${mediaDescription}, video ${activeIndex + 1}`}
                 className="h-full w-full object-contain"
                 controls
-                key={`${activeIndex}-${activeMedia.src}`}
+                key={`${activeIndex}-${activeMedia.src}-${reloadVersion}`}
                 playsInline
                 poster={videoPosterUrl(activeMedia.src, modalMediaWidth)}
                 preload="auto"
-                src={fastVideoUrl(activeMedia.src)}
+                src={withRetryVersion(fastVideoUrl(activeMedia.src), reloadVersion)}
                 onCanPlay={() => setIsActiveMediaLoading(false)}
                 onError={() => {
                   setIsActiveMediaLoading(false);
+                  setFailedIndex(activeIndex);
                   setLoadError(true);
                 }}
               />
             ) : (
               <img
-                alt={`${mediaDescription}, ảnh ${activeIndex + 1}`}
+                alt={`${mediaSemanticLabel(activeMedia, activeIndex)} của ${mediaDescription}`}
                 className="h-full w-full object-contain"
                 decoding="async"
                 draggable={false}
                 height={900}
-                onError={() => setLoadError(true)}
+                key={`${activeIndex}-${activeMedia.src}-${reloadVersion}`}
+                onError={() => {
+                  setIsActiveMediaLoading(false);
+                  setFailedIndex(activeIndex);
+                  setLoadError(true);
+                }}
+                onLoad={() => setIsActiveMediaLoading(false)}
                 sizes="100vw"
-                src={modalImageUrl(activeMedia.src)}
-                srcSet={imageSrcSet(activeMedia.src)}
+                src={withRetryVersion(modalImageUrl(activeMedia.src), reloadVersion)}
+                srcSet={reloadVersion ? undefined : imageSrcSet(activeMedia.src)}
                 width={modalMediaWidth}
               />
             )}
@@ -241,9 +276,17 @@ export function RoomGallery({ altText, media, title }: RoomGalleryProps) {
           ) : null}
 
           {loadError ? (
-            <p className="absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 rounded-md bg-error px-4 py-3 text-sm font-semibold text-on-error" role="alert">
-              Không tải được nội dung. Vui lòng thử lại.
-            </p>
+            <div className="absolute left-1/2 top-1/2 z-30 w-[min(22rem,calc(100%-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-lg border border-inverse-on-surface/20 bg-inverse-surface p-5 text-center shadow-lg" role="alert">
+              <p className="text-sm font-semibold text-inverse-on-surface">Không tải được nội dung. Kết nối có thể đang gián đoạn.</p>
+              <div className="mt-4 flex justify-center gap-2">
+                <button className="min-h-11 rounded-md bg-inverse-primary px-4 py-2 text-sm font-semibold text-inverse-surface" onClick={retryFailedMedia} type="button">
+                  Thử lại
+                </button>
+                <button className="min-h-11 rounded-md border border-inverse-on-surface/30 px-4 py-2 text-sm font-semibold" onClick={closeGallery} type="button">
+                  Đóng
+                </button>
+              </div>
+            </div>
           ) : null}
 
           {media.length > 1 ? (
@@ -303,7 +346,8 @@ function GalleryTile({ badge, className, index, item, onClick, priority, title }
   const videoRef = useRef<HTMLVideoElement>(null);
   const width = priority ? modalMediaWidth : 768;
   const quality = 78;
-  const imageAlt = `${title} - ${index === 0 ? "ảnh chính" : `ảnh ${index + 1}`}`;
+  const semanticLabel = mediaSemanticLabel(item, index);
+  const imageAlt = `${semanticLabel} của ${title}`;
 
   useEffect(() => {
     if (item.type === "image") {
@@ -337,6 +381,9 @@ function GalleryTile({ badge, className, index, item, onClick, priority, title }
       type="button"
     >
       {!isLoaded && !hasError ? <span aria-hidden="true" className="absolute inset-0 skeleton-shimmer" /> : null}
+      <span className="absolute left-3 top-3 z-10 max-w-[calc(100%-1.5rem)] truncate rounded-md border border-outline-variant/30 bg-surface-container-lowest/90 px-2.5 py-1 text-xs font-semibold text-on-surface shadow-soft">
+        {semanticLabel}
+      </span>
       {item.type === "video" ? (
         <>
           <video
@@ -399,11 +446,12 @@ function FilmstripButton({ active, disabled, index, item, onClick }: Readonly<{
   onClick: () => void;
 }>) {
   const poster = item.type === "video" ? videoPosterUrl(item.src, 160) : fastImageUrl(item.src, 160, 70);
+  const label = mediaSemanticLabel(item, index);
 
   return (
     <button
       aria-current={active ? "true" : undefined}
-      aria-label={`Xem ${item.type === "video" ? "video" : "ảnh"} ${index + 1}`}
+      aria-label={`Xem ${label}`}
       className={`relative h-14 w-20 shrink-0 overflow-hidden rounded border-2 transition ${active ? "border-inverse-primary" : "border-transparent opacity-70 hover:opacity-100"}`}
       disabled={disabled}
       onClick={onClick}
@@ -421,6 +469,7 @@ function FilmstripButton({ active, disabled, index, item, onClick }: Readonly<{
           <Play aria-hidden="true" fill="currentColor" size={16} />
         </span>
       ) : null}
+      <span className="sr-only">{label}</span>
     </button>
   );
 }
@@ -436,6 +485,23 @@ function mediaCountLabel(media: readonly RoomGalleryMedia[]) {
   const imageCount = media.filter((item) => item.type === "image").length;
   const videoCount = media.length - imageCount;
   return [imageCount ? `${imageCount} ảnh` : "", videoCount ? `${videoCount} video` : ""].filter(Boolean).join(" · ");
+}
+
+const mediaLabels: Record<string, string> = {
+  OVERVIEW: "Toàn cảnh",
+  SLEEPING_AREA: "Góc ngủ",
+  KITCHEN: "Bếp",
+  BATHROOM: "WC",
+  BALCONY: "Ban công",
+  VIDEO_TOUR: "Video tham quan",
+  OTHER: "Góc khác",
+};
+
+function mediaSemanticLabel(item: RoomGalleryMedia, index: number) {
+  if (item.labelText) return item.labelText;
+  if (item.label && mediaLabels[item.label]) return mediaLabels[item.label];
+  if (item.type === "video") return "Video tham quan";
+  return index === 0 ? "Toàn cảnh" : `Góc phòng ${index + 1}`;
 }
 
 function galleryTileClass(total: number, index: number) {
@@ -466,6 +532,12 @@ function imageSrcSet(src: string) {
   return new Set(urls).size > 1
     ? urls.map((url, index) => `${url} ${widths[index]}w`).join(", ")
     : undefined;
+}
+
+function withRetryVersion(url: string, version: number) {
+  if (!version) return url;
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}retry=${version}`;
 }
 
 function preloadGalleryMedia(item?: RoomGalleryMedia) {

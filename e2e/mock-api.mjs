@@ -13,6 +13,7 @@ const roomImages = ['#9a5b31', '#3f7664', '#b78348'].map((color, index) => ({
   image: null,
   image_url: imageDataUrl(color),
   media_type: 'IMAGE',
+  label: ['OVERVIEW', 'SLEEPING_AREA', 'BATHROOM'][index],
   sort_order: index,
   created_at: '2026-07-01T08:00:00Z',
 }));
@@ -23,6 +24,7 @@ const cloudinaryRoomImages = Array.from({ length: 3 }, (_, index) => ({
     ? 'https://res.cloudinary.com/forrent-test/video/upload/v1/e2e-room-tour.mp4'
     : `https://res.cloudinary.com/forrent-test/image/upload/v1/e2e-room-${index + 1}.jpg`,
   media_type: index === 2 ? 'VIDEO' : 'IMAGE',
+  label: ['OVERVIEW', 'KITCHEN', 'VIDEO_TOUR'][index],
   sort_order: index,
   created_at: '2026-07-01T08:00:00Z',
 }));

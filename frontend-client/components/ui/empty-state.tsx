@@ -18,8 +18,8 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, description, action, secondaryAction }: Readonly<EmptyStateProps>) {
   return (
-    <div className="rounded-lg border border-dashed border-outline-variant/60 bg-surface-container-lowest p-8 text-center shadow-soft md:p-10">
-      {icon && <div className="mb-4 flex justify-center text-secondary">{icon}</div>}
+    <div className="rounded-lg border border-outline-variant/60 bg-surface-container-lowest p-7 text-center shadow-soft md:p-9">
+      {icon && <div className="mx-auto mb-4 grid size-12 place-items-center rounded-full bg-surface-container text-secondary">{icon}</div>}
       <h2 className="font-headline-sm text-headline-sm text-on-surface">{title}</h2>
       <p className="mx-auto mt-3 max-w-md font-body-md text-body-md leading-relaxed text-on-surface-variant">{description}</p>
       {(action || secondaryAction) && (
@@ -30,7 +30,7 @@ export function EmptyState({ icon, title, description, action, secondaryAction }
                 <Link
                   className={`premium-button inline-flex min-h-11 items-center justify-center rounded-md px-5 py-3 font-button text-button ${
                     action.variant === "secondary"
-                      ? "border border-primary px-5 py-3 text-primary"
+                      ? "border border-outline-variant/70 px-5 py-3 text-on-surface hover:bg-surface-container-low"
                       : "urban-cta"
                   }`}
                   href={action.href}
@@ -41,7 +41,7 @@ export function EmptyState({ icon, title, description, action, secondaryAction }
                 <button
                   className={`premium-button inline-flex min-h-11 items-center justify-center rounded-md px-5 py-3 font-button text-button ${
                     action.variant === "secondary"
-                      ? "border border-primary px-5 py-3 text-primary"
+                      ? "border border-outline-variant/70 px-5 py-3 text-on-surface hover:bg-surface-container-low"
                       : "urban-cta"
                   }`}
                   onClick={action.onClick}

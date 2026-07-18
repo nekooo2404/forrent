@@ -138,7 +138,7 @@ test('axe accessibility audit passes on the gallery modal', async ({ page }, tes
   test.skip(testInfo.project.name !== 'chromium', 'Run axe once in the desktop Chromium project.');
 
   await page.goto('/rooms/e2e-room-many');
-  await page.getByRole('button', { name: /Xem .*ảnh chính/ }).click();
+  await page.getByRole('button', { name: /Xem Toàn cảnh/ }).click();
   const dialog = page.getByRole('dialog', { name: /Thư viện ảnh và video/ });
   await expect(dialog).toBeVisible();
   const results = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();

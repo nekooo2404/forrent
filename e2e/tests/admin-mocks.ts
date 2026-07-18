@@ -37,6 +37,10 @@ export async function mockAdminDashboard(page: Page) {
           active_rooms: 18,
           total_viewing_requests: 42,
           total_new_leads: 7,
+          today_appointments: 3,
+          leads_not_contacted: 7,
+          rooms_needing_update: 6,
+          media_needing_review: 2,
           total_moved_in_leads: 11,
           total_estimated_commission: 128000000,
           total_received_commission: 72000000,
@@ -103,6 +107,24 @@ export async function mockAdminDashboard(page: Page) {
   );
 }
 
+export async function mockAdminCalendar(page: Page) {
+  await mockAdminSession(page);
+  await page.route('**/api/admin/viewing-requests**', (route) =>
+    route.fulfill({
+      json: adminList([
+        {
+          id: 301,
+          full_name: 'Nguyen Van A',
+          room_title: 'Studio Sakura',
+          status: 'SCHEDULED',
+          appointment_date: '2026-07-18',
+          appointment_time_slot: 'morning',
+        },
+      ]),
+    }),
+  );
+}
+
 export async function mockAdminRoomInventory(page: Page, rooms: unknown[] = []) {
   await mockAdminSession(page);
   await page.route('**/api/admin/rooms**', (route) => route.fulfill({ json: adminList(rooms) }));
@@ -140,6 +162,10 @@ export async function mockAdminWorkspace(page: Page) {
             active_rooms: 0,
             total_viewing_requests: 0,
             total_new_leads: 0,
+            today_appointments: 0,
+            leads_not_contacted: 0,
+            rooms_needing_update: 0,
+            media_needing_review: 0,
             total_moved_in_leads: 0,
             total_estimated_commission: 0,
             total_received_commission: 0,

@@ -89,6 +89,8 @@ export type AdminRoomImage = {
   image: string | null;
   image_url: string;
   media_type: "IMAGE" | "VIDEO";
+  label: "OVERVIEW" | "SLEEPING_AREA" | "KITCHEN" | "BATHROOM" | "BALCONY" | "VIDEO_TOUR" | "OTHER" | "";
+  label_display: string;
   sort_order: number;
   created_at: string;
 };
@@ -211,6 +213,10 @@ export type DashboardSummary = {
   active_rooms: number;
   total_viewing_requests: number;
   total_new_leads: number;
+  today_appointments: number;
+  leads_not_contacted: number;
+  rooms_needing_update: number;
+  media_needing_review: number;
   total_moved_in_leads: number;
   total_estimated_commission: string | number;
   total_received_commission: string | number;
