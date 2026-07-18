@@ -6,6 +6,7 @@ import pytest
 from django.core.exceptions import ImproperlyConfigured
 from django.core.files.base import ContentFile
 from django.core.mail import EmailMessage
+from django.db import connections
 from django.http import HttpResponse
 from django.test import RequestFactory
 from django.test import SimpleTestCase, override_settings
@@ -30,6 +31,23 @@ def test_health_check(client):
     assert payload["checks"]["database"] is True
     assert payload["checks"]["cache"] is True
     assert payload["checks"]["media_storage"] is True
+
+
+@pytest.mark.django_db
+def test_health_check_reports_database_failure_without_exposing_details(client):
+    connection = connections["default"]
+
+    with mock.patch.object(connection, "cursor", side_effect=RuntimeError("database secret")):
+        with mock.patch("config.urls.logger.exception") as exception:
+            response = client.get("/api/health/")
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "status": "error",
+        "checks": {"database": False, "cache": True, "media_storage": True},
+    }
+    assert b"database secret" not in response.content
+    exception.assert_called_once_with("Database health check failed")
 
 
 @pytest.mark.django_db

@@ -35,7 +35,12 @@ wait_for_service("DATABASE_URL", 5432)
 wait_for_service("REDIS_URL", 6379)
 PY
 
-python manage.py migrate --noinput
-python manage.py collectstatic --noinput
+if [ "${RUN_DJANGO_STARTUP_TASKS:-1}" = "1" ]; then
+    echo "Running Django startup tasks..."
+    python manage.py migrate --noinput
+    python manage.py collectstatic --noinput
+else
+    echo "Skipping Django startup tasks for this service."
+fi
 
 exec "$@"

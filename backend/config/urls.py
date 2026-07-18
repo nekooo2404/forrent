@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -26,6 +28,8 @@ from apps.rooms.views import (
     PublicRoomViewSet,
 )
 from apps.viewing_requests.views import AdminViewingRequestViewSet
+
+logger = logging.getLogger(__name__)
 
 admin_router = DefaultRouter()
 admin_router.register("cities", AdminCityViewSet, basename="admin-city")
@@ -64,13 +68,13 @@ def health_check(_request):
             cursor.execute("SELECT 1")
         checks["database"] = True
     except Exception:
-        pass
+        logger.exception("Database health check failed")
 
     try:
         cache.set("health-check", "ok", timeout=5)
         checks["cache"] = cache.get("health-check") == "ok"
     except Exception:
-        pass
+        logger.exception("Cache health check failed")
 
     healthy = all(checks.values())
     return JsonResponse(
