@@ -37,7 +37,6 @@ import {
 
 import type { ApiUser } from "@/lib/api";
 import { MotionPage } from "@/components/motion";
-import { ThemeToggle } from "@/components/theme-toggle";
 import {
   authFetch,
   clearAuthSession,
@@ -170,17 +169,24 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
 
   return (
     <AdminAuthContext.Provider value={contextValue}>
-      <div className="admin-surface min-h-[100dvh] bg-surface text-primary">
+      <div className="admin-surface min-h-[100dvh] bg-surface text-on-surface">
         <a
           className="admin-skip-link"
           href="#admin-main"
+          onClick={(event) => {
+            const target = document.getElementById("admin-main");
+            if (!target) return;
+            event.preventDefault();
+            target.focus();
+            target.scrollIntoView({ block: "start" });
+          }}
         >
           Bỏ qua điều hướng
         </a>
 
         <div className="flex min-h-[100dvh]">
           <aside
-            className={`sticky top-0 hidden h-[100dvh] shrink-0 border-r border-primary/10 bg-surface-container-lowest/90 backdrop-blur-xl transition-[width] duration-300 lg:block ${
+            className={`sticky top-0 hidden h-[100dvh] shrink-0 border-r border-outline-variant/70 bg-surface-container-lowest transition-[width] duration-200 lg:block ${
               isSidebarCollapsed ? "w-[88px]" : "w-[284px]"
             }`}
           >
@@ -194,8 +200,8 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
           </aside>
 
           {isMobileOpen ? (
-            <div className="fixed inset-0 z-40 bg-primary/25 backdrop-blur-sm lg:hidden" role="presentation">
-              <aside className="h-full w-[310px] border-r border-primary/10 bg-surface-container-lowest shadow-elevated">
+            <div className="fixed inset-0 z-40 bg-on-surface/45 lg:hidden" role="presentation">
+              <aside className="h-full w-[min(310px,88vw)] border-r border-outline-variant/70 bg-surface-container-lowest shadow-elevated">
                 <SidebarContent
                   collapsed={false}
                   onClose={() => setIsMobileOpen(false)}
@@ -208,12 +214,12 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
           ) : null}
 
           <div className="flex min-w-0 flex-1 flex-col">
-            <header className="sticky top-0 z-30 border-b border-primary/10 bg-surface/90 backdrop-blur-xl">
-              <div className="flex h-20 items-center justify-between gap-4 px-4 sm:px-6 xl:px-8">
+            <header className="sticky top-0 z-30 border-b border-outline-variant/70 bg-surface-container-lowest">
+              <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 xl:px-8">
                 <div className="flex min-w-0 items-center gap-3">
                   <button
                     aria-label="Mở menu admin"
-                    className="inline-flex size-11 items-center justify-center rounded-md border border-primary/10 bg-surface-container-lowest text-primary shadow-sm transition hover:border-primary/30 lg:hidden"
+                    className="inline-flex size-11 items-center justify-center rounded-md border border-outline-variant/70 bg-surface-container-lowest text-on-surface transition-colors duration-200 hover:bg-surface-container-low lg:hidden"
                     onClick={() => setIsMobileOpen(true)}
                     type="button"
                   >
@@ -229,9 +235,8 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <ThemeToggle />
                   <Link
-                    className="hidden items-center gap-3 rounded-md border border-primary/10 bg-surface-container-lowest py-1.5 pl-2 pr-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 sm:flex"
+                    className="hidden min-h-11 items-center gap-3 rounded-md border border-outline-variant/70 bg-surface-container-lowest py-1.5 pl-2 pr-4 transition-colors duration-200 hover:bg-surface-container-low sm:flex"
                     href="/admin/settings"
                   >
                     <span className="inline-flex size-8 items-center justify-center rounded-md bg-primary text-on-primary">
@@ -246,7 +251,7 @@ export function AdminShell({ children }: Readonly<{ children: ReactNode }>) {
               </div>
             </header>
 
-            <MotionPage className="flex-1 px-4 py-6 sm:px-6 xl:px-8" id="admin-main">
+            <MotionPage className="flex-1 px-4 py-6 sm:px-6 xl:px-8" id="admin-main" tabIndex={-1}>
               <div className="mx-auto w-full max-w-[1480px]">{children}</div>
             </MotionPage>
           </div>
@@ -333,7 +338,7 @@ function SidebarContent({
         })}
       </nav>
 
-      <div className="mt-auto space-y-3 border-t border-primary/10 pt-4">
+      <div className="mt-auto space-y-3 border-t border-outline-variant/70 pt-4">
         {!collapsed ? (
           <div className="rounded-lg bg-surface-container-lowest p-4 shadow-sm">
             <div className="mb-3 flex items-center gap-3">
@@ -345,7 +350,7 @@ function SidebarContent({
                 <p className="text-xs text-secondary">{user.email}</p>
               </div>
             </div>
-            <Link className="inline-flex items-center gap-2 text-xs font-semibold uppercase text-secondary transition hover:text-primary" href="/admin/settings">
+            <Link className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-secondary transition-colors duration-200 hover:text-primary" href="/admin/settings">
               Cập nhật thông tin
               <ChevronRight size={14} strokeWidth={1.8} />
             </Link>
@@ -401,13 +406,13 @@ function AdminGateMessage({
 }>) {
   return (
     <main className="grid min-h-[100dvh] place-items-center bg-surface px-6 py-16 text-center text-primary">
-      <section className="max-w-lg rounded-xl bg-surface-container-lowest p-8 shadow-elevated">
+      <section className="max-w-lg rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-8 shadow-soft">
         <span className="mx-auto mb-6 grid size-16 place-items-center rounded-lg bg-primary text-on-primary">
           <DoorOpen size={28} strokeWidth={1.8} />
         </span>
         <h1 className="mb-3 font-headline-md text-headline-md">{title}</h1>
         <p className="mb-8 text-secondary">{description}</p>
-        <Link className="inline-flex rounded-md bg-primary px-6 py-3 font-button text-button text-on-primary transition hover:-translate-y-0.5" href={actionHref}>
+        <Link className="inline-flex min-h-11 items-center rounded-md bg-primary px-6 py-3 font-button text-button text-on-primary transition-colors duration-200 hover:bg-primary/90" href={actionHref}>
           {actionLabel}
         </Link>
       </section>

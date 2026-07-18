@@ -21,6 +21,7 @@
 - Admin smoke: `https://admin.forrent.io.vn/log-in`
 - Sentry checked:
 - External uptime monitor checked:
+- UI/UX field evidence: `docs/releases/ui-ux-field-evidence-template.md`
 
 ## Rollback
 

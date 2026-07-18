@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Calculator, ImageIcon, Pencil, Plus, RefreshCw, Search, Trash2, Video, X } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, Calculator, ImageIcon, Pencil, Plus, RefreshCw, Search, Trash2, Video, X } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -322,6 +322,21 @@ export function AdminRoomManager() {
     }
   }
 
+  async function handleArchive(room: AdminRoom) {
+    setError("");
+    setMessage("");
+    try {
+      const updatedRoom = await adminRequest<AdminRoom>(`rooms/${room.id}`, token, {
+        body: JSON.stringify({ status: "ARCHIVED" }),
+        method: "PATCH",
+      });
+      setRooms((current) => current.map((item) => (item.id === room.id ? updatedRoom : item)));
+      setMessage("Phòng đã được chuyển vào lưu trữ và vẫn giữ nguyên lịch sử thuê.");
+    } catch (archiveError) {
+      setError(adminMessageFrom(archiveError, "Không thể lưu trữ phòng."));
+    }
+  }
+
   const hasRequiredConfig = lookups.cities.length && lookups.wards.length && lookups.areaRanges.length;
 
   return (
@@ -365,6 +380,7 @@ export function AdminRoomManager() {
             <label className="relative min-w-[260px]">
               <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-secondary" size={17} strokeWidth={1.8} />
               <input
+                aria-label="Tìm phòng theo tên, mã tòa hoặc địa chỉ"
                 className={`${adminInputClass} pl-9`}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Tìm phòng, mã tòa, địa chỉ..."
@@ -372,7 +388,7 @@ export function AdminRoomManager() {
                 value={search}
               />
             </label>
-            <select className={adminSelectClass} onChange={(event) => setStatusFilter(event.target.value)} value={statusFilter}>
+            <select aria-label="Lọc theo trạng thái phòng" className={adminSelectClass} onChange={(event) => setStatusFilter(event.target.value)} value={statusFilter}>
               <option value="">Tất cả trạng thái</option>
               {roomStatuses.map((item) => (
                 <option key={item.value} value={item.value}>{item.label}</option>
@@ -392,7 +408,7 @@ export function AdminRoomManager() {
             {/* Desktop: Table */}
             <div className="hidden overflow-x-auto lg:block">
               <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-primary/10 text-xs uppercase text-secondary">
+                <thead className="border-b border-outline-variant/70 text-xs uppercase text-secondary">
                   <tr>
                     <th className="py-3 pr-5 font-semibold">Phòng</th>
                     <th className="py-3 pr-5 font-semibold">Vị trí</th>
@@ -403,7 +419,7 @@ export function AdminRoomManager() {
                     <th className="py-3 text-right font-semibold">Thao tác</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-primary/10">
+                <tbody className="divide-y divide-outline-variant/70">
                   {rooms.map((room) => (
                     <tr className="transition hover:bg-surface-container-low/70" key={room.id}>
                       <td className="max-w-[280px] py-4 pr-5">
@@ -430,24 +446,35 @@ export function AdminRoomManager() {
                         <div className="flex justify-end gap-2">
                           <button
                             aria-label={`Sửa ${room.title}`}
-                            className="rounded-md border border-primary/10 bg-surface-container-lowest p-2 text-secondary transition hover:border-primary/25 hover:text-primary"
+                            className="inline-flex size-11 items-center justify-center rounded-md border border-outline-variant/70 bg-surface-container-lowest text-secondary transition-colors duration-200 hover:border-primary/40 hover:text-primary"
                             onClick={() => openEditModal(room)}
                             type="button"
                           >
                             <Pencil size={17} strokeWidth={1.8} />
                           </button>
-                          <button
-                            aria-label={`Xóa ${room.title}`}
-                            className={`rounded-md border p-2 transition ${
-                              pendingDeleteId === room.id
-                                ? "border-error/30 bg-error-container text-error"
-                                : "border-primary/10 bg-surface-container-lowest text-secondary hover:border-error/25 hover:text-error"
-                            }`}
-                            onClick={() => handleDelete(room.id)}
-                            type="button"
-                          >
-                            <Trash2 size={17} strokeWidth={1.8} />
-                          </button>
+                          {room.status === "RENTED" ? (
+                            <button
+                              aria-label={`Lưu trữ ${room.title}`}
+                              className="inline-flex size-11 items-center justify-center rounded-md border border-outline-variant/70 bg-surface-container-lowest text-secondary transition-colors duration-200 hover:border-primary/40 hover:text-primary"
+                              onClick={() => handleArchive(room)}
+                              type="button"
+                            >
+                              <Archive size={17} strokeWidth={1.8} />
+                            </button>
+                          ) : (
+                            <button
+                              aria-label={`Xóa ${room.title}`}
+                              className={`inline-flex size-11 items-center justify-center rounded-md border transition ${
+                                pendingDeleteId === room.id
+                                  ? "border-error/30 bg-error-container text-error"
+                                  : "border-outline-variant/70 bg-surface-container-lowest text-secondary hover:border-error/40 hover:text-error"
+                              }`}
+                              onClick={() => handleDelete(room.id)}
+                              type="button"
+                            >
+                              <Trash2 size={17} strokeWidth={1.8} />
+                            </button>
+                          )}
                         </div>
                         {pendingDeleteId === room.id ? <p className="mt-1 text-xs text-error">Bấm lần nữa để xóa</p> : null}
                       </td>
@@ -460,7 +487,7 @@ export function AdminRoomManager() {
             {/* Mobile: Card list */}
             <div className="grid gap-4 lg:hidden">
               {rooms.map((room) => (
-                <div className="rounded-lg border border-primary/10 bg-surface-container-lowest p-4" key={room.id}>
+                <div className="rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-4" key={room.id}>
                   <div className="mb-3 flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate font-semibold text-on-surface">{room.title}</h3>
@@ -491,27 +518,39 @@ export function AdminRoomManager() {
                     </div>
                   </div>
 
-                  <div className="mt-4 flex gap-2 border-t border-primary/10 pt-3">
+                  <div className="mt-4 flex gap-2 border-t border-outline-variant/70 pt-3">
                     <button
-                      className="flex flex-1 items-center justify-center gap-2 rounded-md border border-primary/10 bg-surface-container-lowest px-3 py-2 text-sm font-medium text-secondary transition hover:border-primary/25 hover:text-primary"
+                      className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md border border-outline-variant/70 bg-surface-container-lowest px-3 py-2 text-sm font-medium text-secondary transition-colors duration-200 hover:border-primary/40 hover:text-primary"
                       onClick={() => openEditModal(room)}
                       type="button"
                     >
                       <Pencil size={16} strokeWidth={1.8} />
                       Sửa
                     </button>
-                    <button
-                      className={`flex flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition ${
-                        pendingDeleteId === room.id
-                          ? "border-error/30 bg-error-container text-error"
-                          : "border-primary/10 bg-surface-container-lowest text-secondary hover:border-error/25 hover:text-error"
-                      }`}
-                      onClick={() => handleDelete(room.id)}
-                      type="button"
-                    >
-                      <Trash2 size={16} strokeWidth={1.8} />
-                      {pendingDeleteId === room.id ? "Xác nhận xóa" : "Xóa"}
-                    </button>
+                    {room.status === "RENTED" ? (
+                      <button
+                        aria-label={`Lưu trữ ${room.title}`}
+                        className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md border border-outline-variant/70 bg-surface-container-lowest px-3 py-2 text-sm font-medium text-secondary transition-colors duration-200 hover:border-primary/40 hover:text-primary"
+                        onClick={() => handleArchive(room)}
+                        type="button"
+                      >
+                        <Archive size={16} strokeWidth={1.8} />
+                        Lưu trữ
+                      </button>
+                    ) : (
+                      <button
+                        className={`flex min-h-11 flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition ${
+                          pendingDeleteId === room.id
+                            ? "border-error/30 bg-error-container text-error"
+                            : "border-outline-variant/70 bg-surface-container-lowest text-secondary hover:border-error/40 hover:text-error"
+                        }`}
+                        onClick={() => handleDelete(room.id)}
+                        type="button"
+                      >
+                        <Trash2 size={16} strokeWidth={1.8} />
+                        {pendingDeleteId === room.id ? "Xác nhận xóa" : "Xóa"}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -607,6 +646,7 @@ function RoomFormModal({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }>) {
   const wards = form.city ? lookups.wards.filter((ward) => String(ward.city) === form.city) : lookups.wards;
+  const amenityIdSet = new Set(form.amenities);
   const commissionPreview = (Number(form.commission_base_amount || 0) * Number(form.commission_percent || 0)) / 100;
   const modalRef = useFocusTrap<HTMLElement>(true);
 
@@ -616,7 +656,7 @@ function RoomFormModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-primary/30 p-0 backdrop-blur-sm md:items-center md:p-6"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-on-surface/45 p-0 md:items-center md:p-6"
       onKeyDown={(event) => {
         if (event.key === "Escape") onClose();
       }}
@@ -624,11 +664,11 @@ function RoomFormModal({
       <section
         aria-label={editingRoom ? "Sửa phòng" : "Tạo phòng"}
         aria-modal="true"
-        className="admin-modal-panel max-h-[94dvh] w-full max-w-5xl overflow-y-auto rounded-t-2xl bg-surface shadow-elevated md:rounded-2xl"
+        className="admin-modal-panel max-h-[94dvh] w-full max-w-5xl overflow-y-auto rounded-t-lg bg-surface shadow-elevated md:rounded-lg"
         ref={modalRef}
         role="dialog"
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-primary/10 bg-surface/95 px-5 py-4 backdrop-blur">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-outline-variant/70 bg-surface-container-lowest px-5 py-4">
           <div>
             <p className="text-xs font-semibold uppercase text-secondary">{editingRoom ? "Sửa phòng" : "Phòng mới"}</p>
             <h2 className="font-headline-sm text-2xl text-on-surface">{editingRoom ? "Cập nhật phòng" : "Tạo phòng mới"}</h2>
@@ -732,7 +772,7 @@ function RoomFormModal({
               <Field label="Tiền điện / kWh">
                 <input className={adminInputClass} min="0" onChange={(event) => update("electricity_price_per_kwh", event.target.value)} type="number" value={form.electricity_price_per_kwh} />
               </Field>
-              <Field label="Phí dịch vụ / tháng">
+              <Field label="Phí dịch vụ mỗi tháng">
                 <input className={adminInputClass} min="0" onChange={(event) => update("service_fee", event.target.value)} type="number" value={form.service_fee} />
               </Field>
               <Field label="Cách tính tiền nước">
@@ -773,7 +813,7 @@ function RoomFormModal({
           </div>
 
           <aside className="space-y-5 md:col-span-4">
-            <section className="rounded-xl border border-primary/10 bg-surface-container-lowest p-4 shadow-sm">
+            <section className="border-b border-outline-variant/70 pb-5">
               <div className="mb-4 flex items-center gap-2">
                 <Calculator size={18} strokeWidth={1.8} />
                 <h3 className="font-semibold">Hoa hồng</h3>
@@ -792,11 +832,12 @@ function RoomFormModal({
               </div>
             </section>
 
-            <section className="rounded-xl border border-primary/10 bg-surface-container-lowest p-4 shadow-sm">
+            <section className="border-b border-outline-variant/70 pb-5">
               <div className="mb-4 flex items-center gap-2">
                 <ImageIcon size={18} strokeWidth={1.8} />
                 <h3 className="font-semibold">Ảnh và video</h3>
               </div>
+              <p className="mb-4 text-sm leading-6 text-secondary">Ưu tiên ảnh ngang, đủ sáng và đồng đều góc chụp; ảnh đầu tiên đại diện cho phòng trên danh sách.</p>
               <Field label="Thumbnail">
                 <input
                   accept="image/*"
@@ -834,7 +875,7 @@ function RoomFormModal({
                 <div className="mt-4 space-y-2">
                   <p className="text-xs font-semibold uppercase text-secondary">Media đang có</p>
                   {editingRoom.images.map((mediaItem, index) => (
-                    <div className="flex items-center gap-3 rounded-md border border-primary/10 bg-surface-container-low p-2" key={mediaItem.id}>
+                    <div className="flex items-center gap-3 rounded-md border border-outline-variant/70 bg-surface-container-low p-2" key={mediaItem.id}>
                       {mediaItem.image_url || mediaItem.image ? (
                         mediaItem.media_type === "VIDEO" ? (
                           <video aria-label={`Video phòng ${index + 1}`} className="size-14 rounded object-cover" muted playsInline preload="metadata" src={mediaItem.image_url || mediaItem.image || ""} />
@@ -853,7 +894,8 @@ function RoomFormModal({
                       </div>
                       <div className="flex gap-1">
                         <button
-                          className="rounded border border-primary/10 px-2 py-1 text-xs text-secondary disabled:opacity-40"
+                          aria-label={`Đưa ${mediaItem.media_type === "VIDEO" ? "video" : "ảnh"} ${index + 1} lên trước`}
+                          className="inline-flex size-11 items-center justify-center rounded-md border border-outline-variant/70 text-secondary transition-colors duration-200 hover:text-primary disabled:opacity-40"
                           disabled={index === 0}
                           onClick={() =>
                             onImageSwap(
@@ -865,10 +907,11 @@ function RoomFormModal({
                           }
                           type="button"
                         >
-                          Lên
+                          <ArrowUp aria-hidden="true" size={17} />
                         </button>
                         <button
-                          className="rounded border border-primary/10 px-2 py-1 text-xs text-secondary disabled:opacity-40"
+                          aria-label={`Đưa ${mediaItem.media_type === "VIDEO" ? "video" : "ảnh"} ${index + 1} xuống sau`}
+                          className="inline-flex size-11 items-center justify-center rounded-md border border-outline-variant/70 text-secondary transition-colors duration-200 hover:text-primary disabled:opacity-40"
                           disabled={index === editingRoom.images.length - 1}
                           onClick={() =>
                             onImageSwap(
@@ -880,10 +923,10 @@ function RoomFormModal({
                           }
                           type="button"
                         >
-                          Xuống
+                          <ArrowDown aria-hidden="true" size={17} />
                         </button>
-                        <button className="rounded border border-error/20 px-2 py-1 text-xs text-error" onClick={() => onImageDelete(mediaItem.id)} type="button">
-                          Xóa
+                        <button aria-label={`Xóa ${mediaItem.media_type === "VIDEO" ? "video" : "ảnh"} ${index + 1}`} className="inline-flex size-11 items-center justify-center rounded-md border border-error/30 text-error transition-colors duration-200 hover:bg-error-container" onClick={() => onImageDelete(mediaItem.id)} type="button">
+                          <Trash2 aria-hidden="true" size={17} />
                         </button>
                       </div>
                     </div>
@@ -892,13 +935,13 @@ function RoomFormModal({
               ) : null}
             </section>
 
-            <section className="rounded-xl border border-primary/10 bg-surface-container-lowest p-4 shadow-sm">
+            <section className="border-b border-outline-variant/70 pb-5">
               <h3 className="mb-4 font-semibold">Tiện ích</h3>
               <div className="grid max-h-48 gap-2 overflow-y-auto pr-1">
                 {lookups.amenities.map((amenity) => (
-                  <label className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm transition hover:bg-surface-container-low" key={amenity.id}>
+                  <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm transition hover:bg-surface-container-low" key={amenity.id}>
                     <input
-                      checked={form.amenities.includes(amenity.id)}
+                      checked={amenityIdSet.has(amenity.id)}
                       className="size-4 rounded border-primary/20 text-primary focus:ring-primary"
                       onChange={(event) => {
                         const nextAmenities = event.target.checked

@@ -135,7 +135,7 @@ export function AdminCommissions() {
           {payouts.length ? (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-primary/10 text-xs uppercase text-secondary">
+                <thead className="border-b border-outline-variant/70 text-xs uppercase text-secondary">
                   <tr>
                     <th className="py-3 pr-5 font-semibold">Yêu cầu</th>
                     <th className="py-3 pr-5 font-semibold">Phòng</th>
@@ -161,13 +161,15 @@ export function AdminCommissions() {
                       <td className="py-4 text-right">
                         {payout.status !== "PAID" && payout.status !== "CANCELLED" ? (
                           <input
-                            className="mb-2 w-full rounded-md border border-primary/10 bg-surface-container-lowest px-3 py-2 text-xs text-primary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                            aria-label={`Lý do hủy khoản chi cho ${payout.tenant_name}`}
+                            className="mb-2 min-h-11 w-full rounded-md border border-outline-variant/70 bg-surface-container-lowest px-3 py-2 text-sm text-on-surface outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary/10"
                             onChange={(event) => setCancelNotes((current) => ({ ...current, [payout.id]: event.target.value }))}
                             placeholder="Lý do hủy nếu chọn hủy"
                             value={cancelNotes[payout.id] ?? payout.note ?? ""}
                           />
                         ) : null}
                         <select
+                          aria-label={`Trạng thái khoản chi cho ${payout.tenant_name}`}
                           className={adminSelectClass}
                           disabled={isSaving || payout.status === "PAID" || payout.status === "CANCELLED"}
                           onChange={(event) => updatePayoutStatus(payout, event.target.value)}
@@ -194,7 +196,7 @@ export function AdminCommissions() {
           {summary?.by_room?.length ? (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-primary/10 text-xs uppercase text-secondary">
+                <thead className="border-b border-outline-variant/70 text-xs uppercase text-secondary">
                   <tr>
                     <th className="py-3 pr-5 font-semibold">Phòng</th>
                     <th className="py-3 pr-5 font-semibold">Yêu cầu</th>

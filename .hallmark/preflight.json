@@ -1,0 +1,25 @@
+{
+  "last_scan": "2026-07-18",
+  "framework": "Next.js app router with React 19",
+  "font_stack": "System UI via --font-open-sans in frontend-client/app/globals.css and frontend-admin/app/globals.css",
+  "palette": "Warm Old Quarter brown system with RGB semantic tokens in frontend-client/app/globals.css, frontend-admin/app/globals.css, and Tailwind semantic color mappings",
+  "motion": "Motion-on but restrained: transform/opacity only, 160ms fast state changes, 250ms base transitions, reduced-motion fallback",
+  "spacing": "Tailwind utility spacing with 44px minimum touch targets and 24px desktop gutters",
+  "hallmark_preserve": [
+    "Warm brown brand direction",
+    "Light-only public/admin UI after dark mode removal",
+    "Semantic surface/primary/tertiary tokens",
+    "System font stack for Vietnamese readability",
+    "Existing Next.js, Django, Playwright, and Tailwind boundaries"
+  ],
+  "hallmark_apply": [
+    "Sharper surface hierarchy between page, filter, card, modal, and footer",
+    "Primary color reserved for CTA and active intent instead of every label",
+    "No fake metrics, fake testimonials, or fabricated proof",
+    "Representative real room imagery before brand fallback",
+    "Mobile non-negotiables at 320, 375, 414, and 768px",
+    "No two-line primary buttons or cramped clickable text",
+    "Consistent loading, empty, error, and media-failure states"
+  ],
+  "field_gate_policy": "Hallmark can improve the interface, but physical-device checks, provider deliverability, usability sessions, production telemetry, and Core Web Vitals p75 require real evidence before PASS."
+}

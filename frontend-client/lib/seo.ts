@@ -12,15 +12,33 @@ export function shortDescription(value?: string | null, fallback = SITE_DESCRIPT
   return text.length > maxLength ? `${text.slice(0, maxLength - 1).trim()}…` : text;
 }
 
-export function cleanRoomTitle(value?: string | null, properNouns: Array<string | null | undefined> = []) {
+function expandRoomTypeAcronyms(value: string) {
+  return value
+    .replace(/\bccmn\b/giu, (_match, offset: number) => (offset === 0 ? "Chung cư mini" : "chung cư mini"))
+    .replace(/\bccdv\b/giu, (_match, offset: number) => (offset === 0 ? "Căn hộ dịch vụ" : "căn hộ dịch vụ"));
+}
+
+export function cleanRoomTitle(
+  value?: string | null,
+  properNouns: Array<string | null | undefined> = [],
+  fallback = "Phòng cho thuê",
+) {
   const title = (value || "")
     .replace(/[\p{Extended_Pictographic}\p{Emoji_Presentation}\uFE0F\u200D]/gu, " ")
+    .replace(
+      /^(?:mã\s+phòng\s*)?(?:\[[^\]]+\]|\(?[a-z]\d+(?:[.\-]\d+)?\)?(?:\s*[,/&+]\s*\(?[a-z]\d+(?:[.\-]\d+)?\)?)*)\s*(?:[-–—|:]\s*|(?=\p{L}))/iu,
+      "",
+    )
+    .replace(/^(?:(?:khai\s+trương|mới\s+lên\s+sàn|siêu\s+phẩm)\s*)+/iu, "")
+    .replace(/\s*(?:[-–—|•]\s*)?(?:còn\s+trống|trống|đã\s+thuê|hết\s+phòng)\s*$/iu, "")
     .replace(/\s+/g, " ")
     .trim();
-  if (!title) return "Phòng cho thuê";
+  if (!title || /^(?:phòng\s*)?[a-z]?\d+[a-z]?(?:\s*[,/&+-]\s*[a-z]?\d+[a-z]?)*$/iu.test(title)) {
+    return fallback;
+  }
 
   const letters = title.match(/\p{L}/gu)?.join("") || "";
-  if (!letters || letters !== letters.toLocaleUpperCase("vi-VN")) return title;
+  if (!letters || letters !== letters.toLocaleUpperCase("vi-VN")) return expandRoomTypeAcronyms(title);
 
   const sentenceCase = title.toLocaleLowerCase("vi-VN");
   let result = `${sentenceCase.charAt(0).toLocaleUpperCase("vi-VN")}${sentenceCase.slice(1)}`.replace(
@@ -31,5 +49,5 @@ export function cleanRoomTitle(value?: string | null, properNouns: Array<string 
     const escaped = properNoun.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     result = result.replace(new RegExp(escaped, "giu"), properNoun);
   }
-  return result;
+  return expandRoomTypeAcronyms(result);
 }

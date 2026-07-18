@@ -1,20 +1,14 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { Open_Sans } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
+import { ProductInsights } from "@/components/product-insights";
+import { SkipToContentLink } from "@/components/skip-to-content-link";
 
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 const noindex = process.env.NEXT_PUBLIC_NOINDEX === "true";
-
-const openSans = Open_Sans({
-  subsets: ["latin", "vietnamese"],
-  weight: ["300", "400", "500", "600", "700", "800"],
-  variable: "--font-open-sans",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -68,13 +62,12 @@ export default async function RootLayout({
         <link href="https://res.cloudinary.com" rel="preconnect" />
         <link href={process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"} rel="preconnect" />
       </head>
-      <body className={`${openSans.variable} bg-surface font-sans text-body-md text-on-surface antialiased`}>
-        <a className="skip-link" href="#main-content">
-          Bỏ qua điều hướng
-        </a>
+      <body className="bg-surface font-sans text-body-md text-on-surface antialiased">
+        <SkipToContentLink />
         <ToastProvider>
           <div>{children}</div>
         </ToastProvider>
+        <ProductInsights />
         <ServiceWorkerRegistration />
       </body>
     </html>

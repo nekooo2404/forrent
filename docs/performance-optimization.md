@@ -77,9 +77,9 @@ const RoomGallery = dynamic(() => import('@/components/room-gallery'), {
 - Catches potential issues early
 
 **Font Optimization:**
-- `Open_Sans` loaded via `next/font/google`
-- Automatic font subsetting
-- Self-hosted fonts (no external requests)
+- Native system font stack is used for client and admin surfaces
+- No runtime or build-time Google Fonts dependency
+- No external font requests on public or admin pages
 
 ### 6. Caching Strategy
 

@@ -17,7 +17,7 @@ export function AdminPageHeader({
   title: string;
 }>) {
   return (
-    <section className="mb-6 flex flex-col gap-4 border-b border-primary/10 pb-6 lg:flex-row lg:items-end lg:justify-between">
+    <section className="mb-6 flex flex-col gap-4 border-b border-outline-variant/60 pb-6 lg:flex-row lg:items-end lg:justify-between">
       <div className="max-w-3xl">
         {eyebrow ? <p className="mb-2 text-xs font-semibold uppercase text-secondary">{eyebrow}</p> : null}
         <h1 className="font-headline-md text-3xl leading-tight text-on-surface md:text-[40px]">{title}</h1>
@@ -40,9 +40,9 @@ export function AdminPanel({
   toolbar?: ReactNode;
 }>) {
   return (
-    <section className={`admin-spotlight rounded-lg border border-primary/10 bg-surface-container-lowest p-5 shadow-soft md:p-6 ${className}`}>
+    <section className={`admin-spotlight rounded-lg border border-outline-variant/60 bg-surface-container-lowest p-5 shadow-soft md:p-6 ${className}`}>
       {title || toolbar ? (
-        <div className="mb-5 flex flex-col gap-3 border-b border-primary/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-5 flex flex-col gap-3 border-b border-outline-variant/50 pb-4 sm:flex-row sm:items-center sm:justify-between">
           {title ? <h2 className="font-headline-sm text-xl text-on-surface md:text-2xl">{title}</h2> : <span />}
           {toolbar ? <div className="flex flex-wrap items-center gap-2">{toolbar}</div> : null}
         </div>
@@ -64,10 +64,10 @@ export function AdminStatCard({
   value: ReactNode;
 }>) {
   return (
-    <article className="admin-spotlight rounded-lg border border-primary/10 bg-surface-container-lowest p-5 shadow-soft transition hover:border-primary/20">
+    <article className="admin-spotlight rounded-lg border border-outline-variant/60 bg-surface-container-lowest p-5 shadow-soft transition hover:border-primary/30">
       <div className="mb-6 flex items-start justify-between gap-4">
         <p className="text-sm font-medium text-secondary">{label}</p>
-        <span className="grid size-10 place-items-center rounded-md bg-surface-container text-primary">{icon}</span>
+        <span className="grid size-10 place-items-center rounded-md bg-tertiary-container text-on-tertiary-container">{icon}</span>
       </div>
       <div className="font-body-md text-3xl font-semibold tabular-nums text-on-surface">{value}</div>
       {caption ? <p className="mt-2 text-xs leading-5 text-secondary">{caption}</p> : null}
@@ -150,7 +150,7 @@ export function AdminEmptyState({
   title: string;
 }>) {
   return (
-    <div className="rounded-lg border border-dashed border-primary/20 bg-surface-container-low/60 p-8 text-center">
+    <div className="rounded-lg border border-dashed border-outline-variant/70 bg-surface-container-low/60 p-8 text-center">
       {icon && <div className="mb-4 flex justify-center text-secondary opacity-50">{icon}</div>}
       <h3 className="font-headline-sm text-xl text-on-surface">{title}</h3>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-secondary">{description}</p>
@@ -193,13 +193,14 @@ export function AdminPagination({
   const end = Math.min(count, page * pageSize);
 
   return (
-    <div className="mt-5 flex flex-col gap-3 border-t border-primary/10 pt-4 text-sm text-secondary sm:flex-row sm:items-center sm:justify-between">
+    <div className="mt-5 flex flex-col gap-3 border-t border-outline-variant/70 pt-4 text-sm text-secondary sm:flex-row sm:items-center sm:justify-between">
       <span>
         Hiển thị {start}-{end} / {count}
       </span>
       <div className="flex items-center gap-2">
         <button
-          className="inline-flex size-9 items-center justify-center rounded-md border border-primary/10 bg-surface-container-lowest text-primary disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Trang trước"
+          className="inline-flex size-11 items-center justify-center rounded-md border border-outline-variant/60 bg-surface-container-lowest text-primary disabled:cursor-not-allowed disabled:opacity-40"
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
           type="button"
@@ -210,7 +211,8 @@ export function AdminPagination({
           {page}/{totalPages}
         </span>
         <button
-          className="inline-flex size-9 items-center justify-center rounded-md border border-primary/10 bg-surface-container-lowest text-primary disabled:cursor-not-allowed disabled:opacity-40"
+          aria-label="Trang sau"
+          className="inline-flex size-11 items-center justify-center rounded-md border border-outline-variant/60 bg-surface-container-lowest text-primary disabled:cursor-not-allowed disabled:opacity-40"
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
           type="button"
@@ -223,13 +225,13 @@ export function AdminPagination({
 }
 
 export const adminButtonPrimary =
-  "inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary shadow-sm transition hover:bg-secondary disabled:cursor-wait disabled:opacity-60";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary shadow-sm transition-colors duration-200 hover:bg-primary/90 disabled:cursor-wait disabled:opacity-60";
 
 export const adminButtonSecondary =
-  "inline-flex items-center justify-center gap-2 rounded-md border border-primary/10 bg-surface-container-lowest px-4 py-2.5 text-sm font-semibold text-primary shadow-sm transition hover:border-primary/30 disabled:cursor-wait disabled:opacity-60";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-outline-variant/70 bg-surface-container-lowest px-4 py-2.5 text-sm font-semibold text-on-surface shadow-sm transition-colors duration-200 hover:border-primary/40 hover:text-primary disabled:cursor-wait disabled:opacity-60";
 
 export const adminInputClass =
-  "w-full rounded-md border border-primary/10 bg-surface-container-lowest px-3 py-2.5 text-sm text-primary shadow-sm outline-none transition placeholder:text-secondary focus:border-primary/40 focus:ring-2 focus:ring-primary/10";
+  "min-h-11 w-full rounded-md border border-outline-variant/70 bg-surface-container-lowest px-3 py-2.5 text-sm text-on-surface shadow-sm outline-none transition placeholder:text-on-surface-variant focus:border-primary/60 focus:ring-2 focus:ring-primary/10";
 
 export const adminSelectClass =
-  "w-full rounded-md border border-primary/10 bg-surface-container-lowest px-3 py-2.5 text-sm text-primary shadow-sm outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/10";
+  "min-h-11 w-full rounded-md border border-outline-variant/70 bg-surface-container-lowest px-3 py-2.5 text-sm text-on-surface shadow-sm outline-none transition focus:border-primary/60 focus:ring-2 focus:ring-primary/10";

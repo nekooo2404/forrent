@@ -6,7 +6,6 @@ const config: Config = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  darkMode: "class",
   theme: {
     extend: {
       colors: {
@@ -114,11 +113,11 @@ const config: Config = {
         "container-max": "1280px",
       },
       boxShadow: {
-        low: "0 1px 2px rgba(15,23,42,0.06), 0 1px 3px rgba(15,23,42,0.08)",
-        medium: "0 8px 24px rgba(15,23,42,0.10)",
-        high: "0 18px 48px rgba(15,23,42,0.14)",
-        soft: "0 1px 2px rgba(15,23,42,0.06), 0 1px 3px rgba(15,23,42,0.08)",
-        elevated: "0 8px 24px rgba(15,23,42,0.10)",
+        low: "0 1px 2px rgba(43,35,30,0.05), 0 1px 3px rgba(43,35,30,0.07)",
+        medium: "0 8px 24px rgba(43,35,30,0.08)",
+        high: "0 18px 48px rgba(43,35,30,0.12)",
+        soft: "0 1px 2px rgba(43,35,30,0.05), 0 1px 3px rgba(43,35,30,0.07)",
+        elevated: "0 8px 24px rgba(43,35,30,0.08)",
       },
     },
   },

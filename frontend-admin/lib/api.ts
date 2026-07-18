@@ -107,7 +107,7 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   const payload = (await response.json().catch(() => null)) as ApiEnvelope<T> | null;
   if (!response.ok || !payload?.success) {
-    throw new ApiError(payload?.message || "Không thể kết nối backend.", response.status, payload?.errors);
+    throw new ApiError(payload?.message || "Không thể kết nối hệ thống quản trị.", response.status, payload?.errors);
   }
 
   return payload.data;

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="vi">
+<body style="margin:0;background:#f7f6f3;color:#2a231f;font-family:Arial,sans-serif">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;background:#f7f6f3">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;overflow:hidden;border:1px solid #dfd8d0;border-radius:8px;background:#ffffff">
+        <tr><td style="padding:24px 28px;background:#973f1c;color:#ffffff"><h1 style="margin:0;font-size:22px">ForRent đã nhận yêu cầu</h1></td></tr>
+        <tr><td style="padding:28px">
+          <p>Xin chào {{ full_name }},</p>
+          <p>Yêu cầu xem <strong>{{ room_label }}</strong> đã được ghi nhận.</p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;border-radius:8px;background:#f5f2ee">
+            <tr><td style="padding:16px"><strong>Lịch mong muốn</strong><br>{{ date|date:"d/m/Y" }} · {{ time_slot }}</td></tr>
+          </table>
+          <p>Nhân viên tư vấn sẽ liên hệ để xác nhận lịch thực tế. Yêu cầu chỉ được lên lịch sau khi hai bên đã trao đổi.</p>
+          <p style="margin:24px 0"><a href="{{ profile_url }}" style="display:inline-block;padding:12px 18px;border-radius:6px;background:#973f1c;color:#ffffff;text-decoration:none;font-weight:700">Theo dõi yêu cầu</a></p>
+          <p style="margin-bottom:0;color:#5c524b;font-size:14px">ForRent · Tư vấn phòng thuê Hà Nội</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

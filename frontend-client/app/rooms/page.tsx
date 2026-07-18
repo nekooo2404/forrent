@@ -11,14 +11,19 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import { PublicShell } from "@/components/public-shell";
+import { ProductMetric } from "@/components/product-insights";
 import { ResponsiveFilter, RoomTypeSubtypeFilter } from "@/components/responsive-filter";
+import { RoomCompareBar, RoomCompareToggle, type RoomCompareItem } from "@/components/room-compare-panel";
+import { RoomsSortForm } from "@/components/rooms-sort-form";
 import { StructuredData } from "@/components/structured-data";
-import { fastImageUrl } from "@/lib/image";
+import { EmptyState } from "@/components/ui/empty-state";
+import { fastImageUrl, isCloudinaryImage, ROOM_IMAGE_BLUR_DATA_URL } from "@/lib/image";
 import {
   formatArea,
+  formatMonthlyVnd,
   formatOptionalVnd,
   formatVnd,
   getCachedRoomFilters,
@@ -50,9 +55,9 @@ type RoomCardView = {
   title: string;
   location: string;
   price: string;
-  period: string;
   deposit: string;
   depositLabel: string;
+  fixedMonthlyCost: string;
   primaryMeta: string;
   area: string;
   status: string;
@@ -96,23 +101,48 @@ const fallbackFilters: RoomFilters = {
 };
 
 function mapRoom(room: ApiRoom): RoomCardView {
-  const title = cleanRoomTitle(room.title, [room.ward?.name, room.city?.name]);
+  const location = [room.ward?.name, room.city?.name].filter(Boolean).join(", ") || room.address;
+  const primaryMeta = room.room_subtype_name || roomTypeLabel(room.room_type);
+  const title = cleanRoomTitle(
+    room.public_title || room.title,
+    [room.ward?.name, room.city?.name],
+    `${primaryMeta} tại ${room.ward?.name || room.city?.name || "Hà Nội"}`,
+  );
+  const fixedMonthlyCost = Number(room.price) + Math.max(0, Number(room.service_fee) || 0);
   return {
     id: room.id,
     slug: room.slug,
     title,
-    location: [room.ward?.name, room.city?.name].filter(Boolean).join(", ") || room.address,
-    price: formatVnd(room.price),
-    period: "/ tháng",
+    location,
+    price: formatMonthlyVnd(room.price),
     deposit: formatOptionalVnd(room.deposit_amount),
     depositLabel: room.deposit_type_name || "Cọc",
-    primaryMeta: room.room_subtype_name || roomTypeLabel(room.room_type),
+    fixedMonthlyCost: formatMonthlyVnd(fixedMonthlyCost),
+    primaryMeta,
     area: formatArea(room.actual_area),
     status: roomStatusLabel(room.status),
     unavailable: room.status !== "PUBLISHED",
     featuredAmenities: room.amenities.slice(0, 3).map((amenity) => amenity.name),
     image: resolveMediaUrl(room.thumbnail_url),
-    alt: room.short_description || title,
+    alt: `${primaryMeta} tại ${location}`,
+  };
+}
+
+function roomDetailHref(room: RoomCardView) {
+  return room.slug ? `/rooms/${encodeURIComponent(room.slug)}` : "/rooms";
+}
+
+function toCompareItem(room: RoomCardView): RoomCompareItem {
+  return {
+    id: String(room.id),
+    title: room.title,
+    location: room.location,
+    price: room.price,
+    fixedMonthlyCost: room.fixedMonthlyCost,
+    deposit: room.deposit,
+    area: room.area,
+    primaryMeta: room.primaryMeta,
+    detailHref: roomDetailHref(room),
   };
 }
 
@@ -224,11 +254,20 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
       value,
     })),
   ].filter((item): item is ActiveFilter => Boolean(item));
+  const resultMetricAttributes = {
+    filter_count: activeFilterLabels.length,
+    has_search: Boolean(search),
+    ordering,
+    page: currentPage,
+    result_count: totalCount,
+    search_length: search?.length ?? 0,
+  };
 
   return (
     <PublicShell active="rooms">
+      <ProductMetric attributes={resultMetricAttributes} stage="room_results_loaded" />
       <StructuredData data={roomListStructuredData} />
-      <header className="border-b border-outline-variant/25 bg-surface-container-low px-margin-mobile pb-8 pt-24 md:px-margin-desktop md:pt-28">
+      <header className="border-b border-outline-variant/50 bg-surface-container-lowest px-margin-mobile pb-8 pt-24 md:px-margin-desktop md:pt-28">
         <div className="mx-auto flex w-full max-w-container-max flex-col justify-between gap-8 md:flex-row md:items-end">
           <div className="max-w-3xl">
             <p className="mb-3 font-label-caps text-label-caps uppercase text-secondary">
@@ -243,12 +282,12 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
           </div>
 
           <div className="w-full md:w-auto">
-            <SortForm ordering={ordering} params={params} />
+            <RoomsSortForm ordering={ordering} params={params} />
           </div>
         </div>
       </header>
 
-      <section className="mx-auto flex w-full max-w-container-max flex-grow flex-col gap-gutter px-margin-mobile py-10 md:px-margin-desktop lg:flex-row">
+      <section className="mx-auto flex w-full max-w-container-max flex-grow flex-col gap-gutter px-margin-mobile py-10 md:px-margin-desktop lg:flex-row lg:items-start">
         <FilterSidebar
           activeAreaRange={areaRange}
           activeCity={city}
@@ -264,27 +303,33 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
 
         <div className="flex min-w-0 flex-1 flex-col gap-8">
           <ResultHeader activeFilters={activeFilterLabels} currentPage={currentPage} params={params} totalCount={totalCount} />
+          {rooms.length > 1 ? <RoomCompareBar rooms={rooms.map(toCompareItem)} /> : null}
           {rooms.length ? (
             <div className={`stagger-list grid w-full grid-cols-1 gap-gutter ${rooms.length > 1 ? "xl:grid-cols-2" : ""}`} data-room-grid>
               {rooms.map((room, index) => (
-                <RoomCard key={room.id} priority={index < 2} room={room} wide={rooms.length === 1} />
+                <RoomCard
+                  compareItem={rooms.length > 1 ? toCompareItem(room) : undefined}
+                  key={room.id}
+                  priority={index < 2}
+                  room={room}
+                  wide={rooms.length === 1}
+                />
               ))}
             </div>
           ) : (
-            <div className="urban-card rounded-lg p-8 text-center md:p-10">
-              <h2 className="font-headline-sm text-headline-sm text-on-surface">Chưa có phòng phù hợp</h2>
-              <p className="mt-3 font-body-md text-body-md text-on-surface-variant">
-                Thử xóa bớt bộ lọc hoặc gửi nhu cầu thuê phòng. Nhân viên tư vấn sẽ báo lại khi có phòng đúng khu vực và ngân sách.
-              </p>
-              <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-                <Link className="premium-button inline-flex rounded-xl border border-primary px-5 py-3 font-button text-button text-primary" href="/rooms">
-                  Xóa bộ lọc
-                </Link>
-                <Link className="premium-button urban-cta inline-flex rounded-xl px-5 py-3 font-button text-button" href="/contact">
-                  Gửi nhu cầu thuê phòng
-                </Link>
-              </div>
-            </div>
+            <>
+              <ProductMetric
+                attributes={resultMetricAttributes}
+                stage={activeFilterLabels.length ? "zero_result_search" : "empty_inventory_viewed"}
+              />
+              <EmptyState
+                action={{ href: "/rooms", label: "Xóa bộ lọc" }}
+                description="Thử xóa bớt bộ lọc hoặc gửi nhu cầu. Nhân viên tư vấn sẽ báo khi có phòng đúng khu vực và ngân sách."
+                icon={<Search aria-hidden="true" size={30} strokeWidth={1.7} />}
+                secondaryAction={{ href: "/contact", label: "Gửi nhu cầu thuê phòng" }}
+                title="Chưa có phòng phù hợp"
+              />
+            </>
           )}
           <Pagination currentPage={currentPage} params={params} totalPages={totalPages} />
         </div>
@@ -324,7 +369,7 @@ function ResultHeader({
           {activeFilters.map((filter) => (
             <a
               aria-label={`Bỏ lọc ${filter.label}`}
-              className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-sm font-semibold text-secondary transition-colors hover:bg-primary/15 hover:text-primary"
+              className="inline-flex min-h-11 items-center gap-2 rounded-md bg-tertiary-container px-3 py-2 text-sm font-semibold text-tertiary transition-colors duration-200 hover:bg-tertiary-container/70"
               href={withoutFilterHref(params, filter)}
               key={`${filter.key}-${filter.value ?? filter.label}`}
             >
@@ -332,44 +377,12 @@ function ResultHeader({
               <X aria-hidden="true" size={15} strokeWidth={2} />
             </a>
           ))}
-          <Link className="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-secondary underline hover:text-primary" href="/rooms">
+          <Link className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-semibold text-secondary underline underline-offset-4 hover:bg-surface-container-low hover:text-primary" href="/rooms">
             Xóa tất cả
           </Link>
         </div>
       ) : null}
     </div>
-  );
-}
-
-function SortForm({
-  ordering,
-  params,
-}: Readonly<{
-  ordering: string;
-  params: Record<string, string | string[] | undefined>;
-}>) {
-  return (
-    <form action="/rooms" className="flex w-full items-center gap-3 md:w-auto">
-      {Object.entries(params).map(([key, value]) => {
-        if (key === "ordering" || key === "page" || value === undefined) return null;
-        const values = Array.isArray(value) ? value : [value];
-        return values.filter(Boolean).map((item) => <input key={`${key}-${item}`} name={key} type="hidden" value={item} />);
-      })}
-      <select
-        aria-label="Sắp xếp"
-        className="min-w-0 flex-1 rounded-md border border-outline-variant/30 bg-surface-container-lowest px-4 py-3 font-button text-button text-primary transition-colors focus:border-primary focus:ring-primary md:w-52 md:flex-none"
-        defaultValue={ordering}
-        name="ordering"
-      >
-        <option value="-created_at">Mới nhất</option>
-        <option value="price">Giá thấp trước</option>
-        <option value="-price">Giá cao trước</option>
-        <option value="-actual_area">Diện tích lớn trước</option>
-      </select>
-      <button className="premium-button shrink-0 whitespace-nowrap rounded-md border border-primary/35 bg-surface-container-lowest px-4 py-3 font-button text-button text-primary sm:px-5" type="submit">
-        Áp dụng
-      </button>
-    </form>
   );
 }
 
@@ -403,16 +416,17 @@ function FilterSidebar({
   const visibleWards = filters.wards.filter((ward) => !effectiveCity || String(ward.city) === effectiveCity);
   const selectedSubtype = filters.room_subtypes.find((item) => String(item.id) === activeRoomSubtype);
   const selectedParentType = activeRoomType || selectedSubtype?.parent_type;
+  const activeAmenitySet = new Set(activeAmenities);
   const hasAdvancedFilters = Boolean(selectedParentType || activeRoomSubtype || activeAreaRange || activeAmenities.length);
 
   return (
-    <aside className="w-full flex-shrink-0 lg:sticky lg:top-24 lg:w-[280px] lg:self-start">
+    <aside className="w-full flex-shrink-0 lg:sticky lg:top-24 lg:w-[260px] lg:self-start">
       <ResponsiveFilter>
-        <form action="/rooms" className="mt-3 overflow-visible rounded-lg border border-outline-variant/40 bg-surface-container-lowest shadow-sm lg:mt-0">
+        <form action="/rooms" className="mt-3 overflow-visible rounded-lg border border-outline-variant/60 bg-surface-container-lowest lg:mt-0" data-product-event="room_search_submitted">
           <div className="p-4">
             <div className="mb-4 flex items-center justify-between border-b border-outline-variant/20 pb-4">
-              <h2 className="font-headline-sm text-headline-sm text-on-surface">Bộ lọc</h2>
-              <Link className="font-button text-button text-secondary underline transition-colors hover:text-primary" href="/rooms">
+              <h2 className="text-xl font-semibold text-on-surface">Bộ lọc</h2>
+              <Link className="inline-flex min-h-11 items-center rounded-md px-2 font-button text-button text-secondary underline underline-offset-4 transition-colors hover:bg-surface-container-low hover:text-primary" href="/rooms">
                 Xóa tất cả
               </Link>
             </div>
@@ -422,7 +436,7 @@ function FilterSidebar({
                 <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" size={18} strokeWidth={1.8} />
                 <input
                   aria-label="Tìm kiếm phòng"
-                  className="min-h-11 w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest py-3 pl-10 pr-3 font-body-md text-on-surface focus:border-primary focus:ring-primary"
+                  className="min-h-11 w-full rounded-md border border-outline-variant/60 bg-surface-container-low py-3 pl-10 pr-3 font-body-md text-on-surface focus:border-primary focus:ring-primary"
                   defaultValue={search}
                   name="search"
                   placeholder="Tên phòng, địa chỉ..."
@@ -455,7 +469,7 @@ function FilterSidebar({
               <FilterSection title="Phường">
                 <select
                   aria-label="Chọn phường"
-                  className="min-h-11 w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-on-surface focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
+                  className="min-h-11 w-full rounded-md border border-outline-variant/60 bg-surface-container-low px-3 py-3 font-body-md text-on-surface focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60"
                   defaultValue={activeWard ?? ""}
                   disabled={!effectiveCity}
                   name="ward"
@@ -470,8 +484,8 @@ function FilterSidebar({
 
             <FilterSection title="Khoảng giá">
               <div className="grid grid-cols-1 gap-3">
-                <input aria-label="Giá từ" className="min-h-11 w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-on-surface focus:border-primary focus:ring-primary" defaultValue={activeMinPrice} min="0" name="min_price" placeholder="Giá từ" type="number" />
-                <input aria-label="Giá đến" className="min-h-11 w-full rounded-md border border-outline-variant/30 bg-surface-container-lowest px-3 py-3 font-body-md text-on-surface focus:border-primary focus:ring-primary" defaultValue={activeMaxPrice} min="0" name="max_price" placeholder="Giá đến" type="number" />
+                <input aria-label="Giá từ" className="min-h-11 w-full rounded-md border border-outline-variant/60 bg-surface-container-low px-3 py-3 font-body-md text-on-surface focus:border-primary focus:ring-primary" defaultValue={activeMinPrice} min="0" name="min_price" placeholder="Giá từ" type="number" />
+                <input aria-label="Giá đến" className="min-h-11 w-full rounded-md border border-outline-variant/60 bg-surface-container-low px-3 py-3 font-body-md text-on-surface focus:border-primary focus:ring-primary" defaultValue={activeMaxPrice} min="0" name="max_price" placeholder="Giá đến" type="number" />
               </div>
             </FilterSection>
 
@@ -506,7 +520,7 @@ function FilterSidebar({
                     <div className="space-y-1">
                       {filters.amenities.slice(0, 5).map((item) => (
                         <label className="group flex min-h-11 cursor-pointer items-center gap-3 py-2" key={item.id}>
-                          <input className="size-4 rounded border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary" defaultChecked={activeAmenities.includes(String(item.id))} name="amenities" type="checkbox" value={item.id} />
+                          <input className="size-4 rounded border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary" defaultChecked={activeAmenitySet.has(String(item.id))} name="amenities" type="checkbox" value={item.id} />
                           <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-on-surface">{item.name}</span>
                         </label>
                       ))}
@@ -538,30 +552,43 @@ function FilterSection({ title, children }: Readonly<{ title: string; children: 
   );
 }
 
-function RoomCard({ priority = false, room, wide = false }: Readonly<{ priority?: boolean; room: RoomCardView; wide?: boolean }>) {
-  const detailHref = room.slug ? `/rooms/${encodeURIComponent(room.slug)}` : "/rooms";
+function RoomCard({
+  compareItem,
+  priority = false,
+  room,
+  wide = false,
+}: Readonly<{
+  compareItem?: RoomCompareItem;
+  priority?: boolean;
+  room: RoomCardView;
+  wide?: boolean;
+}>) {
+  const detailHref = roomDetailHref(room);
 
   return (
     <article
-      className={`premium-card group flex flex-col overflow-hidden rounded-lg border border-outline-variant/45 bg-surface-container-low shadow-sm ${wide ? "xl:grid xl:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)]" : ""} ${
+      className={`premium-card group flex flex-col overflow-hidden rounded-lg border border-outline-variant/60 bg-surface-container-lowest shadow-soft ${wide ? "xl:grid xl:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)]" : ""} ${
         room.unavailable ? "opacity-80" : ""
       }`}
       data-layout={wide ? "wide" : "standard"}
       data-room-card
     >
-      <div className={`relative h-[260px] overflow-hidden sm:h-[280px] ${wide ? "xl:h-full xl:min-h-[350px]" : ""} ${room.unavailable ? "grayscale-[30%]" : ""}`}>
+      <div className={`relative h-[260px] overflow-hidden bg-surface-container sm:h-[280px] ${wide ? "xl:h-full xl:min-h-[350px]" : ""} ${room.unavailable ? "grayscale-[30%]" : ""}`}>
         <Link aria-label={`Xem chi tiết ${room.title}`} className="absolute inset-0" href={detailHref}>
           {room.image ? (
             <Image
               alt={room.alt}
+              blurDataURL={ROOM_IMAGE_BLUR_DATA_URL}
               className="shared-image object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               decoding="async"
               fill
               loading={priority ? "eager" : "lazy"}
+              placeholder="blur"
               priority={priority}
               quality={78}
               sizes="(min-width: 1280px) 500px, (min-width: 768px) 50vw, 100vw"
               src={fastImageUrl(room.image, priority ? 1200 : 768, priority ? 82 : 78)}
+              unoptimized={isCloudinaryImage(room.image)}
             />
           ) : (
             <ImagePlaceholder />
@@ -570,7 +597,7 @@ function RoomCard({ priority = false, room, wide = false }: Readonly<{ priority?
         <div className="absolute left-4 top-4">
           <span
             className={`rounded-md px-3 py-1.5 font-label-caps text-label-caps uppercase shadow-sm ${
-              room.unavailable ? "bg-surface-variant/95 text-on-surface" : "border border-primary/30 bg-primary-container text-on-primary-container"
+              room.unavailable ? "bg-surface-variant/95 text-on-surface" : "border border-tertiary/20 bg-tertiary-container text-on-tertiary-container"
             }`}
           >
             {room.unavailable ? room.status : "Còn trống"}
@@ -582,37 +609,47 @@ function RoomCard({ priority = false, room, wide = false }: Readonly<{ priority?
       </div>
 
       <div className="flex flex-grow flex-col p-5 md:p-6">
-        <div className="mb-4 flex items-start justify-between gap-4">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0">
-            <Link className="line-clamp-2 block font-headline-sm text-xl leading-snug text-on-surface hover:text-primary" href={detailHref}>
+            <Link className="line-clamp-2 block min-h-11 font-headline-sm text-xl leading-snug text-on-surface hover:text-primary" href={detailHref}>
               {room.title}
             </Link>
             <p className="mt-2 font-body-md text-base font-medium text-on-surface-variant">{room.primaryMeta} · {room.area}</p>
           </div>
-          <div className="shrink-0 text-right">
+          <div className="text-left sm:shrink-0 sm:text-right">
             <span className="block whitespace-nowrap text-xl font-bold tabular-nums text-on-surface">{room.price}</span>
-            <span className="text-sm font-medium text-on-surface-variant">{room.period}</span>
           </div>
         </div>
 
         {room.featuredAmenities.length ? (
           <div className="mb-4 flex flex-wrap gap-2">
             {room.featuredAmenities.map((amenity) => (
-              <span className="rounded-md border border-primary/20 bg-primary-container/70 px-3 py-1.5 text-sm font-medium text-on-primary-container" key={amenity}>
+              <span className="rounded-md border border-outline-variant/70 bg-surface-container px-3 py-1.5 text-sm font-medium text-on-surface-variant" key={amenity}>
                 {amenity}
               </span>
             ))}
           </div>
         ) : null}
 
-        <div className="mt-auto flex flex-wrap items-center gap-4 border-t border-outline-variant/25 pt-5 text-on-surface-variant">
-          <div className="flex min-w-0 items-center gap-2 text-base">
-            <ShieldCheck aria-hidden="true" className="shrink-0 text-primary" size={20} strokeWidth={1.8} />
-            <span><span className="font-semibold text-on-surface">{room.depositLabel}:</span> {room.deposit}</span>
+        <div className="mt-auto grid gap-3 border-t border-outline-variant/50 pt-5 sm:grid-cols-2">
+          <div className="rounded-md bg-surface-container-low p-3 text-sm text-on-surface-variant">
+            <span className="flex items-center gap-2 font-semibold text-on-surface">
+              <ShieldCheck aria-hidden="true" className="shrink-0 text-primary" size={18} strokeWidth={1.8} />
+              {room.depositLabel}
+            </span>
+            <span className="mt-1 block tabular-nums">{room.deposit}</span>
           </div>
-          <Link className="premium-button urban-cta ml-auto inline-flex min-h-11 items-center rounded-md px-4 py-3 font-body-md text-sm" href={detailHref}>
-            Xem và đặt lịch
+          <div className="rounded-md bg-surface-container-low p-3 text-sm text-on-surface-variant">
+            <span className="font-semibold text-on-surface">Chi phí cố định/tháng</span>
+            <span className="mt-1 block tabular-nums">{room.fixedMonthlyCost}</span>
+            <span className="mt-1 block text-xs">Chưa gồm điện, nước</span>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <Link className="premium-button urban-cta inline-flex min-h-11 items-center justify-center rounded-md px-4 py-3 font-body-md text-sm" href={detailHref}>
+            Xem chi tiết và đặt lịch
           </Link>
+          {compareItem ? <RoomCompareToggle room={compareItem} /> : null}
         </div>
       </div>
     </article>
@@ -628,51 +665,47 @@ function Pagination({
   params: Record<string, string | string[] | undefined>;
   totalPages: number;
 }>) {
-  const start = Math.max(1, Math.min(currentPage - 1, totalPages - 2));
-  const pages = Array.from({ length: Math.min(totalPages, 3) }, (_, index) => start + index);
+  const pages = Array.from(
+    new Set([1, currentPage - 1, currentPage, currentPage + 1, totalPages]),
+  )
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((left, right) => left - right);
 
   return (
     <div className="mt-12 flex items-center justify-center gap-2 font-button text-button">
       <Link
         aria-label="Trang trước"
         aria-disabled={currentPage <= 1}
-        className={`motion-chip flex size-11 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary ${
+        className={`motion-chip flex size-11 items-center justify-center rounded-md border border-outline-variant/60 text-secondary transition-colors hover:border-primary hover:text-primary ${
           currentPage <= 1 ? "pointer-events-none opacity-45" : ""
         }`}
         href={roomsHref(params, Math.max(1, currentPage - 1))}
       >
         <ChevronLeft size={18} strokeWidth={1.8} />
       </Link>
-      {pages.map((page) => (
-        <Link
-          aria-label={`Trang ${page}`}
-          className={
-            page === currentPage
-              ? "motion-chip flex size-11 items-center justify-center rounded bg-primary text-on-primary"
-              : "motion-chip flex size-11 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary"
-          }
-          href={roomsHref(params, page)}
-          key={page}
-        >
-          {page}
-        </Link>
-      ))}
-      {totalPages > 3 ? (
-        <>
-          <span className="px-2 text-secondary">...</span>
+      {pages.map((page, index) => (
+        <Fragment key={page}>
+          {index > 0 && page - pages[index - 1] > 1 ? (
+            <span aria-hidden="true" className="px-1 text-secondary">…</span>
+          ) : null}
           <Link
-            aria-label={`Trang ${totalPages}`}
-            className="motion-chip flex size-11 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary"
-            href={roomsHref(params, totalPages)}
+            aria-current={page === currentPage ? "page" : undefined}
+            aria-label={`Trang ${page}`}
+            className={
+              page === currentPage
+                ? "motion-chip flex size-11 items-center justify-center rounded-md bg-primary text-on-primary"
+                : "motion-chip flex size-11 items-center justify-center rounded-md border border-outline-variant/60 text-secondary transition-colors hover:border-primary hover:text-primary"
+            }
+            href={roomsHref(params, page)}
           >
-            {totalPages}
+            {page}
           </Link>
-        </>
-      ) : null}
+        </Fragment>
+      ))}
       <Link
         aria-label="Trang sau"
         aria-disabled={currentPage >= totalPages}
-        className={`motion-chip flex size-11 items-center justify-center rounded border border-outline-variant/20 text-secondary transition-colors hover:border-primary hover:text-primary ${
+        className={`motion-chip flex size-11 items-center justify-center rounded-md border border-outline-variant/60 text-secondary transition-colors hover:border-primary hover:text-primary ${
           currentPage >= totalPages ? "pointer-events-none opacity-45" : ""
         }`}
         href={roomsHref(params, Math.min(totalPages, currentPage + 1))}

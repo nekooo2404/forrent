@@ -13,6 +13,7 @@ from apps.common.image_validation import (
 )
 from apps.locations.serializers import AmenitySerializer, AreaRangeSerializer, CitySerializer, WardSerializer
 from apps.rooms.models import DepositType, Room, RoomImage, RoomSubtype
+from apps.rooms.public_copy import public_room_title
 
 
 def allowed_room_image_url_hosts():
@@ -82,6 +83,7 @@ class PublicRoomListSerializer(serializers.ModelSerializer):
     area_range = AreaRangeSerializer(read_only=True)
     amenities = AmenitySerializer(many=True, read_only=True)
     deposit_type_name = serializers.SerializerMethodField()
+    public_title = serializers.SerializerMethodField()
     room_subtype_name = serializers.SerializerMethodField()
     thumbnail_url = serializers.SerializerMethodField()
 
@@ -90,6 +92,7 @@ class PublicRoomListSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "title",
+            "public_title",
             "slug",
             "room_type",
             "room_subtype",
@@ -121,12 +124,22 @@ class PublicRoomListSerializer(serializers.ModelSerializer):
     @extend_schema_field(OpenApiTypes.URI)
     def get_thumbnail_url(self, obj):
         request = self.context.get("request")
-        if obj.thumbnail and request:
-            return request.build_absolute_uri(obj.thumbnail.url)
+        if obj.thumbnail:
+            return request.build_absolute_uri(obj.thumbnail.url) if request else obj.thumbnail.url
+        for media in obj.images.all():
+            if media.media_type != RoomImage.MediaType.IMAGE:
+                continue
+            if media.image_url:
+                return media.image_url
+            if media.image:
+                return request.build_absolute_uri(media.image.url) if request else media.image.url
         return None
 
     def get_deposit_type_name(self, obj):
         return obj.deposit_type_name_snapshot or (obj.deposit_type.name if obj.deposit_type_id else "")
+
+    def get_public_title(self, obj):
+        return public_room_title(obj.title, proper_nouns=[obj.city.name if obj.city_id else "", obj.ward.name if obj.ward_id else ""])
 
     def get_room_subtype_name(self, obj):
         return obj.room_subtype.name if obj.room_subtype_id else ""
@@ -154,6 +167,7 @@ class AdminRoomImageWriteSerializer(serializers.ModelSerializer):
 class AdminRoomSerializer(serializers.ModelSerializer):
     images = RoomImageSerializer(many=True, read_only=True)
     deposit_type_name = serializers.SerializerMethodField()
+    public_title = serializers.SerializerMethodField()
     room_subtype_name = serializers.SerializerMethodField()
     uploaded_images = serializers.ListField(
         child=serializers.FileField(),
@@ -172,6 +186,7 @@ class AdminRoomSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "title",
+            "public_title",
             "slug",
             "room_type",
             "room_subtype",
@@ -208,7 +223,7 @@ class AdminRoomSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
-        read_only_fields = ("id", "created_by", "created_by_name", "estimated_commission_amount", "created_at", "updated_at")
+        read_only_fields = ("id", "public_title", "created_by", "created_by_name", "estimated_commission_amount", "created_at", "updated_at")
 
     def validate(self, attrs):
         room_type = attrs.get("room_type") or getattr(self.instance, "room_type", None)
@@ -266,6 +281,9 @@ class AdminRoomSerializer(serializers.ModelSerializer):
 
     def get_deposit_type_name(self, obj):
         return obj.deposit_type_name_snapshot or (obj.deposit_type.name if obj.deposit_type_id else "")
+
+    def get_public_title(self, obj):
+        return public_room_title(obj.title, proper_nouns=[obj.city.name if obj.city_id else "", obj.ward.name if obj.ward_id else ""])
 
     def get_room_subtype_name(self, obj):
         return obj.room_subtype.name if obj.room_subtype_id else ""

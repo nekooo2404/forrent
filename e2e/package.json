@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "scripts": {
     "test": "playwright test",
-    "test:ci": "playwright test --project=chromium --workers=1",
-    "test:cross-browser": "playwright test tests/critical.spec.ts --project=firefox --project=webkit --project=\"Mobile Chrome\" --project=\"Mobile Safari\" --grep \"homepage starts|mobile menu opens|advanced room filters|room gallery adapts|room detail booking panel\" --workers=1",
+    "test:ci": "playwright test --project=chromium --workers=1 --grep-invert \"visual regression\"",
+    "test:visual": "playwright test tests/visual.spec.ts --project=chromium --workers=1",
+    "test:cross-browser": "playwright test tests/critical.spec.ts --project=firefox --project=webkit --project=\"Mobile Chrome\" --project=\"Mobile Safari\" --grep \"login failure|expired session|homepage starts|mobile menu opens|advanced room filters|room gallery adapts|room detail booking panel|dialog keyboard focus\" --workers=1",
+    "field:ui-ux": "node field-gates.mjs",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug"

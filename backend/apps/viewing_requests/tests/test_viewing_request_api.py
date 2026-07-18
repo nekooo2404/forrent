@@ -1,5 +1,6 @@
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
 from django.core.cache import cache
@@ -25,16 +26,18 @@ class TestViewingRequestAPI:
             "preferred_viewing_time_slot": ViewingRequest.TimeSlot.MORNING,
         }
 
-    def test_create_viewing_request_successfully(self):
+    def test_create_viewing_request_successfully(self, django_capture_on_commit_callbacks):
         tenant = create_user()
         room = create_room()
         self.client.force_authenticate(tenant)
 
-        response = self.client.post(
-            "/api/viewing-requests/",
-            self.viewing_payload(room),
-            format="json",
-        )
+        with patch("apps.viewing_requests.services.send_viewing_request_received_email.delay") as send_email:
+            with django_capture_on_commit_callbacks(execute=True):
+                response = self.client.post(
+                    "/api/viewing-requests/",
+                    self.viewing_payload(room),
+                    format="json",
+                )
 
         assert response.status_code == 201
         assert response.data["data"]["room_id"] == room.id
@@ -49,6 +52,7 @@ class TestViewingRequestAPI:
         assert lead.preferred_viewing_time_slot == ViewingRequest.TimeSlot.MORNING
         assert lead.confirmed_at is None
         assert lead.estimated_commission_amount == Decimal("2500000.00")
+        send_email.assert_called_once_with(lead.id)
 
     def test_duplicate_active_viewing_request_is_rejected(self):
         tenant = create_user()
@@ -219,7 +223,7 @@ class TestViewingRequestAPI:
         assert no_show_lead.status == ViewingRequest.Status.NO_SHOW
         assert AuditLog.objects.filter(event="viewing_request.status_changed").count() == 2
 
-    def test_admin_confirm_appointment_action_records_actual_schedule(self):
+    def test_admin_confirm_appointment_action_records_actual_schedule(self, django_capture_on_commit_callbacks):
         tenant = create_user()
         admin = create_admin()
         room = create_room(created_by=admin)
@@ -235,15 +239,17 @@ class TestViewingRequestAPI:
         )
         self.client.force_authenticate(admin)
 
-        response = self.client.post(
-            f"/api/admin/viewing-requests/{lead.id}/confirm-appointment/",
-            {
-                "appointment_date": (timezone.localdate() + timedelta(days=2)).isoformat(),
-                "appointment_time_slot": ViewingRequest.TimeSlot.AFTERNOON,
-                "note": "Khach da xac nhan lich xem.",
-            },
-            format="json",
-        )
+        with patch("apps.viewing_requests.services.send_appointment_confirmed_email.delay") as send_email:
+            with django_capture_on_commit_callbacks(execute=True):
+                response = self.client.post(
+                    f"/api/admin/viewing-requests/{lead.id}/confirm-appointment/",
+                    {
+                        "appointment_date": (timezone.localdate() + timedelta(days=2)).isoformat(),
+                        "appointment_time_slot": ViewingRequest.TimeSlot.AFTERNOON,
+                        "note": "Khach da xac nhan lich xem.",
+                    },
+                    format="json",
+                )
 
         assert response.status_code == 200
         lead.refresh_from_db()
@@ -253,6 +259,7 @@ class TestViewingRequestAPI:
         assert lead.status == ViewingRequest.Status.SCHEDULED
         assert ViewingRequestActivity.objects.filter(viewing_request=lead, action="SCHEDULE_APPOINTMENT").exists()
         assert AuditLog.objects.filter(event="viewing_request.scheduled", target_id=str(lead.id)).exists()
+        send_email.assert_called_once_with(lead.id)
 
     def test_admin_list_can_filter_confirmed_appointments_by_date(self):
         tenant = create_user()

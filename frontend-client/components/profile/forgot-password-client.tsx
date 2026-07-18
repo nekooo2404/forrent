@@ -109,7 +109,7 @@ export function ForgotPasswordClient() {
   }
 
   return (
-    <div className="w-full max-w-md rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-8 shadow-elevated md:p-10">
+    <div className="w-full max-w-md rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-8 shadow-soft md:p-10">
       <div className="mb-10 text-center">
         <h1 className="mb-3 font-headline-md text-headline-md text-on-surface">Quên mật khẩu</h1>
         <p className="font-body-md text-body-md text-on-surface-variant">
@@ -129,8 +129,8 @@ export function ForgotPasswordClient() {
         <SubmitButton loading={state.loading}>Đặt lại mật khẩu</SubmitButton>
       </form>
 
-      <div className="mt-8 border-t border-outline-variant/10 pt-6 text-center">
-        <Link className="font-body-md text-body-md text-primary transition-colors hover:text-gold" href="/log-in">
+      <div className="mt-8 border-t border-outline-variant/70 pt-6 text-center">
+        <Link className="inline-flex min-h-11 items-center font-body-md text-body-md font-semibold text-primary transition-colors duration-200 hover:text-primary/80" href="/log-in">
           Quay lại đăng nhập
         </Link>
       </div>
@@ -151,7 +151,7 @@ function AuthInput({
     <FormField htmlFor={inputId} label={label}>
       <input
         id={inputId}
-        className="w-full border-0 border-b border-outline-variant bg-transparent px-0 py-3 font-body-md text-primary transition-colors focus:border-primary focus:ring-0"
+        className="min-h-11 w-full rounded-md border border-outline-variant/70 bg-surface-container-low px-3 py-3 text-base text-on-surface outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary/10"
         maxLength={maxLength}
         minLength={type === "password" ? 8 : undefined}
         onChange={(event) => onChange(event.target.value)}
@@ -166,7 +166,7 @@ function AuthInput({
 function SubmitButton({ children, loading }: Readonly<{ children: string; loading: boolean }>) {
   return (
     <Button
-      className="w-full rounded bg-primary py-4 hover:bg-surface-tint"
+      className="w-full rounded-md bg-primary py-3 hover:bg-primary/90"
       loading={loading}
       type="submit"
     >

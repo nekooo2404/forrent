@@ -1,19 +1,8 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { Open_Sans } from "next/font/google";
-import Script from "next/script";
 import type { ReactNode } from "react";
 
-import { ThemeProvider } from "@/components/theme-provider";
-
 import "./globals.css";
-
-const openSans = Open_Sans({
-  subsets: ["latin", "vietnamese"],
-  weight: ["300", "400", "500", "600", "700", "800"],
-  variable: "--font-open-sans",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "ForRent Admin",
@@ -29,15 +18,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: ReactNode;
 }>) {
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
+  // Dynamic rendering lets Next attach the per-request CSP nonce to framework scripts.
+  await headers();
 
   return (
-    <html className="light" lang="vi" suppressHydrationWarning>
-      <head>
-        <Script nonce={nonce} src="/theme-init.js" strategy="beforeInteractive" />
-      </head>
-      <body className={`${openSans.variable} bg-surface font-body-md text-body-md text-on-surface antialiased`}>
-        <ThemeProvider>{children}</ThemeProvider>
+    <html className="light" lang="vi">
+      <body className="bg-surface font-body-md text-body-md text-on-surface antialiased">
+        {children}
       </body>
     </html>
   );

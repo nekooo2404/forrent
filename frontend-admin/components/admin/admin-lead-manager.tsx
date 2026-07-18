@@ -272,7 +272,7 @@ export function AdminLeadManager() {
           </button>
         }
         eyebrow="Vận hành yêu cầu"
-        subtitle="Theo dõi yêu cầu xem phòng, cập nhật trạng thái xử lý và xác nhận chuyển vào để backend tự ghi nhận hoa hồng."
+        subtitle="Theo dõi yêu cầu xem phòng, cập nhật trạng thái và ghi nhận kết quả tư vấn."
         title="Quản lý yêu cầu xem phòng"
       />
 
@@ -289,7 +289,7 @@ export function AdminLeadManager() {
           ["CONVERTED", "Chốt thuê"],
         ].map(([key, label]) => (
           <button
-            className="rounded-xl border border-primary/10 bg-surface-container-lowest/90 p-4 text-left shadow-soft transition hover:-translate-y-0.5 hover:border-primary/25"
+            className="min-h-11 rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-4 text-left shadow-soft transition-colors duration-200 hover:border-primary/40"
             key={key}
             onClick={() => {
               setStatus(key);
@@ -317,6 +317,7 @@ export function AdminLeadManager() {
                 <label className="relative">
                   <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-secondary" size={17} strokeWidth={1.8} />
                   <input
+                    aria-label="Tìm yêu cầu xem phòng"
                     className={`${adminInputClass} pl-9`}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Tìm khách hàng, email, số điện thoại..."
@@ -324,12 +325,13 @@ export function AdminLeadManager() {
                     value={search}
                   />
                 </label>
-                <select className={adminSelectClass} onChange={(event) => setStatus(event.target.value)} value={status}>
+                <select aria-label="Lọc yêu cầu theo trạng thái" className={adminSelectClass} onChange={(event) => setStatus(event.target.value)} value={status}>
                   {leadStatuses.map((item) => (
                     <option key={item.value || "all"} value={item.value}>{item.label}</option>
                   ))}
                 </select>
                 <select
+                  aria-label="Lọc yêu cầu theo khu vực"
                   className={adminSelectClass}
                   onChange={(event) => {
                     setCity(event.target.value);
@@ -342,20 +344,20 @@ export function AdminLeadManager() {
                     <option key={item.id} value={item.id}>{item.name}</option>
                   ))}
                 </select>
-                <select className={adminSelectClass} onChange={(event) => setWard(event.target.value)} value={ward}>
+                <select aria-label="Lọc yêu cầu theo phường" className={adminSelectClass} onChange={(event) => setWard(event.target.value)} value={ward}>
                   <option value="">Tất cả phường</option>
                   {filteredWards.map((item) => (
                     <option key={item.id} value={item.id}>{item.name}</option>
                   ))}
                 </select>
-                <input className={adminInputClass} onChange={(event) => setDateFrom(event.target.value)} type="date" value={dateFrom} />
-                <input className={adminInputClass} onChange={(event) => setDateTo(event.target.value)} type="date" value={dateTo} />
+                <input aria-label="Từ ngày" className={adminInputClass} onChange={(event) => setDateFrom(event.target.value)} type="date" value={dateFrom} />
+                <input aria-label="Đến ngày" className={adminInputClass} onChange={(event) => setDateTo(event.target.value)} type="date" value={dateTo} />
                 <button className={adminButtonSecondary} type="submit">Lọc</button>
               </form>
               {selectedIds.length ? (
                 <div className="flex w-full flex-wrap items-center gap-2">
                   <span className="text-sm text-secondary">Đã chọn {selectedIds.length}</span>
-                  <select className={adminSelectClass} onChange={(event) => setBulkStatus(event.target.value)} value={bulkStatus}>
+                  <select aria-label="Trạng thái cập nhật hàng loạt" className={adminSelectClass} onChange={(event) => setBulkStatus(event.target.value)} value={bulkStatus}>
                     {bulkStatusOptions.map((item) => (
                       <option key={item.value} value={item.value}>{item.label}</option>
                     ))}
@@ -374,7 +376,7 @@ export function AdminLeadManager() {
           ) : leads.length ? (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-primary/10 text-xs uppercase text-secondary">
+                <thead className="border-b border-outline-variant/70 text-xs uppercase text-secondary">
                   <tr>
                     <th className="py-3 pr-3">
                       <span className="sr-only">Chọn</span>
@@ -390,18 +392,28 @@ export function AdminLeadManager() {
                 <tbody className="divide-y divide-primary/10">
                   {leads.map((lead) => (
                     <tr
+                      aria-label={`Chọn yêu cầu của ${lead.full_name} để cập nhật nhanh`}
                       className={`cursor-pointer transition hover:bg-surface-container-low/70 ${selectedLead?.id === lead.id ? "bg-surface-container-low" : ""}`}
                       key={lead.id}
                       onClick={() => selectLead(lead)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          selectLead(lead);
+                        }
+                      }}
+                      tabIndex={0}
                     >
                       <td className="py-4 pr-3">
-                        <input
-                          checked={selectedIds.includes(lead.id)}
-                          className="size-4 rounded border-primary/20 text-primary focus:ring-primary"
-                          onChange={(event) => toggleLeadSelection(lead.id, event.target.checked)}
-                          onClick={(event) => event.stopPropagation()}
-                          type="checkbox"
-                        />
+                        <label className="grid size-11 cursor-pointer place-items-center" onClick={(event) => event.stopPropagation()}>
+                          <span className="sr-only">Chọn yêu cầu của {lead.full_name}</span>
+                          <input
+                            checked={selectedIdSet.has(lead.id)}
+                            className="size-4 rounded border-primary/20 text-primary focus:ring-primary"
+                            onChange={(event) => toggleLeadSelection(lead.id, event.target.checked)}
+                            type="checkbox"
+                          />
+                        </label>
                       </td>
                       <td className="py-4 pr-5">
                         <p className="font-semibold text-primary">{lead.full_name}</p>
@@ -489,11 +501,11 @@ export function AdminLeadManager() {
                 </label>
               </div>
 
-              <div className="rounded-lg border border-primary/10 bg-surface-container-lowest p-4">
+              <div className="rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-4">
                 <p className="mb-3 text-xs font-semibold uppercase text-secondary">Lịch xem đã chốt</p>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <input className={adminInputClass} onChange={(event) => setAppointmentDateDraft(event.target.value)} type="date" value={appointmentDateDraft} />
-                  <select className={adminSelectClass} onChange={(event) => setAppointmentSlotDraft(event.target.value)} value={appointmentSlotDraft}>
+                  <input aria-label="Ngày xem đã xác nhận" className={adminInputClass} onChange={(event) => setAppointmentDateDraft(event.target.value)} type="date" value={appointmentDateDraft} />
+                  <select aria-label="Khung giờ xem đã xác nhận" className={adminSelectClass} onChange={(event) => setAppointmentSlotDraft(event.target.value)} value={appointmentSlotDraft}>
                     <option value="">Chọn khung giờ</option>
                     <option value="morning">Buổi sáng</option>
                     <option value="afternoon">Buổi chiều</option>

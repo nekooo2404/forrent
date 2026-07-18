@@ -250,6 +250,7 @@ export function AdminBlogManager() {
             <label className="relative min-w-[260px]">
               <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-secondary" size={17} strokeWidth={1.8} />
               <input
+                aria-label="Tìm bài viết"
                 className={`${adminInputClass} pl-9`}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Tìm tiêu đề, mô tả, nội dung..."
@@ -257,7 +258,7 @@ export function AdminBlogManager() {
                 value={search}
               />
             </label>
-            <select className={adminSelectClass} onChange={(event) => setStatus(event.target.value)} value={status}>
+            <select aria-label="Lọc bài viết theo trạng thái" className={adminSelectClass} onChange={(event) => setStatus(event.target.value)} value={status}>
               {blogStatuses.map((item) => (
                 <option key={item.value || "all"} value={item.value}>{item.label}</option>
               ))}
@@ -274,7 +275,7 @@ export function AdminBlogManager() {
         ) : blogs.length ? (
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-primary/10 text-xs uppercase text-secondary">
+              <thead className="border-b border-outline-variant/70 text-xs uppercase text-secondary">
                 <tr>
                   <th className="py-3 pr-5 font-semibold">Bài viết</th>
                   <th className="py-3 pr-5 font-semibold">Trạng thái</th>
@@ -284,7 +285,7 @@ export function AdminBlogManager() {
                   <th className="py-3 text-right font-semibold">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-primary/10">
+              <tbody className="divide-y divide-outline-variant/70">
                 {blogs.map((blog) => (
                   <tr className="transition hover:bg-surface-container-low/70" key={blog.id}>
                     <td className="max-w-[360px] py-4 pr-5">
@@ -303,7 +304,7 @@ export function AdminBlogManager() {
                         {blog.status === "PUBLISHED" ? (
                           <Link
                             aria-label={`Mở ${blog.title}`}
-                            className="rounded-md border border-primary/10 bg-surface-container-lowest p-2 text-secondary transition hover:border-primary/25 hover:text-primary"
+                            className="inline-flex size-11 items-center justify-center rounded-md border border-outline-variant/70 bg-surface-container-lowest text-secondary transition-colors duration-200 hover:border-primary/40 hover:text-primary"
                             href={`${process.env.NEXT_PUBLIC_CLIENT_URL || "http://localhost:3000"}/blogs/${blog.slug}`}
                             target="_blank"
                           >
@@ -312,7 +313,7 @@ export function AdminBlogManager() {
                         ) : null}
                         <button
                           aria-label={`Sửa ${blog.title}`}
-                          className="rounded-md border border-primary/10 bg-surface-container-lowest p-2 text-secondary transition hover:border-primary/25 hover:text-primary"
+                          className="inline-flex size-11 items-center justify-center rounded-md border border-outline-variant/70 bg-surface-container-lowest text-secondary transition-colors duration-200 hover:border-primary/40 hover:text-primary"
                           onClick={() => openEditModal(blog)}
                           type="button"
                         >
@@ -320,10 +321,10 @@ export function AdminBlogManager() {
                         </button>
                         <button
                           aria-label={`Xóa ${blog.title}`}
-                          className={`rounded-md border p-2 transition ${
+                          className={`inline-flex size-11 items-center justify-center rounded-md border transition-colors duration-200 ${
                             pendingDeleteId === blog.id
                               ? "border-error/30 bg-error-container text-error"
-                              : "border-primary/10 bg-surface-container-lowest text-secondary hover:border-error/25 hover:text-error"
+                              : "border-outline-variant/70 bg-surface-container-lowest text-secondary hover:border-error/40 hover:text-error"
                           }`}
                           onClick={() => handleDelete(blog.id)}
                           type="button"
@@ -346,7 +347,7 @@ export function AdminBlogManager() {
                 Tạo bài viết đầu tiên
               </button>
             }
-            description="Khi backend có bài viết, trang public `/blogs` sẽ tự động hiển thị các bài đang publish."
+            description="Bài viết được xuất bản sẽ hiển thị trong mục Cẩm nang trên website."
             title="Chưa có bài viết"
           />
         )}
@@ -371,7 +372,7 @@ export function AdminBlogManager() {
 
 function MiniMetric({ label, value }: Readonly<{ label: string; value: number }>) {
   return (
-    <div className="rounded-xl border border-primary/10 bg-surface-container-lowest/90 p-4 shadow-soft">
+    <div className="rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-4 shadow-soft">
       <p className="text-xs font-semibold uppercase text-secondary">{label}</p>
       <p className="mt-2 text-2xl font-semibold tabular-nums text-primary">{value}</p>
     </div>
@@ -394,14 +395,14 @@ function BlogFormModal({
   onUpdate: <K extends keyof BlogFormState>(key: K, value: BlogFormState[K]) => void;
 }>) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-primary/30 p-0 backdrop-blur-sm md:items-center md:p-6">
-      <section className="admin-modal-panel max-h-[94dvh] w-full max-w-4xl overflow-y-auto rounded-t-2xl bg-surface shadow-elevated md:rounded-2xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-primary/10 bg-surface/95 px-5 py-4 backdrop-blur">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-on-surface/45 p-0 md:items-center md:p-6">
+      <section className="admin-modal-panel max-h-[94dvh] w-full max-w-4xl overflow-y-auto rounded-t-lg bg-surface shadow-elevated md:rounded-lg">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-outline-variant/70 bg-surface-container-lowest px-5 py-4">
           <div>
             <p className="text-xs font-semibold uppercase text-secondary">{isEditing ? "Sửa bài viết" : "Bài viết mới"}</p>
             <h2 className="font-headline-sm text-2xl text-on-surface">{isEditing ? "Cập nhật bài viết" : "Tạo bài viết mới"}</h2>
           </div>
-          <button className="rounded-md p-2 text-secondary transition hover:bg-surface-container hover:text-primary" onClick={onClose} type="button">
+          <button aria-label="Đóng cửa sổ bài viết" className="inline-flex size-11 items-center justify-center rounded-md text-secondary transition-colors duration-200 hover:bg-surface-container hover:text-primary" onClick={onClose} type="button">
             <X size={22} strokeWidth={1.8} />
           </button>
         </div>
@@ -432,7 +433,7 @@ function BlogFormModal({
           </div>
 
           <aside className="space-y-5 md:col-span-4">
-            <section className="rounded-xl border border-primary/10 bg-surface-container-lowest p-4 shadow-sm">
+            <section className="border-b border-outline-variant/70 pb-5">
               <h3 className="mb-4 font-semibold">Xuất bản</h3>
               <Field label="Thời gian publish">
                 <input
@@ -443,14 +444,15 @@ function BlogFormModal({
                 />
               </Field>
               <p className="mt-3 text-xs leading-5 text-secondary">
-                Nếu để trống và chọn trạng thái publish, backend sẽ tự gán thời điểm hiện tại.
+                Nếu để trống, thời điểm xuất bản sẽ được ghi nhận khi bạn đăng bài.
               </p>
             </section>
 
-            <section className="rounded-xl border border-primary/10 bg-surface-container-lowest p-4 shadow-sm">
+            <section className="border-b border-outline-variant/70 pb-5">
               <h3 className="mb-3 font-semibold">Ảnh thumbnail</h3>
               <input
                 accept="image/*"
+                aria-label="Ảnh thumbnail"
                 className={adminInputClass}
                 onChange={(event) => onUpdate("thumbnail", event.target.files?.[0] ?? null)}
                 type="file"

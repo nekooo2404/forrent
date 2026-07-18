@@ -17,9 +17,9 @@ export default function LogInPage() {
   return (
     <PublicShell>
       <section className="flex flex-grow flex-col pt-20 lg:min-h-[calc(100dvh-80px)] lg:flex-row">
-        <div className="urban-band relative hidden overflow-hidden lg:block lg:w-1/2">
+        <div className="relative hidden overflow-hidden border-r border-outline-variant/70 bg-surface-container lg:block lg:w-1/2">
           <div className="relative flex h-full min-h-[640px] items-center justify-center p-12">
-            <div className="max-w-md rounded-lg border border-primary/20 bg-surface-container-lowest p-8 shadow-high">
+            <div className="max-w-md rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-8 shadow-soft">
               <Image
                 alt="ForRent"
                 className="h-auto w-44 rounded-lg bg-surface-container-lowest p-3"

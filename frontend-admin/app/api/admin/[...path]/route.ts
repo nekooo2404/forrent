@@ -53,7 +53,7 @@ async function proxyAdminRequest(request: Request, context: RouteContext) {
     return NextResponse.json(
       {
         success: false,
-        message: "Không thể kết nối backend admin.",
+        message: "Không thể kết nối hệ thống quản trị.",
         errors: {},
       },
       { status: 502 },

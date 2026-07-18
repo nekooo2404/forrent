@@ -11,7 +11,7 @@ Every public page should answer four questions in this order: what rooms are ava
 ## Visual Direction
 
 - Quiet warm minimalism: flat warm surfaces, one amber-brown accent, restrained teal only for semantic success.
-- Open Sans remains because it is already loaded, supports Vietnamese, and avoids another font request.
+- Final implementation uses the native system font stack for Vietnamese support and removes the Google Fonts build/runtime dependency.
 - One primary action per section. No slideshow, scroll hijacking, 3D, decorative particles, or heavy glass effects.
 - Mobile header shows only the logo and menu. Desktop header is at most 80px and shrinks after scrolling.
 - Body text is at least 16px with 1.5 line height; interactive controls are at least 44px.

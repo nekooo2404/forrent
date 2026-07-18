@@ -6,17 +6,20 @@ import type { ReactNode } from "react";
 
 import { MotionItem, MotionList, MotionSection } from "@/components/motion";
 import { PublicShell } from "@/components/public-shell";
-import { fastImageUrl } from "@/lib/image";
+import { EmptyState } from "@/components/ui/empty-state";
+import { fastImageUrl, isCloudinaryImage, ROOM_IMAGE_BLUR_DATA_URL } from "@/lib/image";
 import {
   formatArea,
+  formatMonthlyVnd,
   formatOptionalVnd,
-  formatVnd,
   getRooms,
   resolveMediaUrl,
   roomTypeLabel,
   type ApiRoom,
 } from "@/lib/api";
 import { cleanRoomTitle, SITE_DESCRIPTION } from "@/lib/seo";
+
+export const revalidate = 30;
 
 export const metadata: Metadata = {
   title: "Thuê phòng theo tháng tại Hà Nội | ForRent",
@@ -81,35 +84,48 @@ type PropertyCardView = {
 };
 
 function mapProperty(room: ApiRoom, index: number): PropertyCardView {
-  const title = cleanRoomTitle(room.title, [room.ward?.name, room.city?.name]);
+  const location = [room.ward?.name, room.city?.name].filter(Boolean).join(", ") || room.address;
+  const descriptor = room.room_subtype_name || roomTypeLabel(room.room_type);
+  const title = cleanRoomTitle(
+    room.public_title || room.title,
+    [room.ward?.name, room.city?.name],
+    `${descriptor} tại ${room.ward?.name || room.city?.name || "Hà Nội"}`,
+  );
   return {
     id: room.id,
     slug: room.slug,
     title,
-    price: `${formatVnd(room.price)}/tháng`,
+    price: formatMonthlyVnd(room.price),
     deposit: formatOptionalVnd(room.deposit_amount),
     depositLabel: room.deposit_type_name || "Cọc",
     serviceFee: formatOptionalVnd(room.service_fee),
-    location: [room.ward?.name, room.city?.name].filter(Boolean).join(", ") || room.address,
-    descriptor: roomTypeLabel(room.room_type),
+    location,
+    descriptor,
     area: formatArea(room.actual_area),
     amenities: room.amenities.length ? `${room.amenities.length} tiện ích` : "Tiện ích cơ bản",
     featuredAmenities: room.amenities.slice(0, 2).map((amenity) => amenity.name),
     label: index === 0 ? "MỚI LÊN SÀN" : undefined,
-    labelClassName: index === 0 ? "bg-surface/90 text-primary backdrop-blur" : undefined,
+    labelClassName: index === 0 ? "bg-surface-container-lowest/95 text-primary" : undefined,
     image: resolveMediaUrl(room.thumbnail_url),
-    alt: room.short_description || title,
+    alt: `${descriptor} tại ${location}`,
   };
 }
 
 export default async function Homepage() {
-  const roomsResponse = await getRooms({ page_size: 3, status: "PUBLISHED", ordering: "-created_at" }).catch(() => null);
-  const properties = roomsResponse?.results.map(mapProperty) ?? [];
+  const roomsResponse = await getRooms({ page_size: 24, status: "PUBLISHED", ordering: "-created_at" }).catch(() => null);
+  const allProperties = roomsResponse?.results.map(mapProperty) ?? [];
+  const properties = allProperties.slice(0, 3);
+  const listingHeroProperty = allProperties.find((property) => property.image);
+  const listingHeroImage = listingHeroProperty?.image;
+  const heroImage = listingHeroImage ? fastImageUrl(listingHeroImage, 1920, 82) : "/brand/forrent-hero-old-quarter.jpg";
 
   return (
     <PublicShell active="home">
       <header
         className="relative mt-16 min-h-[550px] overflow-hidden lg:mt-20 lg:min-h-[560px]"
+        data-hero-room-id={listingHeroProperty?.id}
+        data-hero-room-slug={listingHeroProperty?.slug}
+        data-hero-source={listingHeroImage ? "listing" : "brand"}
         data-testid="homepage-hero"
       >
         <Image
@@ -119,9 +135,10 @@ export default async function Homepage() {
           priority
           quality={82}
           sizes="100vw"
-          src="/brand/forrent-hero-old-quarter.jpg"
+          src={heroImage}
+          unoptimized={Boolean(listingHeroImage && isCloudinaryImage(listingHeroImage))}
         />
-        <div aria-hidden="true" className="absolute inset-0 bg-inverse-surface/70" />
+        <div aria-hidden="true" className="absolute inset-0 bg-inverse-surface/[0.58]" />
 
         <div className="relative mx-auto flex min-h-[550px] w-full max-w-container-max flex-col px-margin-mobile pb-4 pt-6 text-inverse-on-surface md:px-margin-desktop md:pt-9 lg:min-h-[560px] lg:pb-6 lg:pt-12">
           <div className="max-w-2xl">
@@ -136,10 +153,10 @@ export default async function Homepage() {
             </p>
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold md:mt-4">
               <Link
-                className="inline-flex min-h-11 items-center whitespace-nowrap underline decoration-inverse-primary/70 underline-offset-4 transition-colors hover:text-inverse-primary"
+                className="inline-flex min-h-11 items-center rounded-md bg-surface-container-lowest px-4 py-2 font-semibold text-primary shadow-soft transition-colors hover:bg-primary-container"
                 href="/rooms"
               >
-                Xem tất cả phòng
+                Xem phòng đang trống
               </Link>
               <Link
                 className="inline-flex min-h-11 items-center whitespace-nowrap underline decoration-inverse-primary/70 underline-offset-4 transition-colors hover:text-inverse-primary"
@@ -153,6 +170,7 @@ export default async function Homepage() {
           <form
             action="/rooms"
             className="mt-auto grid grid-cols-2 gap-2 rounded-lg border border-outline-variant/40 bg-surface-container-lowest/95 p-3 text-on-surface shadow-high lg:grid-cols-[1.4fr_0.85fr_0.85fr_auto] lg:items-end"
+            data-product-event="room_search_submitted"
           >
             <div className="col-span-2 flex flex-col rounded-md bg-surface-container-low px-4 py-2 lg:col-span-1">
               <label className="mb-1 font-label-caps text-label-caps text-on-surface-variant" htmlFor="home-room-search">
@@ -198,8 +216,8 @@ export default async function Homepage() {
                 name="room_type"
               >
                 <option value="">Tất cả</option>
-                <option value="CCMN">CCMN</option>
-                <option value="CCDV">CCDV</option>
+                <option value="CCMN">Chung cư mini</option>
+                <option value="CCDV">Căn hộ dịch vụ</option>
                 <option value="HOUSE">Nhà nguyên căn</option>
               </select>
             </div>
@@ -220,7 +238,7 @@ export default async function Homepage() {
             <div>
               <h2 className="mb-4 font-headline-md text-headline-md text-on-surface">Tìm đúng kiểu phòng bạn cần</h2>
               <p className="max-w-2xl font-body-lg text-body-lg text-on-surface-variant">
-                Chọn CCMN, căn hộ dịch vụ hoặc nhà nguyên căn, sau đó lọc tiếp theo khu vực, ngân sách và lịch xem.
+                Chọn chung cư mini, căn hộ dịch vụ hoặc nhà nguyên căn, sau đó lọc tiếp theo khu vực, ngân sách và lịch xem.
               </p>
             </div>
             <Link
@@ -283,19 +301,16 @@ export default async function Homepage() {
               ))}
             </MotionList>
           ) : (
-            <div className="rounded border border-outline-variant/20 bg-surface-container-lowest p-10 text-center shadow-soft">
-              <h3 className="font-headline-sm text-headline-sm text-on-surface">Chưa có phòng đang trống</h3>
-              <p className="mt-3 font-body-md text-body-md text-on-surface-variant">
-                Bạn có thể quay lại sau hoặc gửi nhu cầu để nhân viên tư vấn báo khi có phòng phù hợp.
-              </p>
-              <Link className="premium-button mt-6 inline-flex rounded bg-primary px-6 py-3 font-button text-button text-on-primary" href="/contact">
-                Gửi nhu cầu thuê phòng
-              </Link>
-            </div>
+            <EmptyState
+              action={{ href: "/contact", label: "Gửi nhu cầu thuê phòng" }}
+              description="Bạn có thể gửi nhu cầu để nhân viên tư vấn báo khi có phòng phù hợp."
+              icon={<BedDouble aria-hidden="true" size={30} strokeWidth={1.7} />}
+              title="Chưa có phòng đang trống"
+            />
           )}
           <div className="mt-12 text-center">
             <Link
-              className="premium-button urban-cta inline-flex rounded-xl px-8 py-4 font-button text-button"
+              className="premium-button urban-cta inline-flex min-h-11 items-center rounded-md px-8 py-4 font-button text-button"
               href="/rooms"
             >
               Xem tất cả phòng
@@ -338,19 +353,22 @@ function PropertyCard({ featured = false, property }: Readonly<{ featured?: bool
   const detailHref = property.slug ? `/rooms/${encodeURIComponent(property.slug)}` : "/rooms";
 
   return (
-    <article className={`premium-card group overflow-hidden rounded-lg border border-outline-variant/45 bg-surface-container-low shadow-sm ${featured ? "md:grid md:grid-cols-[1.05fr_0.95fr]" : ""}`}>
-      <div className={`relative h-72 overflow-hidden ${featured ? "md:h-full md:min-h-[350px]" : ""}`}>
+    <article className={`premium-card group overflow-hidden rounded-lg border border-outline-variant/60 bg-surface-container-lowest shadow-soft ${featured ? "md:grid md:grid-cols-[1.05fr_0.95fr]" : ""}`}>
+      <div className={`relative h-72 overflow-hidden bg-surface-container ${featured ? "md:h-full md:min-h-[350px]" : ""}`}>
         <Link aria-label={`Xem chi tiết ${property.title}`} className="absolute inset-0" href={detailHref}>
           {property.image ? (
             <Image
               alt={property.alt}
+              blurDataURL={ROOM_IMAGE_BLUR_DATA_URL}
               className="shared-image object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               decoding="async"
               fill
               loading="lazy"
+              placeholder="blur"
               quality={78}
               sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
               src={fastImageUrl(property.image, 1200, 78)}
+              unoptimized={isCloudinaryImage(property.image)}
             />
           ) : (
             <ImagePlaceholder />
@@ -361,16 +379,16 @@ function PropertyCard({ featured = false, property }: Readonly<{ featured?: bool
             {property.label}
           </div>
         ) : null}
-        <div className="absolute right-4 top-4 rounded-md border border-primary/30 bg-primary-container px-3 py-1 font-label-caps text-label-caps uppercase text-on-primary-container">
+        <div className="absolute right-4 top-4 rounded-md border border-tertiary/20 bg-tertiary-container px-3 py-1 font-label-caps text-label-caps uppercase text-on-tertiary-container">
           Còn trống
         </div>
       </div>
-      <div className="p-6">
-        <div className="mb-3 flex items-start justify-between gap-4">
-          <Link className="line-clamp-2 font-headline-sm text-headline-sm text-on-surface hover:text-primary" href={detailHref}>
+      <div className="flex h-full flex-col p-6">
+        <div className="mb-3 flex flex-col items-start gap-2 sm:flex-row sm:justify-between sm:gap-4">
+          <Link className="line-clamp-2 min-h-11 font-headline-sm text-headline-sm text-on-surface hover:text-primary" href={detailHref}>
             {property.title}
           </Link>
-          <span className="shrink-0 whitespace-nowrap text-right font-headline-sm text-xl tabular-nums text-on-surface">{property.price}</span>
+          <span className="shrink-0 whitespace-nowrap font-headline-sm text-xl tabular-nums text-on-surface sm:text-right">{property.price}</span>
         </div>
         <p className="mb-4 font-body-md text-body-md text-on-surface-variant">
           {property.location} · {property.descriptor}
@@ -386,7 +404,7 @@ function PropertyCard({ featured = false, property }: Readonly<{ featured?: bool
           <div className="rounded-md bg-surface-container-low p-3">
             <div className="mb-1 flex items-center gap-1 font-semibold uppercase text-secondary">
               <ReceiptText size={15} strokeWidth={1.8} />
-              Phí DV
+              Phí dịch vụ
             </div>
             <p className="line-clamp-1 text-primary">{property.serviceFee}</p>
           </div>
@@ -394,21 +412,21 @@ function PropertyCard({ featured = false, property }: Readonly<{ featured?: bool
         {property.featuredAmenities.length ? (
           <div className="mb-4 flex flex-wrap gap-2">
             {property.featuredAmenities.map((amenity) => (
-              <span className="rounded-md bg-primary/10 px-3 py-1 text-xs font-medium text-secondary" key={amenity}>
+              <span className="rounded-md bg-surface-container px-3 py-1.5 text-sm font-medium text-secondary" key={amenity}>
                 {amenity}
               </span>
             ))}
           </div>
         ) : null}
-        <div className="flex items-center gap-4 border-t border-outline-variant/20 pt-4 text-on-surface-variant">
+        <div className="mt-auto flex flex-wrap items-center gap-4 border-t border-outline-variant/50 pt-4 text-on-surface-variant">
           <div className="flex items-center gap-1 font-body-md text-sm">
             <BedDouble size={18} strokeWidth={1.8} /> {property.area}
           </div>
           <div className="flex items-center gap-1 font-body-md text-sm">
             <ShowerHead size={18} strokeWidth={1.8} /> {property.amenities}
           </div>
-          <Link className="premium-button ml-auto rounded-lg bg-primary px-4 py-2 font-body-md text-sm text-on-primary" href={detailHref}>
-            Xem phòng
+          <Link className="premium-button ml-auto inline-flex min-h-11 items-center rounded-md bg-primary px-4 py-2 font-body-md text-sm text-on-primary" href={detailHref}>
+            Xem chi tiết
           </Link>
         </div>
       </div>

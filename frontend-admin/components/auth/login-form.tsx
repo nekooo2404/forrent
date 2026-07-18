@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Eye, EyeOff, LoaderCircle } from "lucide-react";
 import type { ChangeEvent, FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { saveAuthSession, type BrowserAuthSession } from "@/lib/auth-storage";
 
@@ -40,7 +40,11 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [touched, setTouched] = useState<TouchedFields>({});
   const [formError, setFormError] = useState("");
+  const [isReady, setIsReady] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionInFlight = useRef(false);
+
+  useEffect(() => setIsReady(true), []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,6 +61,8 @@ export function LoginForm() {
       return;
     }
 
+    if (submissionInFlight.current) return;
+    submissionInFlight.current = true;
     setIsSubmitting(true);
 
     try {
@@ -78,38 +84,39 @@ export function LoginForm() {
     } catch {
       setFormError("Không thể kết nối hệ thống đăng nhập. Vui lòng thử lại sau.");
     } finally {
+      submissionInFlight.current = false;
       setIsSubmitting(false);
     }
   }
 
   return (
-    <div className="w-full max-w-md rounded-lg border border-outline-variant/10 bg-surface-container-lowest p-gutter shadow-soft md:p-12">
-      <div className="mb-12 text-center lg:text-left">
+    <div className="w-full max-w-md">
+      <div className="mb-10 text-center lg:text-left">
         <h1 className="mb-2 font-headline-md text-headline-md text-on-surface">Chào mừng trở lại</h1>
         <p className="font-body-md text-body-md text-on-surface-variant">
-          Đăng nhập để truy cập bộ sưu tập tuyển chọn của bạn.
+          Đăng nhập để quản lý phòng, lịch xem và yêu cầu tư vấn.
         </p>
       </div>
 
-      <form className="space-y-6" noValidate onSubmit={handleSubmit}>
-        <div className="relative">
-          <input
-            className="peer w-full border-0 border-b border-outline-variant bg-transparent px-0 pb-2 pt-6 font-body-md text-body-md text-on-surface placeholder-transparent transition-colors focus:border-primary focus:outline-none focus:ring-0"
-            id="identifier"
-            name="identifier"
-            onBlur={() => setTouched((current) => ({ ...current, identifier: true }))}
-            onChange={(event: ChangeEvent<HTMLInputElement>) => setIdentifier(event.target.value)}
-            placeholder="Email hoặc số điện thoại"
-            required
-            type="text"
-            value={identifier}
-          />
-          <label
-            className="pointer-events-none absolute left-0 top-6 origin-left font-body-md text-body-md text-on-surface-variant transition-all duration-300 peer-focus:-translate-y-6 peer-focus:scale-[0.85] peer-focus:text-primary peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-[0.85]"
-            htmlFor="identifier"
-          >
+      <form aria-busy={isSubmitting} className="space-y-6" data-ready={isReady ? "true" : "false"} noValidate onSubmit={handleSubmit}>
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-on-surface" htmlFor="identifier">
             Email hoặc số điện thoại
           </label>
+          <input
+            className="min-h-11 w-full rounded-md border border-outline-variant/70 bg-surface-container-low px-3 py-3 text-base text-on-surface outline-none transition-colors duration-200 placeholder:text-on-surface-variant/70 focus:border-primary focus:ring-2 focus:ring-primary/10"
+            id="identifier"
+            disabled={!isReady || isSubmitting}
+            name="identifier"
+            onBlur={(event) => {
+              setIdentifier(event.currentTarget.value);
+              setTouched((current) => ({ ...current, identifier: true }));
+            }}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setIdentifier(event.target.value)}
+            placeholder="email@domain.vn hoặc 09xxxxxxxx"
+            required
+            type="text"
+          />
           {touched.identifier && !identifier.trim() ? (
             <p className="mt-1 min-h-4 font-body-md text-xs text-error">
               Vui lòng nhập email hoặc số điện thoại hợp lệ.
@@ -119,33 +126,36 @@ export function LoginForm() {
           )}
         </div>
 
-        <div className="relative">
-          <input
-            className="peer w-full border-0 border-b border-outline-variant bg-transparent px-0 pb-2 pt-6 pr-10 font-body-md text-body-md text-on-surface placeholder-transparent transition-colors focus:border-primary focus:outline-none focus:ring-0"
-            id="password"
-            minLength={8}
-            name="password"
-            onBlur={() => setTouched((current) => ({ ...current, password: true }))}
-            onChange={(event: ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)}
-            placeholder="Mật khẩu"
-            required
-            type={showPassword ? "text" : "password"}
-            value={password}
-          />
-          <label
-            className="pointer-events-none absolute left-0 top-6 origin-left font-body-md text-body-md text-on-surface-variant transition-all duration-300 peer-focus:-translate-y-6 peer-focus:scale-[0.85] peer-focus:text-primary peer-[:not(:placeholder-shown)]:-translate-y-6 peer-[:not(:placeholder-shown)]:scale-[0.85]"
-            htmlFor="password"
-          >
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-on-surface" htmlFor="password">
             Mật khẩu
           </label>
+          <div className="relative">
+            <input
+            className="min-h-11 w-full rounded-md border border-outline-variant/70 bg-surface-container-low px-3 py-3 pr-12 text-base text-on-surface outline-none transition-colors duration-200 placeholder:text-on-surface-variant/70 focus:border-primary focus:ring-2 focus:ring-primary/10"
+            id="password"
+            disabled={!isReady || isSubmitting}
+            minLength={8}
+            name="password"
+            onBlur={(event) => {
+              setPassword(event.currentTarget.value);
+              setTouched((current) => ({ ...current, password: true }));
+            }}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setPassword(event.target.value)}
+            placeholder="Nhập mật khẩu"
+            required
+            type={showPassword ? "text" : "password"}
+            />
           <button
             aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-            className="absolute right-0 top-2 flex size-11 items-center justify-center text-on-surface-variant transition-colors hover:text-primary"
+            className="absolute right-0 top-0 flex size-11 items-center justify-center text-on-surface-variant transition-colors hover:text-primary"
+            disabled={!isReady || isSubmitting}
             onClick={() => setShowPassword((current) => !current)}
             type="button"
           >
             {showPassword ? <Eye size={18} strokeWidth={1.8} /> : <EyeOff size={18} strokeWidth={1.8} />}
           </button>
+          </div>
           {touched.password && password.length < 8 ? (
             <p className="mt-1 min-h-4 font-body-md text-xs text-error">Mật khẩu phải có ít nhất 8 ký tự.</p>
           ) : (
@@ -153,31 +163,32 @@ export function LoginForm() {
           )}
         </div>
 
-        <div className="flex items-center justify-between pt-2">
-          <label className="flex items-center gap-2 font-body-md text-body-md text-on-surface-variant" htmlFor="remember-me">
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+          <label className="flex min-h-11 cursor-pointer items-center gap-2 font-body-md text-body-md text-on-surface-variant" htmlFor="remember-me">
             <input
               className="size-4 rounded border-outline-variant bg-transparent text-primary focus:ring-primary focus:ring-offset-surface"
               id="remember-me"
+              disabled={!isReady || isSubmitting}
               name="remember-me"
               type="checkbox"
             />
             Ghi nhớ đăng nhập
           </label>
-          <Link className="font-body-md text-body-md text-primary transition-colors hover:text-gold" href="/forget-password">
+          <Link className="inline-flex min-h-11 items-center font-body-md text-body-md font-semibold text-primary transition-colors duration-200 hover:text-primary/80" href="/forget-password">
             Quên mật khẩu?
           </Link>
         </div>
 
         {formError ? (
-          <div className="flex gap-3 border border-error bg-error-container/30 p-4 text-error">
+          <div className="flex gap-3 rounded-md border border-error/40 bg-error-container p-4 text-error">
             <AlertCircle className="mt-0.5 flex-shrink-0" size={18} strokeWidth={1.8} />
             <p className="font-body-md text-sm">{formError}</p>
           </div>
         ) : null}
 
         <button
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded bg-primary px-4 py-4 font-button text-button uppercase text-on-primary transition-colors duration-300 hover:bg-surface-tint disabled:cursor-wait disabled:opacity-70"
-          disabled={isSubmitting}
+          className="mt-6 flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 font-button text-button text-on-primary transition-colors duration-200 hover:bg-primary/90 disabled:cursor-wait disabled:opacity-70"
+          disabled={!isReady || isSubmitting}
           type="submit"
         >
           {isSubmitting ? <LoaderCircle className="animate-spin" size={18} strokeWidth={1.8} /> : null}

@@ -13,11 +13,12 @@ export function useFocusTrap<T extends HTMLElement = HTMLElement>(isActive: bool
 
     const container = containerRef.current;
     if (!container) return;
+    const previouslyFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     // Find all focusable elements
-    const focusableElements = container.querySelectorAll<HTMLElement>(
+    const focusableElements = Array.from(container.querySelectorAll<HTMLElement>(
       'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    );
+    )).filter((element) => element.getClientRects().length > 0 && getComputedStyle(element).visibility !== 'hidden');
 
     const firstElement = focusableElements[0];
     const lastElement = focusableElements[focusableElements.length - 1];
@@ -41,7 +42,10 @@ export function useFocusTrap<T extends HTMLElement = HTMLElement>(isActive: bool
     }
 
     document.addEventListener("keydown", handleTab);
-    return () => document.removeEventListener("keydown", handleTab);
+    return () => {
+      document.removeEventListener("keydown", handleTab);
+      if (previouslyFocusedElement?.isConnected) previouslyFocusedElement.focus();
+    };
   }, [isActive]);
 
   return containerRef;

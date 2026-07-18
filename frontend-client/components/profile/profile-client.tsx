@@ -415,14 +415,18 @@ function ViewingRequestsSummary({
         <div className="space-y-4">
           {recentRequests.map((request) => (
             <Link
-              className="group block rounded-md border border-outline-variant/20 bg-surface-container-low/70 p-4 transition hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-soft"
+              className="group block rounded-md border border-outline-variant/70 bg-surface-container-low/70 p-4 transition-colors duration-200 hover:border-primary/40 hover:bg-surface-container"
               href={`/rooms/${encodeURIComponent(request.room.slug)}`}
               key={request.id}
             >
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="line-clamp-1 font-body-md font-semibold text-primary">
-                    {cleanRoomTitle(request.room.title, [request.room.ward?.name, request.room.city?.name])}
+                    {cleanRoomTitle(
+                      request.room.public_title || request.room.title,
+                      [request.room.ward?.name, request.room.city?.name],
+                      `Phòng cho thuê tại ${request.room.ward?.name || request.room.city?.name || "Hà Nội"}`,
+                    )}
                   </p>
                   <p className="mt-1 flex items-center gap-1 text-xs text-on-surface-variant">
                     <MapPin size={13} strokeWidth={1.8} />

@@ -139,7 +139,7 @@ export function AdminDashboard() {
         <AdminPanel
           title="Yêu cầu mới nhất"
           toolbar={
-            <Link className="text-sm font-semibold text-secondary transition hover:text-primary" href="/admin/leads">
+            <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-secondary transition hover:text-primary" href="/admin/leads">
               Mở danh sách
             </Link>
           }
@@ -147,7 +147,7 @@ export function AdminDashboard() {
           {summary?.latest_leads?.length ? (
             <div className="overflow-x-auto">
               <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-primary/10 text-xs uppercase text-secondary">
+                <thead className="border-b border-outline-variant/70 text-xs uppercase text-secondary">
                   <tr>
                     <th className="py-3 pr-5 font-semibold">Khách hàng</th>
                     <th className="py-3 pr-5 font-semibold">Phòng</th>
@@ -220,7 +220,7 @@ export function AdminDashboard() {
 
           <AdminPanel title="Nội dung & liên hệ">
             <div className="grid gap-3">
-              <Link className="group flex items-center justify-between rounded-lg border border-primary/10 bg-surface-container-lowest p-4 transition-colors hover:border-primary/25 hover:bg-surface-container-low" href="/admin/blogs">
+              <Link className="group flex min-h-11 items-center justify-between rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-4 transition-colors duration-200 hover:border-primary/40 hover:bg-surface-container-low" href="/admin/blogs">
                 <span className="flex items-center gap-3">
                   <span className="grid size-10 place-items-center rounded-md bg-surface-container text-primary">
                     <Newspaper size={18} strokeWidth={1.8} />
@@ -232,7 +232,7 @@ export function AdminDashboard() {
                 </span>
                 <ArrowRight className="text-secondary transition group-hover:translate-x-1 group-hover:text-primary" size={17} strokeWidth={1.8} />
               </Link>
-              <Link className="group flex items-center justify-between rounded-lg border border-primary/10 bg-surface-container-lowest p-4 transition-colors hover:border-primary/25 hover:bg-surface-container-low" href="/admin/contacts">
+              <Link className="group flex min-h-11 items-center justify-between rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-4 transition-colors duration-200 hover:border-primary/40 hover:bg-surface-container-low" href="/admin/contacts">
                 <span className="flex items-center gap-3">
                   <span className="grid size-10 place-items-center rounded-md bg-surface-container text-primary">
                     <Mail size={18} strokeWidth={1.8} />
@@ -250,7 +250,7 @@ export function AdminDashboard() {
           <AdminPanel
             title="Hoa hồng theo phòng"
             toolbar={
-              <Link className="text-sm font-semibold text-secondary transition hover:text-primary" href="/admin/commissions">
+              <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-secondary transition hover:text-primary" href="/admin/commissions">
                 Chi tiết
               </Link>
             }
@@ -258,7 +258,7 @@ export function AdminDashboard() {
             {commission?.by_room?.length ? (
               <div className="space-y-4">
                 {commission.by_room.slice(0, 5).map((item) => (
-                  <div className="flex items-start justify-between gap-4 border-b border-primary/10 pb-4 last:border-0 last:pb-0" key={item.room_id}>
+                  <div className="flex items-start justify-between gap-4 border-b border-outline-variant/70 pb-4 last:border-0 last:pb-0" key={item.room_id}>
                     <div>
                       <p className="font-semibold text-primary">{item.room__title}</p>
                       <p className="mt-1 flex items-center gap-2 text-xs text-secondary">

@@ -60,6 +60,7 @@ export function AdminContactManager() {
     () => contacts.find((contact) => contact.id === selectedId) ?? contacts[0] ?? null,
     [contacts, selectedId],
   );
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const newCount = useMemo(() => contacts.filter((contact) => contact.status === "NEW").length, [contacts]);
   const handledCount = useMemo(() => contacts.filter((contact) => contact.status === "HANDLED").length, [contacts]);
 
@@ -217,7 +218,7 @@ export function AdminContactManager() {
           </button>
         }
         eyebrow="Tin nhắn khách hàng"
-        subtitle="Theo dõi tin nhắn từ trang `/contact`, đổi trạng thái xử lý và dọn dữ liệu cũ trực tiếp qua backend Django."
+        subtitle="Theo dõi tin nhắn từ trang Liên hệ, cập nhật trạng thái và quản lý yêu cầu."
         title="Hộp thư liên hệ"
       />
 
@@ -246,6 +247,7 @@ export function AdminContactManager() {
                 <label className="relative min-w-[260px]">
                   <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-secondary" size={17} strokeWidth={1.8} />
                   <input
+                    aria-label="Tìm liên hệ"
                     className={`${adminInputClass} pl-9`}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Tìm tên, số điện thoại, email, nội dung..."
@@ -253,7 +255,7 @@ export function AdminContactManager() {
                     value={search}
                   />
                 </label>
-                <select className={adminSelectClass} onChange={(event) => setStatus(event.target.value)} value={status}>
+                <select aria-label="Lọc liên hệ theo trạng thái" className={adminSelectClass} onChange={(event) => setStatus(event.target.value)} value={status}>
                   {contactStatuses.map((item) => (
                     <option key={item.value || "all"} value={item.value}>{item.label}</option>
                   ))}
@@ -265,7 +267,7 @@ export function AdminContactManager() {
               {selectedIds.length ? (
                 <div className="flex w-full flex-wrap items-center gap-2">
                   <span className="text-sm text-secondary">Đã chọn {selectedIds.length}</span>
-                  <select className={adminSelectClass} onChange={(event) => setBulkStatus(event.target.value)} value={bulkStatus}>
+                  <select aria-label="Trạng thái cập nhật hàng loạt" className={adminSelectClass} onChange={(event) => setBulkStatus(event.target.value)} value={bulkStatus}>
                     {contactStatuses.filter((item) => item.value).map((item) => (
                       <option key={item.value} value={item.value}>{item.label}</option>
                     ))}
@@ -286,34 +288,41 @@ export function AdminContactManager() {
               {contacts.map((contact) => {
                 const isSelected = selectedContact?.id === contact.id;
                 return (
-                  <button
-                    className={`w-full rounded-lg border p-4 text-left transition ${
+                  <article
+                    className={`w-full rounded-lg border p-4 text-left transition-colors duration-200 ${
                       isSelected
                         ? "border-primary/35 bg-surface-container-low shadow-soft"
-                        : "border-primary/10 bg-surface-container-lowest hover:-translate-y-0.5 hover:border-primary/25"
+                        : "border-outline-variant/70 bg-surface-container-lowest hover:border-primary/40"
                     }`}
                     key={contact.id}
-                    onClick={() => setSelectedId(contact.id)}
-                    type="button"
                   >
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 gap-3">
+                    <div className="flex items-start gap-2">
+                      <label className="grid size-11 shrink-0 cursor-pointer place-items-center">
+                        <span className="sr-only">Chọn liên hệ của {contact.full_name}</span>
                         <input
-                          checked={selectedIds.includes(contact.id)}
-                          className="mt-1 size-4 rounded border-primary/20 text-primary focus:ring-primary"
+                          checked={selectedIdSet.has(contact.id)}
+                          className="size-4 rounded border-primary/20 text-primary focus:ring-primary"
                           onChange={(event) => toggleContactSelection(contact.id, event.target.checked)}
-                          onClick={(event) => event.stopPropagation()}
                           type="checkbox"
                         />
-                        <div className="min-w-0">
-                        <p className="line-clamp-1 font-semibold text-primary">{contact.full_name}</p>
-                        <p className="mt-1 text-xs text-secondary">{formatAdminDate(contact.created_at)}</p>
+                      </label>
+                      <button
+                        aria-pressed={isSelected}
+                        className="min-h-11 min-w-0 flex-1 text-left"
+                        onClick={() => setSelectedId(contact.id)}
+                        type="button"
+                      >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="line-clamp-1 font-semibold text-primary">{contact.full_name}</p>
+                            <p className="mt-1 text-xs text-secondary">{formatAdminDate(contact.created_at)}</p>
+                          </div>
+                          <AdminContactBadge status={contact.status} />
                         </div>
-                      </div>
-                      <AdminContactBadge status={contact.status} />
+                        <p className="line-clamp-2 text-sm leading-6 text-secondary">{contact.message}</p>
+                      </button>
                     </div>
-                    <p className="line-clamp-2 text-sm leading-6 text-secondary">{contact.message}</p>
-                  </button>
+                  </article>
                 );
               })}
             </div>
@@ -331,7 +340,7 @@ export function AdminContactManager() {
         <AdminPanel className="xl:col-span-5" title="Chi tiết xử lý">
           {selectedContact ? (
             <div className="space-y-6">
-              <div className="rounded-lg border border-primary/10 bg-surface-container-low p-5">
+              <div className="rounded-lg border border-outline-variant/70 bg-surface-container-low p-5">
                 <div className="mb-4 flex items-start justify-between gap-4">
                   <div>
                     <p className="font-headline-sm text-2xl text-primary">{selectedContact.full_name}</p>
@@ -349,7 +358,7 @@ export function AdminContactManager() {
 
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase text-secondary">Nội dung</p>
-                <div className="rounded-lg border border-primary/10 bg-surface-container-lowest p-5 text-sm leading-7 text-primary">
+                <div className="rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-5 text-sm leading-7 text-on-surface">
                   {selectedContact.message}
                 </div>
               </div>
@@ -430,12 +439,12 @@ export function AdminContactManager() {
                 ) : null}
               </div>
 
-              <div className="border-t border-primary/10 pt-5">
+              <div className="border-t border-outline-variant/70 pt-5">
                 <button
-                  className={`inline-flex items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-semibold transition ${
+                  className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-semibold transition-colors duration-200 ${
                     pendingDeleteId === selectedContact.id
                       ? "border-error/30 bg-error-container text-error"
-                      : "border-primary/10 bg-surface-container-lowest text-secondary hover:border-error/25 hover:text-error"
+                      : "border-outline-variant/70 bg-surface-container-lowest text-secondary hover:border-error/40 hover:text-error"
                   }`}
                   onClick={() => handleDelete(selectedContact.id)}
                   type="button"
@@ -459,7 +468,7 @@ export function AdminContactManager() {
 
 function MiniMetric({ label, value }: Readonly<{ label: string; value: number }>) {
   return (
-    <div className="rounded-xl border border-primary/10 bg-surface-container-lowest/90 p-4 shadow-soft">
+    <div className="rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-4 shadow-soft">
       <p className="text-xs font-semibold uppercase text-secondary">{label}</p>
       <p className="mt-2 text-2xl font-semibold tabular-nums text-primary">{value}</p>
     </div>

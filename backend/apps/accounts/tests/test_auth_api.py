@@ -138,6 +138,7 @@ class TestAuthAPI:
 
         log = AuditLog.objects.get(event="auth.login_failed")
         assert response.status_code == 401
+        assert response.data["message"] == "Email/số điện thoại hoặc mật khẩu không đúng."
         assert log.status == AuditLog.Status.FAILURE
         assert log.metadata["identifier_hash"] != "tenant@example.com"
 
