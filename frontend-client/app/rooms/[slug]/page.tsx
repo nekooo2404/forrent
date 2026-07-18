@@ -351,11 +351,11 @@ function ListingBody({ detail }: Readonly<{ detail: DetailView }>) {
 function MobileListingSummary({ detail }: Readonly<{ detail: DetailView }>) {
   return (
     <section className="mb-5 rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-4 shadow-sm md:hidden">
-      <div className="mb-3 flex items-start justify-between gap-4">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <span className={`rounded-md px-2.5 py-1 text-sm font-semibold ${detail.isAvailable ? "bg-tertiary-container text-tertiary" : "bg-surface-container text-on-surface-variant"}`}>
           {detail.isAvailable ? "Còn trống" : detail.status}
         </span>
-        <p className="whitespace-nowrap text-lg font-bold tabular-nums text-on-surface">{detail.price}</p>
+        <p className="min-w-0 max-w-full text-right text-lg font-bold leading-tight tabular-nums text-on-surface">{detail.price}</p>
       </div>
       <h1 className="text-xl font-semibold leading-snug text-on-surface">{detail.title}</h1>
       <p className="mt-2 flex items-start gap-2 text-sm leading-6 text-on-surface-variant">
