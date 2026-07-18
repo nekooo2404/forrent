@@ -10,8 +10,8 @@ from apps.common.permissions import IsAdmin, IsTenant
 from apps.common.viewsets import StandardResponseModelViewSetMixin
 
 
-@method_decorator(cache_control(public=True, max_age=300), name="list")
-@method_decorator(cache_control(public=True, max_age=600), name="retrieve")
+@method_decorator(cache_control(no_store=True), name="list")
+@method_decorator(cache_control(no_store=True), name="retrieve")
 class PublicBlogViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
     lookup_field = "slug"
     search_fields = ("title", "short_description", "content")

@@ -290,6 +290,7 @@ test.describe('Public critical flows', () => {
   test('large cẩm nang inventories paginate without duplicate page controls', async ({ page }) => {
     await page.goto('/blogs?page=4');
 
+    await expect(page.getByRole('heading', { name: 'Cam nang thue phong 22' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Trang 4' })).toHaveCount(1);
     await expect(page.getByRole('link', { name: 'Trang 4' })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('link', { name: 'Trang sau' })).toHaveAttribute('aria-disabled', 'true');

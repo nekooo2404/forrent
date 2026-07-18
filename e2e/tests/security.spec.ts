@@ -56,7 +56,7 @@ test.describe('Security headers and origin guard', () => {
   test('caches public pages without caching session endpoints', async ({ request }, testInfo) => {
     test.skip(testInfo.project.name !== 'chromium', 'Run cache regression once.');
 
-    for (const path of ['/', '/rooms', '/blogs', '/contact']) {
+    for (const path of ['/', '/rooms', '/contact']) {
       const response = await request.get(path);
       const cacheControl = response.headers()['cache-control'] ?? '';
 
@@ -65,6 +65,10 @@ test.describe('Security headers and origin guard', () => {
       expect(cacheControl).toContain('max-age=30');
       expect(cacheControl).toContain('s-maxage=60');
     }
+
+    const blogs = await request.get('/blogs');
+    expect(blogs.ok()).toBeTruthy();
+    expect(blogs.headers()['cache-control'] ?? '').not.toContain('public');
 
     for (const path of ['/api/auth/session', '/log-in']) {
       const response = await request.get(path);
