@@ -1,8 +1,15 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { mockAdminCalendar, mockAdminDashboard, mockAdminRoomInventory } from './admin-mocks';
 
 const adminBaseURL = process.env.ADMIN_BASE_URL || 'http://localhost:3001';
+
+async function mockAuthenticatedSession(page: Page) {
+  await page.route('**/api/auth/session', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ success: true, message: 'Success', data: { authenticated: true } }),
+  }));
+}
 
 test.describe('Public critical flows', () => {
   for (const target of [
@@ -193,7 +200,7 @@ test.describe('Public critical flows', () => {
       await expect(page.getByTestId('site-nav').locator(':focus')).toHaveCount(0);
     }
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Phòng');
-    await expect(page.locator('body')).toHaveCSS('font-family', /system-ui/);
+    await expect(page.locator('body')).toHaveCSS('font-family', /Be Vietnam Pro/);
     await expect(page.locator('form[data-product-event="room_search_submitted"]')).toBeVisible();
 
     const controls = page.locator('#home-room-search, #home-max-price, #home-room-type');
@@ -258,7 +265,7 @@ test.describe('Public critical flows', () => {
 
     const filterForm = page.locator('form[action="/rooms"]').filter({ has: page.locator('input[name="search"]') });
     await expect(filterForm).toHaveAttribute('data-product-event', 'room_search_submitted');
-    const filterToggle = page.getByRole('button', { name: 'Bộ lọc phòng' });
+    const filterToggle = page.getByRole('button', { name: 'Lọc phòng' });
     if (await filterToggle.isVisible()) await filterToggle.click();
     await expect(filterForm).toBeVisible();
     await filterForm.locator('input[name="search"]').fill('test');
@@ -287,6 +294,60 @@ test.describe('Public critical flows', () => {
     await expect(page.getByRole('link', { name: 'Trang 21' })).toHaveCount(1);
     await expect(page.getByRole('link', { name: 'Trang 21' })).toHaveAttribute('aria-current', 'page');
     await expect(page.getByRole('link', { name: 'Trang sau' })).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  test('room pagination keeps current cards while loading and returns focus to results', async ({ page }) => {
+    let releasePageTwo = () => {};
+    const pageTwoGate = new Promise<void>((resolve) => {
+      releasePageTwo = resolve;
+    });
+    const warmedPageTwoImages = new Set<string>();
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="#9a5b31"/></svg>';
+
+    await page.route('https://res.cloudinary.com/**', async (route) => {
+      const url = route.request().url();
+      if (/pagination-(7|8)\.jpg/.test(url)) warmedPageTwoImages.add(url);
+      await route.fulfill({ body: svg, contentType: 'image/svg+xml' });
+    });
+    await page.route('**/rooms?search=pagination-images&page=2*', async (route) => {
+      if (route.request().headers().rsc) await pageTwoGate;
+      await route.continue();
+    });
+    await page.goto('/rooms?search=pagination-images');
+
+    const results = page.locator('[data-rooms-results]');
+    const pagination = page.getByRole('navigation', { name: 'Phân trang' });
+    await expect(page.locator('[data-room-card-id="1"]')).toBeVisible();
+    await expect.poll(() => warmedPageTwoImages.size).toBe(2);
+    await pagination.scrollIntoViewIfNeeded();
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(500);
+
+    await pagination.getByRole('link', { name: 'Trang 2' }).click();
+    await expect(results).toHaveAttribute('aria-busy', 'true');
+    await expect(page.locator('[data-room-card-id="1"]')).toBeVisible();
+
+    releasePageTwo();
+    await expect(page).toHaveURL(/page=2/);
+    await expect(page.locator('[data-room-card-id="7"]')).toBeVisible();
+    await expect(results).toHaveAttribute('aria-busy', 'false');
+    await expect(page.getByRole('heading', { name: '12 phòng phù hợp · trang 2' })).toBeFocused();
+    await expect(page.getByText('Đã tải trang 2, hiển thị 6 phòng.')).toBeAttached();
+    const firstTwoImageSources = await page.locator('[data-room-card] img').evaluateAll((images) =>
+      images.slice(0, 2).map((image) => (image as HTMLImageElement).currentSrc),
+    );
+    expect(firstTwoImageSources).toEqual(expect.arrayContaining([...warmedPageTwoImages]));
+    await expect.poll(async () => {
+      const box = await page.getByRole('heading', { name: '12 phòng phù hợp · trang 2' }).boundingBox();
+      return box?.y ?? Number.POSITIVE_INFINITY;
+    }).toBeLessThan(180);
+  });
+
+  test('an empty room result does not render a fake page one control', async ({ page }) => {
+    await page.goto('/rooms?search=visual-empty');
+
+    await expect(page.getByRole('heading', { name: 'Chưa có phòng phù hợp' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Phân trang' })).toHaveCount(0);
+    await expect(page.getByText(/trang 1/i)).toHaveCount(0);
   });
 
   test('rooms can be compared from the listing without changing pages', async ({ page }) => {
@@ -353,7 +414,7 @@ test.describe('Public critical flows', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.locator('[data-testid="site-nav"]:visible').first()).toHaveAttribute('data-ready', 'true', { timeout: 15_000 });
     const filterForm = page.locator('form[action="/rooms"]').filter({ has: page.locator('input[name="search"]') });
-    const filterToggle = page.getByRole('button', { name: 'Bộ lọc phòng' });
+    const filterToggle = page.getByRole('button', { name: 'Lọc phòng' });
     if (await filterToggle.isVisible()) await filterToggle.click();
     await expect(filterForm).toBeVisible();
 
@@ -555,6 +616,7 @@ test.describe('Public critical flows', () => {
     await expect(galleryDialog).toHaveCount(0);
     await expect(galleryTrigger).toBeFocused();
 
+    await mockAuthenticatedSession(page);
     await page.goto('/rooms/e2e-room');
     await page.getByLabel('Ngày mong muốn').fill('2099-01-15');
     await page.getByLabel('Thời gian').selectOption('morning');
@@ -597,11 +659,25 @@ test.describe('Public critical flows', () => {
     await expect(page.getByRole('dialog')).toContainText('tour.mp4');
   });
 
+  test('admin room form warns about low-resolution listing photos', async ({ page }) => {
+    await mockAdminRoomInventory(page);
+    await page.goto(new URL('/admin/rooms', adminBaseURL).toString());
+    await page.getByRole('button', { name: 'Thêm phòng', exact: true }).click();
+
+    await page.getByLabel('Thumbnail').setInputFiles({
+      name: 'thumbnail-small.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
+    });
+
+    await expect(page.getByRole('status')).toContainText('nên dùng tối thiểu 1200×800px');
+  });
+
   test('room detail shows water charged per cubic meter', async ({ page }) => {
     await page.goto('/rooms/e2e-room-water-meter');
 
-    const waterFact = page.getByText('Tiền nước / m³').locator('..');
-    await expect(waterFact).toContainText('25.000 VNĐ');
+    const utilities = page.getByText('Điện · nước').locator('..');
+    await expect(utilities).toContainText('25.000 VNĐ / m³');
   });
 
   test('admin room form switches the water price input by billing type', async ({ page }) => {
@@ -629,6 +705,7 @@ test.describe('Public critical flows', () => {
       ward: 1,
       address: 'Tay Mo, Ha Noi',
       building_code: 'S3.02',
+      hero_eligible: false,
       price: '5000000.00',
       deposit_type: 1,
       deposit_type_name: 'Coc 1 thang',
@@ -667,6 +744,7 @@ test.describe('Public critical flows', () => {
 
     await expect(page.getByRole('heading', { name: /Chung c. mini m.i tinh/, level: 1 })).toBeVisible();
     await expect(page.getByRole('heading', { name: /P801|Khai tr..ng|Si.u ph.m|CCMN|🎉/, level: 1 })).toHaveCount(0);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
   });
 
   test('room detail resolves an encoded Vietnamese slug', async ({ page }) => {
@@ -678,23 +756,27 @@ test.describe('Public critical flows', () => {
     await expect(page.getByText('Phòng này hiện không còn hiển thị')).toHaveCount(0);
   });
 
-  test('contact form validates required and phone fields', async ({ page }) => {
+  test('contact form uses localized validation and accepts one contact method', async ({ page }) => {
     await page.goto('/contact');
 
     const fullName = page.locator('#fullName');
     const email = page.locator('#email');
     const phone = page.locator('#phone');
-    const message = page.locator('#message');
 
-    await expect(fullName).toHaveJSProperty('validity.valid', false);
-    await fullName.fill('Test User');
-    await email.fill('test@example.com');
+    await page.getByRole('button', { name: 'Gửi nhu cầu thuê phòng' }).click();
+    await expect(page.getByText('Vui lòng nhập họ và tên.')).toBeVisible();
+    await expect(page.getByText('Nhập số điện thoại hoặc email để nhân viên tư vấn liên hệ.')).toBeVisible();
+    await expect(fullName).toBeFocused();
+
+    await fullName.fill('Nguyễn Văn A');
     await phone.fill('123');
-    await message.fill('Need a room this week.');
+    await page.getByRole('button', { name: 'Gửi nhu cầu thuê phòng' }).click();
+    await expect(page.getByText('Số điện thoại cần có 10 số hoặc bắt đầu bằng +84.')).toBeVisible();
 
-    await expect
-      .poll(() => phone.evaluate((element) => (element as HTMLInputElement).validity.valid))
-      .toBe(false);
+    await phone.fill('0912345678');
+    await expect(email).toHaveValue('');
+    await page.getByRole('button', { name: 'Gửi nhu cầu thuê phòng' }).click();
+    await expect(page.getByText(/Đã nhận yêu cầu/)).toBeVisible();
   });
 
   test('contact form keeps user input when the API is temporarily unavailable', async ({ page }) => {
@@ -711,13 +793,13 @@ test.describe('Public critical flows', () => {
     await page.goto('/contact');
 
     await page.getByLabel('Họ và tên').fill('Nguyen Van A');
-    await page.getByLabel('Địa chỉ email').fill('tenant@example.com');
-    await page.getByLabel('Số điện thoại').fill('+84 912 345 678');
+    await page.getByLabel('Email', { exact: true }).fill('tenant@example.com');
+    await page.locator('#phone').fill('+84 912 345 678');
     await page.getByLabel('Lời nhắn').fill('Can tim phong gan Tay Mo.');
     await page.getByRole('button', { name: 'Gửi nhu cầu thuê phòng' }).dblclick();
 
     await expect(page.getByLabel('Họ và tên')).toHaveValue('Nguyen Van A');
-    await expect(page.getByLabel('Số điện thoại')).toHaveValue('+84 912 345 678');
+    await expect(page.locator('#phone')).toHaveValue('+84 912 345 678');
     await expect(page.getByRole('button', { name: 'Gửi nhu cầu thuê phòng' })).toBeEnabled();
     expect(requestCount).toBe(1);
   });
@@ -734,6 +816,7 @@ test.describe('Public critical flows', () => {
   });
 
   test('viewing request shows the pending confirmation state after submission', async ({ page }) => {
+    await mockAuthenticatedSession(page);
     await page.route('**/api/viewing-requests', (route) => route.fulfill({
       body: JSON.stringify({ success: true, message: 'Yêu cầu xem phòng đã được ghi nhận.', data: { id: 101 } }),
       contentType: 'application/json',
@@ -754,6 +837,7 @@ test.describe('Public critical flows', () => {
   });
 
   test('viewing request keeps the selected schedule when the API fails', async ({ page }) => {
+    await mockAuthenticatedSession(page);
     let requestCount = 0;
     await page.route('**/api/viewing-requests', async (route) => {
       requestCount += 1;
@@ -778,6 +862,7 @@ test.describe('Public critical flows', () => {
   });
 
   test('expired session preserves viewing request input and explains the next step', async ({ page }) => {
+    await mockAuthenticatedSession(page);
     await page.route('**/api/viewing-requests', (route) => route.fulfill({
       body: JSON.stringify({ success: false, message: 'Phiên đăng nhập đã hết hạn.', errors: {} }),
       contentType: 'application/json',
@@ -791,9 +876,8 @@ test.describe('Public critical flows', () => {
     await page.getByRole('button', { name: 'Xác nhận', exact: true }).click();
 
     await expect(page.getByText(/Vui lòng đăng nhập tài khoản khách thuê/).first()).toBeVisible();
-    await expect(page.getByLabel('Ngày mong muốn')).toHaveValue('2099-01-15');
-    await expect(page.getByLabel('Thời gian')).toHaveValue('evening');
-    await expect(page.getByRole('button', { name: 'Yêu cầu xem ngay' })).toBeEnabled();
+    await expect(page.getByText(/Lịch đã lưu: 2099-01-15/)).toContainText('Tối, 16:00 - 19:00');
+    await expect(page.getByRole('link', { name: 'Đăng nhập để đặt lịch' })).toBeVisible();
   });
 
   test('gallery exposes recoverable image and video errors when the CDN is unavailable', async ({ page }) => {
@@ -810,6 +894,15 @@ test.describe('Public critical flows', () => {
 
     await expect(page).toHaveURL(/\/rooms\/e2e-room$/);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  });
+
+  test('a missing room returns a real 404 with recovery actions', async ({ page }) => {
+    const response = await page.goto('/rooms/room-does-not-exist');
+
+    expect(response?.status()).toBe(404);
+    await expect(page.getByRole('heading', { name: 'Không tìm thấy phòng' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Tìm phòng khác' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Gửi nhu cầu', exact: true })).toBeVisible();
   });
 });
 
@@ -938,7 +1031,7 @@ test.describe('Accessibility basics', () => {
   test('auth and filter actions meet the 44px touch target', async ({ page }) => {
     const targets: Array<{ path: string; labels: string[] }> = [
       { path: '/log-in', labels: ['Quên mật khẩu?', 'Đăng ký'] },
-      { path: '/sign-up', labels: ['Gửi mã', 'Đăng nhập'] },
+      { path: '/sign-up', labels: ['Tiếp tục xác thực', 'Đăng nhập'] },
       { path: '/rooms?search=test', labels: ['Xóa tất cả', 'Xem chi tiết và đặt lịch'] },
     ];
 

@@ -52,6 +52,7 @@ const room = {
   thumbnail: null,
   thumbnail_url: null,
   status: 'PUBLISHED',
+  hero_eligible: false,
   created_at: '2026-07-01T08:00:00Z',
   updated_at: '2026-07-10T08:00:00Z',
 };
@@ -60,6 +61,7 @@ const heroRoomWithImage = {
   id: 2,
   title: 'Studio gan Sakura',
   slug: 'e2e-room-hero',
+  hero_eligible: true,
   thumbnail_url: imageDataUrl('#3f7664'),
 };
 
@@ -131,6 +133,10 @@ const server = http.createServer((request, response) => {
   }
   if (url.pathname === '/api/rooms/') {
     const search = url.searchParams.get('search');
+    if (url.searchParams.get('hero_eligible') === 'true') {
+      sendJson(response, 200, envelope({ count: 1, next: null, previous: null, results: [heroRoomWithImage] }));
+      return;
+    }
     if (!search && url.searchParams.get('status') === 'PUBLISHED') {
       sendJson(response, 200, envelope({
         count: 2,
@@ -144,13 +150,16 @@ const server = http.createServer((request, response) => {
       sendJson(response, 200, envelope({ count: 0, next: null, previous: null, results: [] }));
       return;
     }
-    if (search === 'visual-12' || search === 'pagination-125') {
+    if (search === 'visual-12' || search === 'pagination-125' || search === 'pagination-images') {
       const roomCount = search === 'pagination-125' ? 125 : 12;
       const rooms = Array.from({ length: roomCount }, (_, index) => ({
         ...room,
         id: index + 1,
         slug: `e2e-room-${index + 1}`,
         title: `Can ho dich vu ${index + 1}`,
+        ...(search === 'pagination-images'
+          ? { thumbnail_url: `https://res.cloudinary.com/forrent-test/image/upload/v1/pagination-${index + 1}.jpg` }
+          : {}),
       }));
       const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
       const pageSize = Math.max(1, Number(url.searchParams.get('page_size')) || 6);
