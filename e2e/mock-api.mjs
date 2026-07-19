@@ -1,5 +1,8 @@
 import http from 'node:http';
 
+const port = Math.max(1, Number(process.env.MOCK_API_PORT) || 4100);
+const roomDetailDelayMs = Math.max(0, Number(process.env.ROOM_DETAIL_DELAY_MS) || 0);
+
 const city = { id: 1, name: 'Ha Noi', slug: 'ha-noi', is_active: true };
 const ward = { id: 1, city: 1, city_name: 'Ha Noi', name: 'Nam Tu Liem', slug: 'nam-tu-liem', is_active: true };
 const amenities = [
@@ -64,6 +67,7 @@ const heroRoomWithImage = {
   hero_eligible: true,
   thumbnail_url: imageDataUrl('#3f7664'),
 };
+const requestCounts = new Map();
 
 function envelope(data, message = 'OK') {
   return { success: true, message, data };
@@ -82,6 +86,19 @@ const server = http.createServer((request, response) => {
   } catch {
     // Keep the encoded path so malformed input falls through to the 404 response.
   }
+
+  if (url.pathname === '/__test__/request-counts/') {
+    if (request.method === 'DELETE') {
+      requestCounts.clear();
+      sendJson(response, 200, envelope({}));
+      return;
+    }
+    sendJson(response, 200, envelope(Object.fromEntries(requestCounts)));
+    return;
+  }
+
+  const requestCountKey = `${request.method} ${decodedPathname}`;
+  requestCounts.set(requestCountKey, (requestCounts.get(requestCountKey) ?? 0) + 1);
 
   if (request.method === 'OPTIONS') {
     response.writeHead(204).end();
@@ -106,7 +123,7 @@ const server = http.createServer((request, response) => {
   }
   const cloudinaryRoomMatch = decodedPathname.match(/^\/api\/rooms\/(e2e-room-cloudinary)\/$/);
   const roomDetailMatch = cloudinaryRoomMatch ?? decodedPathname.match(
-    /^\/api\/rooms\/(e2e-room(?:-(?:one|many|water-meter|operational-title)|-\d+)?|phòng-đẹp-hà-nội)\/$/,
+    /^\/api\/rooms\/(e2e-room(?:-(?:one|many|water-meter|operational-title|performance)|-\d+)?|phòng-đẹp-hà-nội)\/$/,
   );
   if (roomDetailMatch) {
     const slug = roomDetailMatch[1];
@@ -117,7 +134,7 @@ const server = http.createServer((request, response) => {
         : slug.endsWith('-many')
           ? roomImages
           : [];
-    sendJson(response, 200, envelope({
+    const body = envelope({
       ...room,
       slug,
       title: slug === 'phòng-đẹp-hà-nội' ? '🎉 PHÒNG ĐẸP HÀ NỘI 🎉' : room.title,
@@ -128,7 +145,12 @@ const server = http.createServer((request, response) => {
         : {}),
       description: 'Can ho dich vu day du thong tin de dat lich xem.',
       images,
-    }));
+    });
+    if (slug.endsWith('-performance') && roomDetailDelayMs > 0) {
+      setTimeout(() => sendJson(response, 200, body), roomDetailDelayMs);
+      return;
+    }
+    sendJson(response, 200, body);
     return;
   }
   if (url.pathname === '/api/rooms/') {
@@ -202,6 +224,6 @@ const server = http.createServer((request, response) => {
   sendJson(response, 404, { success: false, message: 'Not found', errors: {} });
 });
 
-server.listen(4100, '127.0.0.1');
+server.listen(port, '127.0.0.1');
 process.on('SIGTERM', () => server.close());
 process.on('SIGINT', () => server.close());

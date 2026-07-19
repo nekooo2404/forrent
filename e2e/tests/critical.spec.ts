@@ -756,6 +756,31 @@ test.describe('Public critical flows', () => {
     await expect(page.getByText('Phòng này hiện không còn hiển thị')).toHaveCount(0);
   });
 
+  test('room detail uses the low-latency public API once for metadata and page content', async ({ page, request }) => {
+    const publicCountersUrl = 'http://127.0.0.1:4100/__test__/request-counts/';
+    const internalCountersUrl = 'http://127.0.0.1:4101/__test__/request-counts/';
+    await Promise.all([request.delete(publicCountersUrl), request.delete(internalCountersUrl)]);
+
+    await page.goto('/rooms/e2e-room-performance');
+    await expect(page.getByRole('heading', { name: 'Can ho dich vu Nam Tu Liem', level: 1 })).toBeVisible();
+
+    const [publicResponse, internalResponse] = await Promise.all([
+      request.get(publicCountersUrl),
+      request.get(internalCountersUrl),
+    ]);
+    const publicPayload = await publicResponse.json() as { data: Record<string, number> };
+    const internalPayload = await internalResponse.json() as { data: Record<string, number> };
+    expect(publicPayload.data['GET /api/rooms/e2e-room-performance/']).toBe(1);
+    expect(internalPayload.data['GET /api/rooms/e2e-room-performance/']).toBeUndefined();
+
+    const warmResponse = await request.get('/rooms/e2e-room-performance');
+    expect(warmResponse.ok()).toBe(true);
+
+    const cachedPublicResponse = await request.get(publicCountersUrl);
+    const cachedPublicPayload = await cachedPublicResponse.json() as { data: Record<string, number> };
+    expect(cachedPublicPayload.data['GET /api/rooms/e2e-room-performance/']).toBe(1);
+  });
+
   test('contact form uses localized validation and accepts one contact method', async ({ page }) => {
     await page.goto('/contact');
 

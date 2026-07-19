@@ -36,7 +36,6 @@ import {
   formatArea,
   formatMonthlyVnd,
   formatOptionalVnd,
-  getCachedRoomDetail,
   resolveMediaUrl,
   roomStatusLabel,
   roomTypeLabel,
@@ -44,6 +43,7 @@ import {
   type ApiRoomDetail,
 } from "@/lib/api";
 import { absoluteUrl, cleanRoomTitle, shortDescription, SITE_NAME } from "@/lib/seo";
+import { getCachedRoomDetail } from "@/lib/server/room-detail";
 import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/site-config";
 
 type RoomSlugPageProps = {

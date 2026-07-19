@@ -285,8 +285,8 @@ export class ApiError extends Error {
 
 type QueryValue = boolean | number | string | undefined;
 
-function buildUrl(path: string, params?: Record<string, QueryValue>) {
-  const url = new URL(path, API_BASE_URL);
+function buildUrl(path: string, params?: Record<string, QueryValue>, apiBaseUrl = API_BASE_URL) {
+  const url = new URL(path, apiBaseUrl);
   Object.entries(params ?? {}).forEach(([key, value]) => {
     if (value !== undefined && value !== "") {
       url.searchParams.set(key, String(value));
@@ -297,14 +297,14 @@ function buildUrl(path: string, params?: Record<string, QueryValue>) {
 
 async function apiFetch<T>(
   path: string,
-  init: RequestInit & { next?: { revalidate?: number }; timeoutMs?: number } = {},
+  init: RequestInit & { apiBaseUrl?: string; next?: { revalidate?: number }; timeoutMs?: number } = {},
   params?: Record<string, QueryValue>,
 ): Promise<T> {
-  const { timeoutMs = DEFAULT_API_TIMEOUT_MS, ...requestInit } = init;
+  const { apiBaseUrl = API_BASE_URL, timeoutMs = DEFAULT_API_TIMEOUT_MS, ...requestInit } = init;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-  const response = await fetch(buildUrl(path, params), {
+  const response = await fetch(buildUrl(path, params, apiBaseUrl), {
     ...requestInit,
     headers: buildRequestHeaders(requestInit.headers, Boolean(requestInit.body)),
     next: requestInit.next ?? (requestInit.method || requestInit.cache === "no-store" ? undefined : { revalidate: PUBLIC_REVALIDATE_SECONDS }),
@@ -339,7 +339,10 @@ export async function getRooms(params?: {
 }
 
 export async function getRoomDetail(slug: string) {
-  return apiFetch<ApiRoomDetail>(`/api/rooms/${encodeURIComponent(slug)}/`, { next: { revalidate: AVAILABILITY_REVALIDATE_SECONDS } });
+  return apiFetch<ApiRoomDetail>(`/api/rooms/${encodeURIComponent(slug)}/`, {
+    apiBaseUrl: PUBLIC_API_BASE_URL,
+    next: { revalidate: AVAILABILITY_REVALIDATE_SECONDS },
+  });
 }
 
 export async function getRoomFilters() {
@@ -363,7 +366,6 @@ export async function createTenantBlog(payload: TenantBlogPayload, authorization
 }
 
 export const getCachedBlogDetail = cache(getBlogDetail);
-export const getCachedRoomDetail = cache(getRoomDetail);
 export const getCachedRoomFilters = cache(getRoomFilters);
 
 export async function submitContact(payload: ContactPayload) {

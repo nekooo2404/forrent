@@ -621,7 +621,7 @@ function RoomCard({
       data-room-card
     >
       <div className={`relative h-[260px] overflow-hidden bg-surface-container sm:h-[280px] ${wide ? "xl:h-full xl:min-h-[350px]" : ""} ${room.unavailable ? "grayscale-[30%]" : ""}`}>
-        <Link aria-label={`Xem chi tiết ${room.title}`} className="absolute inset-0" data-room-detail-link data-room-id={room.id} href={detailHref}>
+        <Link aria-label={`Xem chi tiết ${room.title}`} className="absolute inset-0" data-room-detail-link data-room-id={room.id} href={detailHref} prefetch={priority}>
           {room.image ? (
             <Image
               alt={room.alt}
@@ -658,7 +658,7 @@ function RoomCard({
       <div className="flex flex-grow flex-col p-5 md:p-6">
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0">
-            <Link className="line-clamp-2 block min-h-11 font-headline-sm text-xl leading-snug text-on-surface hover:text-primary" data-room-detail-link data-room-id={room.id} href={detailHref}>
+            <Link className="line-clamp-2 block min-h-11 font-headline-sm text-xl leading-snug text-on-surface hover:text-primary" data-room-detail-link data-room-id={room.id} href={detailHref} prefetch={priority}>
               {room.title}
             </Link>
             <p className="mt-2 font-body-md text-base font-medium text-on-surface-variant">{room.primaryMeta} · {room.area}</p>
@@ -698,7 +698,7 @@ function RoomCard({
           </div>
         </div>
         <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-          <Link className="premium-button urban-cta inline-flex min-h-11 items-center justify-center rounded-md px-4 py-3 font-body-md text-sm" data-room-detail-link data-room-id={room.id} href={detailHref}>
+          <Link className="premium-button urban-cta inline-flex min-h-11 items-center justify-center rounded-md px-4 py-3 font-body-md text-sm" data-room-detail-link data-room-id={room.id} href={detailHref} prefetch={priority}>
             Xem chi tiết và đặt lịch
           </Link>
           {compareItem ? <RoomCompareToggle room={compareItem} /> : null}
