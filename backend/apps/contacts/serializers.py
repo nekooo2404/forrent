@@ -15,6 +15,9 @@ def normalized_phone(value):
 
 
 class ContactCreateSerializer(serializers.ModelSerializer):
+    phone = serializers.CharField(required=False, allow_blank=True, max_length=20)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    message = serializers.CharField(required=False, allow_blank=True)
     room_id = serializers.PrimaryKeyRelatedField(
         source="room",
         queryset=Room.objects.available(),
@@ -28,7 +31,14 @@ class ContactCreateSerializer(serializers.ModelSerializer):
         fields = ("full_name", "phone", "email", "message", "room_id")
 
     def validate_phone(self, value):
-        return normalized_phone(value)
+        return normalized_phone(value) if value else ""
+
+    def validate(self, attrs):
+        if not attrs.get("phone") and not attrs.get("email"):
+            raise serializers.ValidationError(
+                {"contact": "Vui l\u00f2ng nh\u1eadp s\u1ed1 \u0111i\u1ec7n tho\u1ea1i ho\u1eb7c email \u0111\u1ec3 nh\u00e2n vi\u00ean t\u01b0 v\u1ea5n li\u00ean h\u1ec7."}
+            )
+        return attrs
 
 
 class AdminContactMessageSerializer(serializers.ModelSerializer):

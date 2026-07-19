@@ -18,6 +18,7 @@ def test_public_room_quality_audit_passes_for_clean_room():
         room=room,
         image_url="https://res.cloudinary.com/demo/image/upload/f_auto,q_auto/v1/rooms/studio-yen-so.jpg",
         media_type=RoomImage.MediaType.IMAGE,
+        label=RoomImage.Label.OVERVIEW,
     )
 
     stdout = StringIO()
@@ -27,7 +28,7 @@ def test_public_room_quality_audit_passes_for_clean_room():
 
 
 @pytest.mark.django_db
-def test_public_room_quality_audit_fails_for_bad_public_listing_copy_and_missing_media():
+def test_public_room_quality_audit_sanitizes_operational_copy_but_requires_media():
     room = create_room()
     room.title = "P502 CCMN KHAI TRUONG SIEU PHAM 🎉"
     room.thumbnail = ""
@@ -38,9 +39,9 @@ def test_public_room_quality_audit_fails_for_bad_public_listing_copy_and_missing
         call_command("audit_public_room_quality", stdout=stdout)
 
     output = stdout.getvalue()
-    assert "title contains emoji" in output
-    assert "title starts with an internal room code" in output
-    assert "title contains internal abbreviation CCMN" in output
+    assert "title contains emoji" not in output
+    assert "title starts with an internal room code" not in output
+    assert "title contains internal abbreviation CCMN" not in output
     assert "missing thumbnail" in output
     assert "gallery needs at least one still image" in output
 
@@ -55,6 +56,7 @@ def test_public_room_quality_audit_rejects_unapproved_absolute_media_hosts():
         room=room,
         image_url="https://example.com/room.jpg",
         media_type=RoomImage.MediaType.IMAGE,
+        label=RoomImage.Label.OVERVIEW,
     )
 
     stdout = StringIO()
@@ -62,6 +64,26 @@ def test_public_room_quality_audit_rejects_unapproved_absolute_media_hosts():
         call_command("audit_public_room_quality", stdout=stdout)
 
     assert "uses an unapproved media host" in stdout.getvalue()
+
+
+@pytest.mark.django_db
+def test_public_room_quality_audit_requires_semantic_media_for_hero_rooms():
+    room = create_room()
+    room.thumbnail = "room-thumbnails/hero.jpg"
+    room.hero_eligible = True
+    room.save(update_fields=("thumbnail", "hero_eligible", "updated_at"))
+    RoomImage.objects.create(
+        room=room,
+        image_url="https://res.cloudinary.com/demo/image/upload/v1/rooms/hero.jpg",
+        media_type=RoomImage.MediaType.IMAGE,
+        label=RoomImage.Label.OTHER,
+    )
+
+    stdout = StringIO()
+    with pytest.raises(CommandError, match="Public room quality audit failed"):
+        call_command("audit_public_room_quality", stdout=stdout)
+
+    assert "homepage hero rooms require an OVERVIEW gallery image" in stdout.getvalue()
 
 
 @pytest.mark.django_db

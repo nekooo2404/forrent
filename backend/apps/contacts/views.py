@@ -68,6 +68,8 @@ class AdminContactMessageViewSet(StandardResponseModelViewSetMixin, ModelViewSet
             raise ValidationError({"room": "Select an interested room before converting this contact."})
         if not contact.email:
             raise ValidationError({"email": "Email is required before converting contact to a tenant lead."})
+        if not contact.phone:
+            raise ValidationError({"phone": "Phone is required before converting contact to a tenant lead."})
 
         phone = normalize_vietnamese_phone(contact.phone)
         user = User.objects.filter(phone=phone).first()

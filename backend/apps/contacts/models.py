@@ -14,9 +14,9 @@ class ContactMessage(TimeStampedModel):
         HANDLED = "HANDLED", "Handled"
 
     full_name = models.CharField(max_length=255)
-    phone = models.CharField(max_length=20, validators=[validate_vietnamese_phone])
+    phone = models.CharField(max_length=20, validators=[validate_vietnamese_phone], blank=True)
     email = models.EmailField(blank=True)
-    message = models.TextField()
+    message = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.NEW)
     room = models.ForeignKey(Room, on_delete=models.SET_NULL, related_name="contact_messages", null=True, blank=True)
     assigned_to = models.ForeignKey(

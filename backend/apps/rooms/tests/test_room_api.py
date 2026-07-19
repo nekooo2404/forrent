@@ -49,13 +49,89 @@ class TestRoomAPI:
         public_response = self.client.get(f"/api/rooms/{room.slug}/")
         self.client.force_authenticate(admin)
         admin_response = self.client.get(f"/api/admin/rooms/{room.id}/")
+        expected_public_title = f"Gác xép tại {room.ward.name}"
 
         assert public_response.status_code == 200
-        assert public_response.data["data"]["title"] == "P302 - Gác xép 🎉"
-        assert public_response.data["data"]["public_title"] == "Gác xép"
+        assert public_response.data["data"]["title"] == expected_public_title
+        assert public_response.data["data"]["public_title"] == expected_public_title
         assert admin_response.status_code == 200
         assert admin_response.data["data"]["title"] == "P302 - Gác xép 🎉"
-        assert admin_response.data["data"]["public_title"] == "Gác xép"
+        assert admin_response.data["data"]["public_title"] == expected_public_title
+
+    def test_public_room_search_is_accent_and_case_insensitive(self):
+        room = create_room()
+        room.address = "Ngõ 70 Xuân Phương, Bắc Từ Liêm"
+        room.save(update_fields=("address", "updated_at"))
+
+        response = self.client.get("/api/rooms/", {"search": "BAC TU LIEM"})
+
+        assert response.status_code == 200
+        assert [item["id"] for item in response.data["data"]["results"]] == [room.id]
+
+    def test_public_room_search_does_not_expose_internal_building_code(self):
+        room = create_room()
+        room.building_code = "S3.02"
+        room.save(update_fields=("building_code", "updated_at"))
+
+        response = self.client.get("/api/rooms/", {"search": "S3.02"})
+
+        assert response.status_code == 200
+        assert response.data["data"]["results"] == []
+
+    def test_public_room_list_can_select_homepage_hero_inventory(self):
+        regular_room = create_room()
+        hero_room = create_room()
+        hero_room.hero_eligible = True
+        hero_room.thumbnail = "room-thumbnails/hero.jpg"
+        hero_room.save(update_fields=("hero_eligible", "thumbnail", "updated_at"))
+
+        response = self.client.get("/api/rooms/", {"hero_eligible": "true"})
+
+        assert response.status_code == 200
+        assert [item["id"] for item in response.data["data"]["results"]] == [hero_room.id]
+        assert regular_room.id != hero_room.id
+
+    def test_admin_cannot_mark_room_as_hero_without_thumbnail(self):
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        self.client.force_authenticate(admin)
+
+        response = self.client.patch(
+            f"/api/admin/rooms/{room.id}/",
+            {"hero_eligible": True},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "hero_eligible" in response.data["errors"]
+
+    def test_admin_cannot_mark_room_as_hero_without_overview_media(self):
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        room.thumbnail = "room-thumbnails/hero.jpg"
+        room.save(update_fields=("thumbnail", "updated_at"))
+        self.client.force_authenticate(admin)
+
+        rejected = self.client.patch(
+            f"/api/admin/rooms/{room.id}/",
+            {"hero_eligible": True},
+            format="json",
+        )
+        RoomImage.objects.create(
+            room=room,
+            image_url="https://res.cloudinary.com/demo/image/upload/v1/overview.jpg",
+            media_type=RoomImage.MediaType.IMAGE,
+            label=RoomImage.Label.OVERVIEW,
+        )
+        accepted = self.client.patch(
+            f"/api/admin/rooms/{room.id}/",
+            {"hero_eligible": True},
+            format="json",
+        )
+
+        assert rejected.status_code == 400
+        assert "overview gallery image" in rejected.data["errors"]["hero_eligible"][0]
+        assert accepted.status_code == 200
 
     def test_building_code_is_admin_only_and_searchable(self):
         admin = create_admin()
