@@ -17,20 +17,21 @@ import {
   roomTypeLabel,
   type ApiRoom,
 } from "@/lib/api";
-import { cleanRoomTitle, SITE_DESCRIPTION } from "@/lib/seo";
+import { cleanRoomTitle, SITE_DESCRIPTION, SITE_TITLE, SOCIAL_PREVIEW_IMAGE } from "@/lib/seo";
 
 export const revalidate = 30;
 
 export const metadata: Metadata = {
-  title: "Thuê phòng theo tháng tại Hà Nội | ForRent",
+  title: { absolute: SITE_TITLE },
   description: SITE_DESCRIPTION,
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "ForRent - Thuê phòng theo tháng tại Hà Nội",
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     url: "/",
+    images: [SOCIAL_PREVIEW_IMAGE],
   },
 };
 

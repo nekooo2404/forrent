@@ -1,7 +1,14 @@
 export const SITE_NAME = "ForRent";
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://forrent.io.vn";
+export const SITE_TITLE = "ForRent - Tìm CCMN, CHDV giá tốt tại Hà Nội";
 export const SITE_DESCRIPTION =
-  "ForRent giúp người thuê tìm phòng theo tháng tại Hà Nội, lọc theo khu vực, giá, diện tích, tiện ích và đặt lịch xem trực tiếp.";
+  "Tìm chung cư mini (CCMN), căn hộ dịch vụ (CHDV) giá tốt tại Hà Nội, minh bạch giá thuê, tiền cọc, chi phí và lịch xem phòng.";
+export const SOCIAL_PREVIEW_IMAGE = {
+  url: "/brand/forrent-social-preview.jpg",
+  width: 1200,
+  height: 630,
+  alt: SITE_TITLE,
+};
 
 export function absoluteUrl(path = "/") {
   return new URL(path, SITE_URL).toString();

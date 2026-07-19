@@ -6,7 +6,7 @@ import { ServiceWorkerRegistration } from "@/components/service-worker-registrat
 import { ProductInsights } from "@/components/product-insights";
 import { SkipToContentLink } from "@/components/skip-to-content-link";
 
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL, SOCIAL_PREVIEW_IMAGE } from "@/lib/seo";
 
 const noindex = process.env.NEXT_PUBLIC_NOINDEX === "true";
 
@@ -15,10 +15,17 @@ export const metadata: Metadata = {
   applicationName: SITE_NAME,
   manifest: "/manifest.webmanifest",
   title: {
-    default: "ForRent - Thuê phòng theo tháng tại Hà Nội",
+    default: SITE_TITLE,
     template: `%s | ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
+  keywords: [
+    "chung cư mini Hà Nội",
+    "CCMN Hà Nội",
+    "căn hộ dịch vụ Hà Nội",
+    "CHDV Hà Nội",
+    "thuê phòng Hà Nội",
+  ],
   icons: {
     icon: [
       { url: "/brand/forrent-icon-192.png", sizes: "192x192", type: "image/png" },
@@ -31,13 +38,15 @@ export const metadata: Metadata = {
     locale: "vi_VN",
     siteName: SITE_NAME,
     url: "/",
-    title: "ForRent - Thuê phòng theo tháng tại Hà Nội",
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
+    images: [SOCIAL_PREVIEW_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ForRent - Thuê phòng theo tháng tại Hà Nội",
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
+    images: [SOCIAL_PREVIEW_IMAGE],
   },
   verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
     ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }

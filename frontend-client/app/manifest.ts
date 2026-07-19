@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "ForRent",
+    name: "ForRent - Tìm CCMN, CHDV giá tốt tại Hà Nội",
     short_name: "ForRent",
-    description: "Tìm phòng thuê theo tháng tại Hà Nội, rõ giá, cọc, phí và lịch xem.",
+    description: "Tìm chung cư mini và căn hộ dịch vụ giá tốt tại Hà Nội, rõ giá, cọc, phí và lịch xem.",
     start_url: "/",
     display: "standalone",
     background_color: "#f7f3ef",

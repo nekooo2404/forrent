@@ -100,6 +100,31 @@ test.describe('Public critical flows', () => {
     }
   });
 
+  test('homepage exposes the branded social preview metadata', async ({ page, request }) => {
+    const expectedTitle = 'ForRent - Tìm CCMN, CHDV giá tốt tại Hà Nội';
+    await page.goto('/');
+
+    await expect(page).toHaveTitle(expectedTitle);
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', expectedTitle);
+    await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute('content', expectedTitle);
+
+    const imageUrl = await page.locator('meta[property="og:image"]').getAttribute('content');
+    expect(imageUrl).toBeTruthy();
+    const socialImage = new URL(imageUrl!);
+    expect(socialImage.origin).toBe('https://forrent.io.vn');
+    expect(socialImage.pathname).toBe('/brand/forrent-social-preview.jpg');
+    await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute('content', '1200');
+    await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute('content', '630');
+
+    const imageResponse = await request.get(socialImage.pathname);
+    expect(imageResponse.ok()).toBeTruthy();
+    expect(imageResponse.headers()['content-type']).toContain('image/jpeg');
+    expect((await imageResponse.body()).byteLength).toBeGreaterThan(100_000);
+
+    const manifest = await (await request.get('/manifest.webmanifest')).json();
+    expect(manifest.name).toBe(expectedTitle);
+  });
+
   test('homepage uses the first available listing photo before the brand fallback', async ({ page }) => {
     await page.goto('/');
 
@@ -193,7 +218,10 @@ test.describe('Public critical flows', () => {
     const offline = await request.get('/offline');
 
     expect(manifest.ok()).toBeTruthy();
-    expect(await manifest.json()).toMatchObject({ name: 'ForRent', display: 'standalone' });
+    expect(await manifest.json()).toMatchObject({
+      name: 'ForRent - Tìm CCMN, CHDV giá tốt tại Hà Nội',
+      display: 'standalone',
+    });
     expect(serviceWorker.ok()).toBeTruthy();
     const serviceWorkerSource = await serviceWorker.text();
     expect(serviceWorkerSource).toContain('forrent-static');
