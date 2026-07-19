@@ -16,28 +16,36 @@ export const metadata: Metadata = {
 export default function LogInPage() {
   return (
     <PublicShell>
-      <section className="flex flex-grow flex-col pt-20 lg:min-h-[calc(100dvh-80px)] lg:flex-row">
-        <div className="relative hidden overflow-hidden border-r border-outline-variant/70 bg-surface-container lg:block lg:w-1/2">
-          <div className="relative flex h-full min-h-[640px] items-center justify-center p-12">
-            <div className="max-w-md rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-8 shadow-soft">
-              <Image
-                alt="ForRent"
-                className="h-auto w-44 rounded-lg bg-surface-container-lowest p-3"
-                height={96}
-                priority
-                src="/brand/forrent-logo.png"
-                width={240}
-              />
-              <h2 className="mt-8 font-headline-md text-headline-md text-on-surface">Quản lý lịch xem phòng rõ ràng</h2>
-              <p className="mt-4 font-body-md text-body-md text-on-surface-variant">
-                Đăng nhập để theo dõi yêu cầu, trạng thái xác nhận và thông tin phòng đã chọn.
-              </p>
-            </div>
+      <section className="flex flex-grow items-center bg-surface px-margin-mobile pb-16 pt-28 md:px-margin-desktop lg:min-h-[calc(100dvh-80px)] lg:pt-24">
+        <div className="mx-auto grid w-full max-w-6xl gap-12 lg:grid-cols-[minmax(0,0.85fr)_minmax(420px,0.65fr)] lg:items-center lg:gap-20">
+          <div className="hidden lg:block">
+            <Image
+              alt="ForRent"
+              className="h-auto w-40"
+              height={96}
+              priority
+              src="/brand/forrent-logo.png"
+              width={240}
+            />
+            <h2 className="mt-10 max-w-xl font-headline-md text-4xl leading-tight text-on-surface">Theo dõi lịch xem và phản hồi từ ForRent</h2>
+            <p className="mt-5 max-w-lg text-base leading-7 text-on-surface-variant">
+              Tài khoản lưu các phòng bạn đã yêu cầu xem, thời gian mong muốn và trạng thái xác nhận của nhân viên tư vấn.
+            </p>
+            <dl className="mt-10 max-w-lg divide-y divide-outline-variant/60 border-y border-outline-variant/60">
+              <div className="grid grid-cols-[7rem_1fr] gap-4 py-4">
+                <dt className="font-semibold text-on-surface">Lịch xem</dt>
+                <dd className="text-on-surface-variant">Biết yêu cầu đã nhận, đã liên hệ hay đã xác nhận.</dd>
+              </div>
+              <div className="grid grid-cols-[7rem_1fr] gap-4 py-4">
+                <dt className="font-semibold text-on-surface">Thông tin</dt>
+                <dd className="text-on-surface-variant">Không cần nhập lại email và số điện thoại cho mỗi phòng.</dd>
+              </div>
+            </dl>
           </div>
-        </div>
 
-        <div className="relative z-10 flex w-full items-center justify-center bg-surface p-margin-mobile md:p-margin-desktop lg:w-1/2">
+          <div className="relative z-10 flex w-full items-center justify-center">
           <LoginForm />
+          </div>
         </div>
       </section>
 

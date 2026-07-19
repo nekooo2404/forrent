@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle, CheckCircle, LoaderCircle } from "lucide-react";
+import { AlertCircle, CheckCircle, LoaderCircle } from "@/components/ui/icons";
 import type { FormEvent } from "react";
 import { useState } from "react";
 

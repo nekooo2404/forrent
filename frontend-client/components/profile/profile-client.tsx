@@ -8,7 +8,7 @@ import {
   Lock,
   MapPin,
   UserRound,
-} from "lucide-react";
+} from "@/components/ui/icons";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 

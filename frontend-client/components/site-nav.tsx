@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Menu, X } from "@/components/ui/icons";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { ProfileMenu } from "@/components/profile-menu";

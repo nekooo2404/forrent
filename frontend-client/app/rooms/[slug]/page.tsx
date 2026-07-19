@@ -1,29 +1,29 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   AlertTriangle,
   Building2,
   Car,
   CalendarCheck,
+  CheckCircle,
   ChevronRight,
-  Droplets,
+  CookingPot,
   Dumbbell,
+  House,
   Mail,
   MessageCircle,
   MapPin,
   ParkingCircle,
   Phone,
-  ReceiptText,
   Ruler,
   ShieldCheck,
-  Sparkles,
+  ShowerHead,
   Waves,
   WashingMachine,
   Wifi,
   Wind,
-  Wine,
-  Zap,
-} from "lucide-react";
+} from "@/components/ui/icons";
 import type { ReactNode } from "react";
 
 import { LazyViewingRequestPanel } from "@/components/lazy-viewing-request-panel";
@@ -69,8 +69,6 @@ type DetailView = {
   depositLabel: string;
   electricity: string;
   water: string;
-  waterLabel: string;
-  serviceFee: string;
   fixedMonthlyCost: string;
   location: string;
   area: string;
@@ -79,7 +77,7 @@ type DetailView = {
   description: string;
   secondaryDescription: string;
   amenities: ApiAmenity[];
-  gallery: Array<{ src: string; type: "image" | "video" }>;
+  gallery: Array<{ src: string; type: "image" | "video"; label?: string; labelText?: string }>;
   galleryAlt: string;
   updatedAt: string;
 };
@@ -88,15 +86,7 @@ export async function generateMetadata({ params }: RoomSlugPageProps): Promise<M
   const slug = decodeRouteSlug((await params).slug);
 
   const room = await getCachedRoomDetail(slug).catch(() => null);
-  if (!room) {
-    return {
-      title: "Không tìm thấy phòng",
-      robots: {
-        index: false,
-        follow: false,
-      },
-    };
-  }
+  if (!room) notFound();
 
   const location = [room.ward?.name, room.city?.name].filter(Boolean).join(", ");
   const descriptor = room.room_subtype_name || roomTypeLabel(room.room_type);
@@ -161,14 +151,12 @@ function mapDetail(room: ApiRoomDetail): DetailView {
     price: formatMonthlyVnd(room.price),
     deposit: formatOptionalVnd(room.deposit_amount),
     depositLabel: room.deposit_type_name || "Cọc",
-    electricity: formatOptionalVnd(room.electricity_price_per_kwh),
-    water: formatOptionalVnd(
+    electricity: `${formatOptionalVnd(room.electricity_price_per_kwh)} / kWh`,
+    water: `${formatOptionalVnd(
       room.water_billing_type === "PER_CUBIC_METER"
         ? room.water_price_per_cubic_meter
         : room.water_price_per_person,
-    ),
-    waterLabel: room.water_billing_type === "PER_CUBIC_METER" ? "Tiền nước / m³" : "Tiền nước / người",
-    serviceFee: formatOptionalVnd(room.service_fee),
+    )} / ${room.water_billing_type === "PER_CUBIC_METER" ? "m³" : "người"}`,
     fixedMonthlyCost: formatMonthlyVnd(Number(room.price) + Number(room.service_fee || 0)),
     location,
     area: formatArea(room.actual_area),
@@ -246,62 +234,48 @@ function roomStructuredData(room: ApiRoomDetail) {
 }
 
 function iconForAmenity(icon: string) {
-  const normalized = icon.toLowerCase();
-  const props = { size: 30, strokeWidth: 1.8, className: "text-secondary" };
+  const normalized = icon
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/g, "d")
+    .toLowerCase();
+  const props = { size: 22, weight: "regular" as const, className: "shrink-0 text-secondary" };
 
   if (normalized.includes("wifi")) return <Wifi {...props} />;
-  if (normalized.includes("air")) return <Wind {...props} />;
-  if (normalized.includes("washing")) return <WashingMachine {...props} />;
-  if (normalized.includes("parking")) return <ParkingCircle {...props} />;
+  if (normalized.includes("air") || normalized.includes("dieu hoa") || normalized.includes("may lanh")) return <Wind {...props} />;
+  if (normalized.includes("washing") || normalized.includes("may giat")) return <WashingMachine {...props} />;
+  if (normalized.includes("parking") || normalized.includes("bai xe") || normalized.includes("de xe") || normalized.includes("giu xe")) return <ParkingCircle {...props} />;
   if (normalized.includes("car")) return <Car {...props} />;
   if (normalized.includes("pool")) return <Waves {...props} />;
   if (normalized.includes("fitness")) return <Dumbbell {...props} />;
-  if (normalized.includes("wine")) return <Wine {...props} />;
-  if (normalized.includes("building") || normalized.includes("balcony")) return <Building2 {...props} />;
-  return <Sparkles {...props} />;
+  if (normalized.includes("bep") || normalized.includes("cooking")) return <CookingPot {...props} />;
+  if (normalized.includes("wc") || normalized.includes("ve sinh")) return <ShowerHead {...props} />;
+  if (normalized.includes("noi that")) return <House {...props} />;
+  if (normalized.includes("building") || normalized.includes("balcony") || normalized.includes("ban cong") || normalized.includes("thang may")) return <Building2 {...props} />;
+  return <CheckCircle {...props} />;
 }
 
 export default async function RoomSlugPage({ params }: RoomSlugPageProps) {
   const slug = decodeRouteSlug((await params).slug);
   const room = await getCachedRoomDetail(slug).catch(() => null);
-  const detail = room ? mapDetail(room) : null;
-  const detailMetricAttributes: ProductMetricAttributes = detail
-    ? {
-        available: detail.isAvailable,
-        image_count: detail.gallery.filter((item) => item.type === "image").length,
-        room_id: detail.id,
-        slug,
-        video_count: detail.gallery.filter((item) => item.type === "video").length,
-      }
-    : {
-        slug,
-      };
+  if (!room) notFound();
+  const detail = mapDetail(room);
+  const detailMetricAttributes: ProductMetricAttributes = {
+    available: detail.isAvailable,
+    image_count: detail.gallery.filter((item) => item.type === "image").length,
+    room_id: detail.id,
+    slug,
+    video_count: detail.gallery.filter((item) => item.type === "video").length,
+  };
 
   return (
     <PublicShell active="rooms">
       <ProductMetric
         attributes={detailMetricAttributes}
-        stage={detail ? "room_detail_loaded" : "room_detail_unavailable"}
+        stage="room_detail_loaded"
       />
-      {room ? <StructuredData data={roomStructuredData(room)} /> : null}
+      <StructuredData data={roomStructuredData(room)} />
       <div className="mx-auto w-full max-w-container-max flex-grow px-margin-mobile pb-24 pt-28 md:px-margin-desktop md:pt-32">
-        {!detail ? (
-          <section className="urban-card flex min-h-[420px] flex-col items-center justify-center rounded-lg p-8 text-center md:p-10">
-            <h1 className="font-headline-md text-headline-md text-on-surface">Phòng này hiện không còn hiển thị</h1>
-            <p className="mt-4 max-w-xl font-body-md text-body-md leading-7 text-on-surface-variant">
-              Phòng có thể đã được thuê hoặc đang cập nhật thông tin. Bạn có thể xem phòng khác hoặc gửi nhu cầu để được tư vấn.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link className="premium-button urban-cta inline-flex min-h-11 items-center justify-center rounded-md px-6 py-3 font-button text-button" href="/rooms">
-                Xem phòng đang trống
-              </Link>
-              <Link className="premium-button inline-flex min-h-11 items-center justify-center rounded-md border border-primary px-6 py-3 font-button text-button text-primary" href="/contact">
-                Gửi nhu cầu
-              </Link>
-            </div>
-          </section>
-        ) : (
-          <>
         <nav aria-label="Đường dẫn trang" className="mb-8 flex flex-wrap items-center gap-2 text-sm font-medium text-on-surface-variant">
           <Link className="inline-flex min-h-11 items-center transition-colors hover:text-primary" href="/">Trang chủ</Link>
           <ChevronRight aria-hidden="true" size={15} strokeWidth={1.8} />
@@ -310,8 +284,7 @@ export default async function RoomSlugPage({ params }: RoomSlugPageProps) {
           <span aria-current="page" className="max-w-full truncate text-on-surface">{detail.title}</span>
         </nav>
 
-        <MobileListingSummary detail={detail} />
-        <div className="mb-5 hidden md:block">
+        <div className="mb-5">
           <ListingHeader detail={detail} />
         </div>
         <RoomGallery
@@ -322,8 +295,6 @@ export default async function RoomSlugPage({ params }: RoomSlugPageProps) {
 
         <ListingBody detail={detail} />
         <MobileStickyBookingAction detail={detail} />
-          </>
-        )}
       </div>
 
     </PublicShell>
@@ -332,8 +303,8 @@ export default async function RoomSlugPage({ params }: RoomSlugPageProps) {
 
 function ListingBody({ detail }: Readonly<{ detail: DetailView }>) {
   return (
-    <div className="relative grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="space-y-6">
+    <div className="relative mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="divide-y divide-outline-variant/60 border-y border-outline-variant/60">
         <DescriptionSection detail={detail} />
         <FactsSection detail={detail} />
         <AmenitiesSection amenities={detail.amenities} />
@@ -350,45 +321,34 @@ function ListingBody({ detail }: Readonly<{ detail: DetailView }>) {
   );
 }
 
-function MobileListingSummary({ detail }: Readonly<{ detail: DetailView }>) {
-  return (
-    <section className="mb-5 rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-4 shadow-sm md:hidden">
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-        <span className={`rounded-md px-2.5 py-1 text-sm font-semibold ${detail.isAvailable ? "bg-tertiary-container text-tertiary" : "bg-surface-container text-on-surface-variant"}`}>
-          {detail.isAvailable ? "Còn trống" : detail.status}
-        </span>
-        <p className="min-w-0 max-w-full text-right text-lg font-bold leading-tight tabular-nums text-on-surface">{detail.price}</p>
-      </div>
-      <h1 className="text-xl font-semibold leading-snug text-on-surface">{detail.title}</h1>
-      <p className="mt-2 flex items-start gap-2 text-sm leading-6 text-on-surface-variant">
-        <MapPin className="mt-0.5 shrink-0 text-primary" size={17} strokeWidth={1.8} />
-        {detail.location || "Địa chỉ sẽ được xác nhận trước lịch xem"}
-      </p>
-      <Link className="premium-button urban-cta mt-4 flex min-h-11 w-full items-center justify-center rounded-md px-4 py-3 font-semibold" href="#viewing-request">
-        Đặt lịch xem phòng
-      </Link>
-    </section>
-  );
-}
-
 function ListingHeader({ detail }: Readonly<{ detail: DetailView }>) {
   return (
-    <header className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-5 shadow-sm md:p-6">
-      <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-on-surface-variant">
-        <span>{detail.collection}</span>
-        <span>/</span>
-        <span>{detail.location}</span>
+    <header className="border-b border-outline-variant/60 pb-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm text-on-surface-variant">
+        <span>{detail.collection} · {detail.area}</span>
+        <span className={`rounded-md px-2.5 py-1 font-semibold ${detail.isAvailable ? "bg-tertiary-container text-tertiary" : "bg-surface-container text-on-surface-variant"}`}>
+          {detail.isAvailable ? "Còn trống" : detail.status}
+        </span>
       </div>
-      <h1 className="text-2xl font-semibold leading-snug text-on-surface md:text-3xl">{detail.title}</h1>
-      <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-on-surface-variant">
-        <MapPin className="mt-0.5 shrink-0 text-primary" size={18} strokeWidth={1.8} />
-        {detail.location || "Địa chỉ sẽ được nhân viên tư vấn xác nhận trước khi xem phòng"}
-      </p>
-      <div className="mt-5 grid divide-y divide-outline-variant/20 rounded-lg border border-outline-variant/20 bg-surface-container-low sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+      <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold leading-snug text-on-surface md:text-3xl">{detail.title}</h1>
+          <p className="mt-3 flex items-start gap-2 text-sm leading-6 text-on-surface-variant">
+            <MapPin className="mt-0.5 shrink-0 text-secondary" size={18} strokeWidth={1.8} />
+            {detail.location || "Địa chỉ sẽ được nhân viên tư vấn xác nhận trước khi xem phòng"}
+          </p>
+        </div>
+        {detail.isAvailable ? (
+          <Link className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-5 py-3 font-semibold text-on-primary hover:bg-primary/90 md:w-auto" href="#viewing-request">
+            Đặt lịch xem phòng
+          </Link>
+        ) : null}
+      </div>
+      <div className="mt-6 grid divide-y divide-outline-variant/50 border-y border-outline-variant/60 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
         <ListingStat label="Giá thuê" value={detail.price} />
-        <ListingStat label="Diện tích" value={detail.area} />
         <ListingStat label={detail.depositLabel} value={detail.deposit} />
-        <ListingStat label="Trạng thái" value={detail.isAvailable ? "Còn trống" : detail.status} />
+        <ListingStat label="Cố định mỗi tháng" value={detail.fixedMonthlyCost} />
+        <ListingStat label="Điện · nước" value={`${detail.electricity} · ${detail.water}`} />
       </div>
     </header>
   );
@@ -396,18 +356,18 @@ function ListingHeader({ detail }: Readonly<{ detail: DetailView }>) {
 
 function ListingStat({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
-    <div className="px-4 py-4">
+    <div className="min-w-0 px-4 py-4 first:pl-0 sm:first:pl-4">
       <p className="text-sm font-medium text-on-surface-variant">{label}</p>
-      <p className="mt-1 text-base font-semibold text-on-surface">{value}</p>
+      <p className="mt-1 break-words text-base font-semibold leading-6 tabular-nums text-on-surface">{value}</p>
     </div>
   );
 }
 
 function DescriptionSection({ detail }: Readonly<{ detail: DetailView }>) {
   return (
-    <section className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-5 shadow-sm md:p-6">
+    <section className="py-7 md:py-8">
       <h2 className="mb-4 text-xl font-semibold text-on-surface">Thông tin mô tả</h2>
-      <div className="space-y-4 text-[15px] leading-7 text-on-surface-variant">
+      <div className="max-w-3xl space-y-4 text-base leading-7 text-on-surface-variant">
         <p className="whitespace-pre-line">{detail.description}</p>
         <p>{detail.secondaryDescription}</p>
       </div>
@@ -417,17 +377,13 @@ function DescriptionSection({ detail }: Readonly<{ detail: DetailView }>) {
 
 function FactsSection({ detail }: Readonly<{ detail: DetailView }>) {
   return (
-    <section className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-5 shadow-sm md:p-6">
+    <section className="py-7 md:py-8">
       <h2 className="mb-4 text-xl font-semibold text-on-surface">Đặc điểm phòng</h2>
-      <div className="grid overflow-hidden rounded-lg border border-outline-variant/20 sm:grid-cols-2">
-        <DetailRow icon={<ReceiptText size={18} />} label="Giá thuê" value={detail.price} />
+      <div className="grid border-t border-outline-variant/50 sm:grid-cols-2">
+        <DetailRow icon={<Building2 size={18} />} label="Loại phòng" value={detail.collection} />
         <DetailRow icon={<Ruler size={18} />} label="Diện tích" value={detail.area} />
-        <DetailRow icon={<ShieldCheck size={18} />} label={detail.depositLabel} value={detail.deposit} />
         <DetailRow icon={<CalendarCheck size={18} />} label="Cập nhật" value={detail.updatedAt} />
-        <DetailRow icon={<Zap size={18} />} label="Tiền điện" value={detail.electricity} />
-        <DetailRow icon={<Droplets size={18} />} label={detail.waterLabel} value={detail.water} />
-        <DetailRow icon={<ReceiptText size={18} />} label="Phí dịch vụ" value={detail.serviceFee} />
-        <DetailRow icon={<Sparkles size={18} />} label="Tiện ích" value={`${detail.amenities.length} tiện ích`} />
+        <DetailRow icon={<ShieldCheck size={18} />} label="Tình trạng" value={detail.isAvailable ? "Còn trống" : detail.status} />
       </div>
     </section>
   );
@@ -435,8 +391,8 @@ function FactsSection({ detail }: Readonly<{ detail: DetailView }>) {
 
 function DetailRow({ icon, label, value }: Readonly<{ icon: ReactNode; label: string; value: string }>) {
   return (
-    <div className="flex items-center gap-3 border-b border-outline-variant/20 px-4 py-4 last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0">
-      <span className="text-primary">{icon}</span>
+    <div className="flex items-center gap-3 border-b border-outline-variant/50 py-4 sm:px-4 sm:odd:pl-0">
+      <span className="text-secondary">{icon}</span>
       <div>
         <p className="text-sm text-on-surface-variant">{label}</p>
         <p className="mt-0.5 text-base font-semibold text-on-surface">{value}</p>
@@ -446,20 +402,37 @@ function DetailRow({ icon, label, value }: Readonly<{ icon: ReactNode; label: st
 }
 
 function AmenitiesSection({ amenities }: Readonly<{ amenities: ApiAmenity[] }>) {
+  const primaryAmenities = amenities.slice(0, 6);
+  const additionalAmenities = amenities.slice(6);
   return (
-    <section className="rounded-lg border border-outline-variant/20 bg-surface-container-lowest p-5 shadow-sm md:p-6">
+    <section className="py-7 md:py-8">
       <h2 className="mb-5 text-xl font-semibold text-on-surface">Tiện ích</h2>
       {amenities.length ? (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-          {amenities.slice(0, 12).map((amenity) => (
-            <div className="flex items-center gap-3 rounded-lg border border-outline-variant/15 bg-surface-container-low px-3 py-3 text-sm text-on-surface" key={amenity.id}>
-              {iconForAmenity(amenity.icon || amenity.name)}
-              <span>{amenity.name}</span>
-            </div>
-          ))}
+        <div>
+          <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2 md:grid-cols-3">
+            {primaryAmenities.map((amenity) => (
+              <div className="flex min-h-12 items-center gap-3 border-b border-outline-variant/40 py-3 text-sm text-on-surface" key={amenity.id}>
+                {iconForAmenity(amenity.icon)}
+                <span>{amenity.name}</span>
+              </div>
+            ))}
+          </div>
+          {additionalAmenities.length ? (
+            <details className="mt-4 border-t border-outline-variant/50 pt-3">
+              <summary className="flex min-h-11 cursor-pointer items-center font-semibold text-on-surface">Xem thêm {additionalAmenities.length} tiện ích</summary>
+              <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2 md:grid-cols-3">
+                {additionalAmenities.map((amenity) => (
+                  <div className="flex min-h-12 items-center gap-3 border-b border-outline-variant/40 py-3 text-sm text-on-surface" key={amenity.id}>
+                    {iconForAmenity(amenity.icon)}
+                    <span>{amenity.name}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ) : null}
         </div>
       ) : (
-        <p className="rounded-lg border border-dashed border-outline-variant/30 bg-surface-container-low p-4 text-sm text-on-surface-variant">
+        <p className="border-l-2 border-outline-variant/70 pl-4 text-sm leading-6 text-on-surface-variant">
           Tiện ích đang được cập nhật. Nhân viên tư vấn sẽ xác nhận lại trước lịch xem.
         </p>
       )}
@@ -478,23 +451,18 @@ function ContactCard({ detail }: Readonly<{ detail: DetailView }>) {
         </div>
       </div>
 
-      <div className="my-4 rounded-lg bg-surface-container-low p-4">
-        <p className="text-xs font-semibold uppercase text-on-surface-variant">Giá thuê</p>
-        <p className="mt-1 text-2xl font-bold text-primary">{detail.price}</p>
-        <div className="mt-3 border-t border-outline-variant/50 pt-3">
-          <p className="text-sm text-on-surface-variant">Chi phí cố định dự kiến</p>
-          <p className="mt-1 text-base font-semibold text-on-surface">{detail.fixedMonthlyCost}</p>
-          <p className="mt-1 text-xs leading-5 text-on-surface-variant">Gồm tiền thuê và phí dịch vụ; chưa gồm điện, nước.</p>
-        </div>
-        <p className="mt-2 text-sm text-on-surface-variant">{detail.isAvailable ? "Phòng còn trống, có thể đặt lịch xem." : detail.status}</p>
-      </div>
+      <p className="my-4 text-sm leading-6 text-on-surface-variant">
+        {detail.isAvailable
+          ? "Gọi trực tiếp nếu bạn cần xác nhận nhanh tình trạng phòng, cọc và giờ xem."
+          : "Phòng hiện không nhận lịch xem mới. Nhân viên tư vấn có thể gợi ý phòng tương tự."}
+      </p>
 
       <div className="grid gap-2">
         <a className="flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 font-semibold text-on-primary transition-colors duration-200 hover:bg-primary/90" href={`tel:${CONTACT_PHONE}`}>
           <Phone size={18} strokeWidth={1.8} />
           {CONTACT_PHONE}
         </a>
-        <a className="flex min-h-11 items-center justify-center gap-2 rounded-md border border-primary px-4 py-3 font-semibold text-primary transition-colors duration-200 hover:bg-primary/5" href={`mailto:${CONTACT_EMAIL}`}>
+        <a className="flex min-h-11 items-center justify-center gap-2 rounded-md border border-outline-variant px-4 py-3 font-semibold text-on-surface transition-colors duration-200 hover:bg-surface-container-low" href={`mailto:${CONTACT_EMAIL}`}>
           <Mail size={18} strokeWidth={1.8} />
           Gửi email
         </a>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus, RefreshCw, Search } from "lucide-react";
+import { Pencil, Plus, RefreshCw, Search } from "@/components/ui/icons";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 

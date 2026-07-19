@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { recordProductDistribution, recordProductMetric } from "@/components/product-insights";
 
 type FormState = "idle" | "submitting" | "success" | "error";
+type ContactFieldErrors = Partial<Record<"fullName" | "email" | "phone" | "contact", string>>;
 
 type ContactApiResponse = {
   success: boolean;
@@ -35,6 +36,7 @@ function errorText(payload: ContactApiResponse) {
 
 export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | null; roomTitle?: string }>) {
   const [state, setState] = useState<FormState>("idle");
+  const [fieldErrors, setFieldErrors] = useState<ContactFieldErrors>({});
   const formStartedAt = useRef<number | null>(null);
   const reachedFields = useRef(new Set<string>());
   const submissionInFlight = useRef(false);
@@ -60,8 +62,27 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
-    if (!form.checkValidity()) {
-      const message = "Vui lòng kiểm tra lại các trường bắt buộc.";
+    const formData = new FormData(form);
+    const fullName = String(formData.get("fullName") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
+    const phoneInput = String(formData.get("phone") ?? "").trim();
+    const phone = normalizePhone(phoneInput);
+    const nextErrors: ContactFieldErrors = {};
+
+    if (!fullName) nextErrors.fullName = "Vui lòng nhập họ và tên.";
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      nextErrors.email = "Email chưa đúng định dạng, ví dụ ten@domain.vn.";
+    }
+    if (phone && !/^(0\d{9}|\+84\d{9})$/.test(phone)) {
+      nextErrors.phone = "Số điện thoại cần có 10 số hoặc bắt đầu bằng +84.";
+    }
+    if (!email && !phone) {
+      nextErrors.contact = "Nhập số điện thoại hoặc email để nhân viên tư vấn liên hệ.";
+    }
+
+    if (Object.keys(nextErrors).length) {
+      const message = "Vui lòng sửa thông tin được đánh dấu bên dưới.";
+      setFieldErrors(nextErrors);
       setState("error");
       toast({
         type: "error",
@@ -69,22 +90,23 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
         message,
       });
       recordProductMetric("contact_request_failed", { ...metricAttributes, reason: "validation" });
-      form.reportValidity();
+      const firstField = nextErrors.fullName ? "fullName" : nextErrors.email ? "email" : "phone";
+      (form.elements.namedItem(firstField) as HTMLElement | null)?.focus();
       return;
     }
 
     if (submissionInFlight.current) return;
     submissionInFlight.current = true;
 
-    const formData = new FormData(form);
     const payload = {
-      full_name: String(formData.get("fullName") ?? "").trim(),
-      phone: normalizePhone(String(formData.get("phone") ?? "")),
-      email: String(formData.get("email") ?? "").trim(),
+      full_name: fullName,
+      phone,
+      email,
       message: String(formData.get("message") ?? "").trim(),
       ...(roomId ? { room_id: roomId } : {}),
     };
 
+    setFieldErrors({});
     setState("submitting");
 
     try {
@@ -111,6 +133,7 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
 
       const message = "Đã nhận yêu cầu. Nhân viên tư vấn sẽ liên hệ để xác nhận phòng, cọc và lịch xem.";
       form.reset();
+      setFieldErrors({});
       setState("success");
       recordProductMetric("contact_request_submitted", metricAttributes);
       if (formStartedAt.current !== null) {
@@ -138,7 +161,7 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
   }
 
   return (
-    <form aria-busy={state === "submitting"} className="space-y-6" onFocusCapture={handleFormFocus} onSubmit={handleSubmit}>
+    <form aria-busy={state === "submitting"} className="space-y-6" noValidate onFocusCapture={handleFormFocus} onSubmit={handleSubmit}>
       {roomTitle ? (
         <div className="rounded-md border border-outline-variant/70 bg-surface-container-low p-4 text-sm text-on-surface-variant">
           Tư vấn phòng: <span className="font-semibold">{roomTitle}</span>
@@ -149,36 +172,49 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
           Họ và tên
         </label>
         <input
+          aria-describedby={fieldErrors.fullName ? "full-name-error" : undefined}
+          aria-invalid={Boolean(fieldErrors.fullName)}
           className="min-h-11 w-full rounded-md border border-outline-variant/70 bg-surface-container-low px-4 py-3 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:ring-primary/15"
           autoComplete="name"
           id="fullName"
           name="fullName"
           placeholder="Họ và tên của bạn"
-          required
+          onChange={() => {
+            if (fieldErrors.fullName) setFieldErrors((current) => ({ ...current, fullName: undefined }));
+          }}
           type="text"
         />
+        {fieldErrors.fullName ? <p className="mt-2 text-sm text-error" id="full-name-error" role="alert">{fieldErrors.fullName}</p> : null}
       </div>
 
-      <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
-        <div>
+      <fieldset>
+        <legend className="mb-3 text-sm font-semibold text-on-surface">Chọn một cách liên hệ</legend>
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div>
           <label className="mb-2 block text-sm font-semibold text-on-surface" htmlFor="email">
-            Địa chỉ email
+            Email
           </label>
           <input
+            aria-describedby={fieldErrors.email || fieldErrors.contact ? "contact-method-error" : undefined}
+            aria-invalid={Boolean(fieldErrors.email || fieldErrors.contact)}
             className="min-h-11 w-full rounded-md border border-outline-variant/70 bg-surface-container-low px-4 py-3 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:ring-primary/15"
             autoComplete="email"
             id="email"
             name="email"
             placeholder="your@email.com"
-            required
+            onChange={() => {
+              if (fieldErrors.email || fieldErrors.contact) setFieldErrors((current) => ({ ...current, email: undefined, contact: undefined }));
+            }}
             type="email"
           />
-        </div>
-        <div>
+          </div>
+          <div>
           <label className="mb-2 block text-sm font-semibold text-on-surface" htmlFor="phone">
-            Số điện thoại
+            Số điện thoại <span className="font-normal text-on-surface-variant">(ưu tiên)</span>
           </label>
           <input
+            aria-describedby={fieldErrors.phone || fieldErrors.contact ? "contact-method-error" : undefined}
+            aria-invalid={Boolean(fieldErrors.phone || fieldErrors.contact)}
             className="min-h-11 w-full rounded-md border border-outline-variant/70 bg-surface-container-low px-4 py-3 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:ring-primary/15"
             autoComplete="tel"
             id="phone"
@@ -187,22 +223,29 @@ export function ContactForm({ roomId, roomTitle }: Readonly<{ roomId?: number | 
             name="phone"
             pattern="(0|\+84)[0-9\s\-()]{9,13}"
             placeholder="0900 000 000"
-            required
+            onChange={() => {
+              if (fieldErrors.phone || fieldErrors.contact) setFieldErrors((current) => ({ ...current, phone: undefined, contact: undefined }));
+            }}
             type="tel"
           />
+          </div>
         </div>
-      </div>
+      </fieldset>
+      {fieldErrors.email || fieldErrors.phone || fieldErrors.contact ? (
+        <p className="-mt-4 text-sm text-error" id="contact-method-error" role="alert">
+          {fieldErrors.email || fieldErrors.phone || fieldErrors.contact}
+        </p>
+      ) : null}
 
       <div>
         <label className="mb-2 block text-sm font-semibold text-on-surface" htmlFor="message">
-          Lời nhắn
+          Lời nhắn <span className="font-normal text-on-surface-variant">(không bắt buộc)</span>
         </label>
         <textarea
           className="w-full rounded-md border border-outline-variant/70 bg-surface-container-low px-4 py-3 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:ring-primary/15"
           id="message"
           name="message"
           placeholder="Ví dụ: Mình cần phòng ở Tây Mỗ, dưới 5 triệu/tháng, có thể xem cuối tuần."
-          required
           rows={4}
         />
       </div>

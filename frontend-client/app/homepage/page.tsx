@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BedDouble, MapPin, ReceiptText, Search, ShieldCheck, ShowerHead } from "lucide-react";
+import { ArrowRight, BedDouble, Building2, House, MapPin, ReceiptText, Search, ShieldCheck, ShowerHead } from "@/components/ui/icons";
 import type { ReactNode } from "react";
 
 import { MotionItem, MotionList, MotionSection } from "@/components/motion";
@@ -41,21 +41,21 @@ const collections = [
     title: "Chung cư mini",
     description: "Phòng gọn, giá rõ, phù hợp người đi làm và sinh viên.",
     href: "/rooms?room_type=CCMN",
-    icon: <BedDouble aria-hidden="true" size={34} strokeWidth={1.7} />,
+    icon: <Building2 aria-hidden="true" size={24} weight="duotone" />,
   },
   {
     kicker: "KHU VỰC SÁNG TẠO",
     title: "Căn hộ dịch vụ",
     description: "Có nội thất, dịch vụ cơ bản và lịch xem linh hoạt.",
     href: "/rooms?room_type=CCDV",
-    icon: <ReceiptText aria-hidden="true" size={34} strokeWidth={1.7} />,
+    icon: <BedDouble aria-hidden="true" size={24} weight="duotone" />,
   },
   {
     kicker: "KHÔNG GIAN RIÊNG",
     title: "Nhà nguyên căn",
     description: "Phù hợp gia đình hoặc nhóm thuê dài hạn.",
     href: "/rooms?room_type=HOUSE",
-    icon: <ShowerHead aria-hidden="true" size={34} strokeWidth={1.7} />,
+    icon: <House aria-hidden="true" size={24} weight="duotone" />,
   },
 ] satisfies Array<{
   kicker: string;
@@ -105,18 +105,21 @@ function mapProperty(room: ApiRoom, index: number): PropertyCardView {
     area: formatArea(room.actual_area),
     amenities: room.amenities.length ? `${room.amenities.length} tiện ích` : "Tiện ích cơ bản",
     featuredAmenities: room.amenities.slice(0, 2).map((amenity) => amenity.name),
-    label: index === 0 ? "MỚI LÊN SÀN" : undefined,
-    labelClassName: index === 0 ? "bg-surface-container-lowest/95 text-primary" : undefined,
+    label: index === 0 ? "Mới cập nhật" : undefined,
+    labelClassName: index === 0 ? "bg-surface-container-lowest/95 text-on-surface" : undefined,
     image: resolveMediaUrl(room.thumbnail_url),
     alt: `${descriptor} tại ${location}`,
   };
 }
 
 export default async function Homepage() {
-  const roomsResponse = await getRooms({ page_size: 24, status: "PUBLISHED", ordering: "-created_at" }).catch(() => null);
+  const [roomsResponse, heroResponse] = await Promise.all([
+    getRooms({ page_size: 24, status: "PUBLISHED", ordering: "-created_at" }).catch(() => null),
+    getRooms({ page_size: 6, status: "PUBLISHED", hero_eligible: true, ordering: "-updated_at" }).catch(() => null),
+  ]);
   const allProperties = roomsResponse?.results.map(mapProperty) ?? [];
   const properties = allProperties.slice(0, 3);
-  const listingHeroProperty = allProperties.find((property) => property.image);
+  const listingHeroProperty = heroResponse?.results.map(mapProperty).find((property) => property.image);
   const listingHeroImage = listingHeroProperty?.image;
   const heroImage = listingHeroImage ? fastImageUrl(listingHeroImage, 1920, 82) : "/brand/forrent-hero-old-quarter.jpg";
 
@@ -242,7 +245,7 @@ export default async function Homepage() {
               </p>
             </div>
             <Link
-              className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-md border border-primary/30 px-5 py-3 font-button text-button text-primary transition hover:bg-surface-container-low md:mt-0"
+              className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-md border border-outline-variant/70 px-5 py-3 font-button text-button text-on-surface transition hover:bg-surface-container-low md:mt-0"
               href="/rooms"
             >
               Xem tất cả phòng
@@ -250,24 +253,23 @@ export default async function Homepage() {
             </Link>
           </MotionSection>
 
-          <MotionList className="grid grid-cols-1 gap-4 md:grid-cols-12 md:gap-gutter">
-            {collections.map((item, index) => (
-              <MotionItem className={index === 0 ? "md:col-span-6" : "md:col-span-3"} key={item.title}>
+          <MotionList className="divide-y divide-outline-variant/60 border-y border-outline-variant/60">
+            {collections.map((item) => (
+              <MotionItem key={item.title}>
                 <Link
                   aria-label={`Xem ${item.title}`}
-                  className="group flex h-full min-h-56 flex-col rounded-lg border border-outline-variant/50 bg-surface-container-lowest p-6 transition-colors duration-200 hover:border-primary/35 md:min-h-64"
+                  className="group grid min-h-28 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 py-5 transition-colors duration-200 hover:bg-surface-container-low md:gap-6 md:px-4"
                   href={item.href}
                 >
-                  <div className="flex h-full flex-col">
-                    <span className="mb-8 flex size-12 items-center justify-center rounded-md bg-primary-container text-primary transition-colors duration-200 group-hover:bg-primary group-hover:text-on-primary">
-                      {item.icon}
-                    </span>
+                  <span className="flex size-11 items-center justify-center rounded-md bg-surface-container text-secondary">{item.icon}</span>
+                  <span className="min-w-0">
                     <span className="mb-2 font-label-caps text-label-caps text-secondary">{item.kicker}</span>
-                    <h3 className="mb-2 font-headline-sm text-headline-sm text-on-surface">{item.title}</h3>
-                    <p className="font-body-md text-body-md text-on-surface-variant">
+                    <span className="mb-1 block font-headline-sm text-headline-sm text-on-surface">{item.title}</span>
+                    <span className="block font-body-md text-body-md text-on-surface-variant">
                       {item.description}
-                    </p>
-                  </div>
+                    </span>
+                  </span>
+                  <ArrowRight aria-hidden="true" className="text-secondary transition-transform group-hover:translate-x-1" size={18} />
                 </Link>
               </MotionItem>
             ))}
@@ -277,12 +279,18 @@ export default async function Homepage() {
 
       <section className="bg-surface-container-low px-margin-mobile py-20 md:px-margin-desktop">
         <div className="mx-auto max-w-container-max">
-          <MotionSection className="mb-16 text-center">
-            <span className="urban-badge mb-4 px-3 py-1 font-label-caps text-label-caps uppercase">Còn trống thật</span>
-            <h2 className="mb-4 font-headline-md text-headline-md text-on-surface">Phòng đang trống, quét nhanh để chọn</h2>
-            <p className="mx-auto max-w-2xl font-body-lg text-body-lg text-on-surface-variant">
-              Ưu tiên phòng còn trống, có giá tháng, cọc dự kiến, khu vực và tiện ích nổi bật để bạn quyết định nhanh.
-            </p>
+          <MotionSection className="mb-12 flex flex-col gap-6 border-b border-outline-variant/55 pb-8 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl">
+              <span className="mb-3 block text-sm font-semibold text-tertiary">Đang nhận lịch xem</span>
+              <h2 className="font-headline-md text-headline-md text-on-surface">Phòng còn trống, đủ chi phí để so sánh</h2>
+              <p className="mt-3 font-body-lg text-body-lg text-on-surface-variant">
+                Xem giá thuê, cọc, phí cố định và tiện ích trước khi mở chi tiết.
+              </p>
+            </div>
+            <Link className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md border border-outline-variant/70 px-5 py-3 font-button text-button text-on-surface transition-colors hover:border-primary hover:text-primary" href="/rooms">
+              Xem toàn bộ phòng
+              <ArrowRight aria-hidden="true" size={17} />
+            </Link>
           </MotionSection>
           {properties.length ? (
             <MotionList
@@ -308,14 +316,6 @@ export default async function Homepage() {
               title="Chưa có phòng đang trống"
             />
           )}
-          <div className="mt-12 text-center">
-            <Link
-              className="premium-button urban-cta inline-flex min-h-11 items-center rounded-md px-8 py-4 font-button text-button"
-              href="/rooms"
-            >
-              Xem tất cả phòng
-            </Link>
-          </div>
         </div>
       </section>
 
@@ -325,7 +325,7 @@ export default async function Homepage() {
             <span className="mb-4 block font-label-caps text-label-caps uppercase text-on-primary/75">Đi xem không mất thời gian</span>
             <h2 className="font-headline-md text-headline-md">Trước khi đi, mọi thứ quan trọng đã được xác nhận.</h2>
           </MotionSection>
-          <MotionList className="grid gap-4 md:grid-cols-3">
+          <MotionList className="divide-y divide-on-primary/20 border-y border-on-primary/20">
             <MotionItem>
               <UrbanStep icon={<ShieldCheck size={22} strokeWidth={1.8} />} title="Còn trống">
                 Nhân viên tư vấn xác nhận lại tình trạng phòng trước lịch xem.
@@ -388,7 +388,7 @@ function PropertyCard({ featured = false, property }: Readonly<{ featured?: bool
           <Link className="line-clamp-2 min-h-11 font-headline-sm text-headline-sm text-on-surface hover:text-primary" href={detailHref}>
             {property.title}
           </Link>
-          <span className="[overflow-wrap:anywhere] font-headline-sm text-xl tabular-nums text-on-surface sm:max-w-40 sm:text-right">{property.price}</span>
+          <span className="max-w-full whitespace-normal font-headline-sm text-xl leading-tight tabular-nums text-on-surface sm:max-w-44 sm:text-right">{property.price}</span>
         </div>
         <p className="mb-4 font-body-md text-body-md text-on-surface-variant">
           {property.location} · {property.descriptor}
@@ -399,14 +399,14 @@ function PropertyCard({ featured = false, property }: Readonly<{ featured?: bool
               <ShieldCheck size={15} strokeWidth={1.8} />
               {property.depositLabel}
             </div>
-            <p className="line-clamp-1 text-primary">{property.deposit}</p>
+            <p className="line-clamp-1 font-medium text-on-surface">{property.deposit}</p>
           </div>
           <div className="rounded-md bg-surface-container-low p-3">
             <div className="mb-1 flex items-center gap-1 font-semibold uppercase text-secondary">
               <ReceiptText size={15} strokeWidth={1.8} />
               Phí dịch vụ
             </div>
-            <p className="line-clamp-1 text-primary">{property.serviceFee}</p>
+            <p className="line-clamp-1 font-medium text-on-surface">{property.serviceFee}</p>
           </div>
         </div>
         {property.featuredAmenities.length ? (
@@ -436,7 +436,7 @@ function PropertyCard({ featured = false, property }: Readonly<{ featured?: bool
 
 function UrbanStep({ children, icon, title }: Readonly<{ children: ReactNode; icon: ReactNode; title: string }>) {
   return (
-    <div className="flex h-full items-start gap-3 border-t border-on-primary/25 pt-4">
+    <div className="flex items-start gap-3 py-4">
       <div className="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-on-primary/10 text-on-primary">{icon}</div>
       <div>
         <h3 className="font-headline-sm text-xl text-on-primary">{title}</h3>

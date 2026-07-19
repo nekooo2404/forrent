@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "@/components/ui/icons";
 import type { ChangeEvent, FormEvent, InputHTMLAttributes } from "react";
 import { useMemo, useRef, useState } from "react";
 
@@ -20,7 +20,6 @@ type AuthApiResponse<T> = {
 
 type SignUpFields = {
   fullName: string;
-  dateOfBirth: string;
   phone: string;
   email: string;
   otp: string;
@@ -30,7 +29,6 @@ type SignUpFields = {
 
 const initialFields: SignUpFields = {
   fullName: "",
-  dateOfBirth: "",
   phone: "",
   email: "",
   otp: "",
@@ -83,6 +81,7 @@ function strengthScaleClass(width: string) {
 
 export function SignUpForm() {
   const router = useRouter();
+  const [step, setStep] = useState<"details" | "verify">("details");
   const [fields, setFields] = useState(initialFields);
   const [touched, setTouched] = useState<Partial<Record<keyof SignUpFields, boolean>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -106,7 +105,6 @@ export function SignUpForm() {
     return {
       otp: validators.otp(fields.otp),
       fullName: validators.required(fields.fullName, "họ và tên của bạn"),
-      dateOfBirth: !fields.dateOfBirth ? "Vui lòng chọn ngày sinh." : "",
       phone: validators.phone(fields.phone),
       email: validators.email(fields.email),
       password: validators.password(fields.password),
@@ -117,20 +115,26 @@ export function SignUpForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const errors = fieldErrors();
-    setTouched({
-      fullName: true,
-      dateOfBirth: true,
-      phone: true,
-      email: true,
-      otp: true,
-      password: true,
-      confirmPassword: true,
-    });
-    if (Object.values(errors).some(Boolean)) {
+    if (step === "details") {
+      setTouched({ fullName: true, phone: true, email: true, password: true, confirmPassword: true });
+      if (errors.fullName || errors.phone || errors.email || errors.password || errors.confirmPassword) {
+        toast({
+          type: "error",
+          title: "Thông tin chưa hợp lệ",
+          message: "Vui lòng kiểm tra lại thông tin đăng ký.",
+        });
+        return;
+      }
+      if (await sendOtp()) setStep("verify");
+      return;
+    }
+
+    setTouched((current) => ({ ...current, otp: true }));
+    if (errors.otp) {
       toast({
         type: "error",
-        title: "Thông tin chưa hợp lệ",
-        message: "Vui lòng kiểm tra lại thông tin đăng ký.",
+        title: "Mã xác thực chưa hợp lệ",
+        message: errors.otp,
       });
       return;
     }
@@ -145,7 +149,6 @@ export function SignUpForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           full_name: fields.fullName.trim(),
-          date_of_birth: fields.dateOfBirth,
           phone: fields.phone.trim(),
           email: fields.email.trim(),
           otp: fields.otp.trim(),
@@ -199,7 +202,7 @@ export function SignUpForm() {
 
   const errors = fieldErrors();
 
-  async function handleSendOtp() {
+  async function sendOtp() {
     const emailError = fieldErrors().email;
     setTouched((current) => ({ ...current, email: true }));
     if (emailError) {
@@ -208,7 +211,7 @@ export function SignUpForm() {
         title: "Email chưa hợp lệ",
         message: emailError,
       });
-      return;
+      return false;
     }
     if (otpInFlight.current) return;
     otpInFlight.current = true;
@@ -226,56 +229,57 @@ export function SignUpForm() {
           title: "Không thể gửi OTP",
           message: firstErrorMessage(payload),
         });
-        return;
+        return false;
       }
       toast({
         type: "success",
         title: "Đã gửi mã OTP",
         message: "Mã OTP đã được gửi tới email của bạn.",
       });
+      return true;
     } catch {
       toast({
         type: "error",
         title: "Lỗi kết nối",
         message: "Không thể gửi mã OTP lúc này.",
       });
+      return false;
     } finally {
       otpInFlight.current = false;
       setIsSendingOtp(false);
     }
   }
 
+  async function handleSendOtp() {
+    await sendOtp();
+  }
+
   return (
     <div className="w-full max-w-md rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-8 shadow-soft md:p-10">
       <div className="mb-10 text-center">
+        <p className="mb-3 text-sm font-semibold text-tertiary">Bước {step === "details" ? "1" : "2"} / 2</p>
         <h1 className="mb-3 font-headline-md text-headline-md text-on-surface">Đăng ký tài khoản</h1>
-        <p className="font-body-md text-body-md text-on-surface-variant">Tạo tài khoản để đặt lịch xem phòng và theo dõi yêu cầu của bạn.</p>
+        <p className="font-body-md text-body-md text-on-surface-variant">
+          {step === "details" ? "Nhập thông tin liên hệ để tạo tài khoản." : `Nhập mã 6 số đã gửi tới ${fields.email}.`}
+        </p>
       </div>
 
       <form className="space-y-6" noValidate onSubmit={handleSubmit}>
-        <AuthInput
-          error={touched.fullName ? errors.fullName : ""}
-          id="fullName"
-          label="Họ và tên"
-          name="fullName"
-          onBlur={() => touchField("fullName")}
-          onChange={updateField("fullName")}
-          placeholder="Nguyễn Văn A"
-          value={fields.fullName}
-        />
-
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        {step === "details" ? (
+          <>
+            <AuthInput
+              autoComplete="name"
+              error={touched.fullName ? errors.fullName : ""}
+              id="fullName"
+              label="Họ và tên"
+              name="fullName"
+              onBlur={() => touchField("fullName")}
+              onChange={updateField("fullName")}
+              placeholder="Nguyễn Văn A"
+              value={fields.fullName}
+            />
           <AuthInput
-            error={touched.dateOfBirth ? errors.dateOfBirth : ""}
-            id="dateOfBirth"
-            label="Ngày sinh"
-            name="dateOfBirth"
-            onBlur={() => touchField("dateOfBirth")}
-            onChange={updateField("dateOfBirth")}
-            type="date"
-            value={fields.dateOfBirth}
-          />
-          <AuthInput
+            autoComplete="tel"
             error={touched.phone ? errors.phone : ""}
             id="phone"
             inputMode="tel"
@@ -288,86 +292,86 @@ export function SignUpForm() {
             type="tel"
             value={fields.phone}
           />
-        </div>
-
-        <AuthInput
-          error={touched.email ? errors.email : ""}
-          id="email"
-          label="Email"
-          name="email"
-          onBlur={() => touchField("email")}
-          onChange={updateField("email")}
-          placeholder="email@example.com"
-          type="email"
-          value={fields.email}
-        />
-
-        <div className="grid grid-cols-[1fr_auto] items-start gap-3">
-          <AuthInput
-            error={touched.otp ? errors.otp : ""}
-            id="otp"
-            inputMode="numeric"
-            label="Mã OTP"
-            maxLength={6}
-            name="otp"
-            onBlur={() => touchField("otp")}
-            onChange={updateField("otp")}
-            pattern="[0-9]{6}"
-            placeholder="123456"
-            value={fields.otp}
-          />
-          <button
-            className="mt-7 inline-flex min-h-11 items-center justify-center rounded-md border border-primary px-4 py-2 font-button text-button text-primary transition-colors duration-200 hover:bg-primary hover:text-on-primary disabled:cursor-wait disabled:opacity-60"
-            disabled={isSendingOtp}
-            onClick={handleSendOtp}
-            type="button"
-          >
-            {isSendingOtp ? "Đang gửi" : "Gửi mã"}
-          </button>
-        </div>
-
-        <div>
-          <AuthInput
-            error={touched.password ? errors.password : ""}
-            id="password"
-            label="Mật khẩu"
-            minLength={8}
-            name="password"
-            onBlur={() => touchField("password")}
-            onChange={updateField("password")}
-            placeholder="••••••••"
-            type="password"
-            value={fields.password}
-          />
-          <div className="mt-2 flex items-center gap-2">
-            <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-variant">
-              <div className={`h-full w-full origin-left transition-transform duration-300 ${strength.className} ${strengthScaleClass(strength.width)}`} />
+            <AuthInput
+              autoComplete="email"
+              error={touched.email ? errors.email : ""}
+              id="email"
+              label="Email"
+              name="email"
+              onBlur={() => touchField("email")}
+              onChange={updateField("email")}
+              placeholder="email@example.com"
+              type="email"
+              value={fields.email}
+            />
+            <div>
+              <AuthInput
+                autoComplete="new-password"
+                error={touched.password ? errors.password : ""}
+                id="password"
+                label="Mật khẩu"
+                minLength={8}
+                name="password"
+                onBlur={() => touchField("password")}
+                onChange={updateField("password")}
+                placeholder="Ít nhất 8 ký tự"
+                type="password"
+                value={fields.password}
+              />
+              <div className="mt-2 flex items-center gap-2">
+                <div className="h-1 flex-1 overflow-hidden rounded-full bg-surface-variant">
+                  <div className={`h-full w-full origin-left transition-transform duration-300 ${strength.className} ${strengthScaleClass(strength.width)}`} />
+                </div>
+                <span className={`min-w-16 text-right text-xs font-semibold ${strength.textClassName}`}>{strength.label}</span>
+              </div>
             </div>
-            <span className={`min-w-16 text-right text-xs font-semibold ${strength.textClassName}`}>
-              {strength.label}
-            </span>
-          </div>
-        </div>
-
-        <AuthInput
-          error={touched.confirmPassword ? errors.confirmPassword : ""}
-          id="confirmPassword"
-          label="Xác nhận mật khẩu"
-          name="confirmPassword"
-          onBlur={() => touchField("confirmPassword")}
-          onChange={updateField("confirmPassword")}
-          placeholder="••••••••"
-          type="password"
-          value={fields.confirmPassword}
-        />
+            <AuthInput
+              autoComplete="new-password"
+              error={touched.confirmPassword ? errors.confirmPassword : ""}
+              id="confirmPassword"
+              label="Nhập lại mật khẩu"
+              name="confirmPassword"
+              onBlur={() => touchField("confirmPassword")}
+              onChange={updateField("confirmPassword")}
+              placeholder="Nhập lại mật khẩu"
+              type="password"
+              value={fields.confirmPassword}
+            />
+          </>
+        ) : (
+          <>
+            <AuthInput
+              autoComplete="one-time-code"
+              error={touched.otp ? errors.otp : ""}
+              id="otp"
+              inputMode="numeric"
+              label="Mã xác thực"
+              maxLength={6}
+              name="otp"
+              onBlur={() => touchField("otp")}
+              onChange={updateField("otp")}
+              pattern="[0-9]{6}"
+              placeholder="6 chữ số"
+              value={fields.otp}
+            />
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+              <button className="inline-flex min-h-11 items-center justify-center px-2 text-sm font-semibold text-on-surface-variant hover:text-primary" onClick={() => setStep("details")} type="button">
+                Sửa thông tin
+              </button>
+              <button className="inline-flex min-h-11 items-center justify-center px-2 text-sm font-semibold text-primary disabled:opacity-60" disabled={isSendingOtp} onClick={handleSendOtp} type="button">
+                {isSendingOtp ? "Đang gửi lại..." : "Gửi lại mã"}
+              </button>
+            </div>
+          </>
+        )}
 
         <button
-          className="premium-button mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 font-button text-button uppercase text-on-primary transition-colors duration-200 hover:bg-primary/90 disabled:cursor-wait disabled:opacity-70"
-          disabled={isSubmitting}
+          className="premium-button mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 font-button text-button text-on-primary transition-colors duration-200 hover:bg-primary/90 disabled:cursor-wait disabled:opacity-70"
+          disabled={isSubmitting || isSendingOtp}
           type="submit"
         >
-          {isSubmitting ? <LoaderCircle className="animate-spin" size={18} strokeWidth={1.8} /> : null}
-          {isSubmitting ? "Đang xử lý..." : "Tạo tài khoản"}
+          {isSubmitting || isSendingOtp ? <LoaderCircle className="animate-spin" size={18} strokeWidth={1.8} /> : null}
+          {step === "details" ? (isSendingOtp ? "Đang gửi mã..." : "Tiếp tục xác thực") : (isSubmitting ? "Đang tạo tài khoản..." : "Tạo tài khoản")}
         </button>
       </form>
 

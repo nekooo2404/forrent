@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, Info, X, AlertTriangle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Info, X, AlertTriangle } from "@/components/ui/icons";
 import { useRef } from "react";
 
 interface ToastProps {

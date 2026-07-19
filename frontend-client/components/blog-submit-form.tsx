@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Send } from "lucide-react";
+import { ChevronDown, Send } from "@/components/ui/icons";
 import type { FormEvent } from "react";
 import { useState } from "react";
 

@@ -24,7 +24,7 @@ import {
   UsersRound,
   WalletCards,
   X,
-} from "lucide-react";
+} from "@/components/ui/icons";
 import {
   createContext,
   type ReactNode,

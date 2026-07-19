@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Home, Plus, Trash2 } from "lucide-react";
+import { Home, Plus, Trash2 } from "@/components/ui/icons";
 
 import { Button } from "./button";
 import { EmptyState } from "./empty-state";

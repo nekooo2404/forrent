@@ -283,7 +283,9 @@ export class ApiError extends Error {
   }
 }
 
-function buildUrl(path: string, params?: Record<string, string | number | undefined>) {
+type QueryValue = boolean | number | string | undefined;
+
+function buildUrl(path: string, params?: Record<string, QueryValue>) {
   const url = new URL(path, API_BASE_URL);
   Object.entries(params ?? {}).forEach(([key, value]) => {
     if (value !== undefined && value !== "") {
@@ -296,7 +298,7 @@ function buildUrl(path: string, params?: Record<string, string | number | undefi
 async function apiFetch<T>(
   path: string,
   init: RequestInit & { next?: { revalidate?: number }; timeoutMs?: number } = {},
-  params?: Record<string, string | number | undefined>,
+  params?: Record<string, QueryValue>,
 ): Promise<T> {
   const { timeoutMs = DEFAULT_API_TIMEOUT_MS, ...requestInit } = init;
   const controller = new AbortController();
@@ -328,6 +330,7 @@ export async function getRooms(params?: {
   room_subtype?: number | string;
   area_range?: number | string;
   status?: string;
+  hero_eligible?: boolean | string;
   min_price?: number | string;
   max_price?: number | string;
   amenities?: number | string;
@@ -484,7 +487,7 @@ export function formatVnd(value: string | number, suffix = "VNĐ") {
 }
 
 export function formatMonthlyVnd(value: string | number) {
-  return `${formatVnd(value)}/tháng`;
+  return `${formatVnd(value)} / tháng`;
 }
 
 export function formatOptionalVnd(value?: string | number | null, fallback = "Xác nhận khi tư vấn") {

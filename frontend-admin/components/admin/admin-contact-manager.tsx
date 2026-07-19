@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Building2, CheckCircle2, Mail, Phone, RefreshCw, Search, Trash2, UserRound } from "lucide-react";
+import { ArrowUpRight, Building2, CheckCircle2, Mail, Phone, RefreshCw, Search, Trash2, UserRound } from "@/components/ui/icons";
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 

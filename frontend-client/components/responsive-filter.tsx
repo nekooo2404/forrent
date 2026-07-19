@@ -1,12 +1,27 @@
 "use client";
 
-import { ChevronDown, Plus } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { ChevronDown, Plus, X } from "@/components/ui/icons";
+import { useEffect, useState, type ReactNode } from "react";
 
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import type { ApiRoomSubtype } from "@/lib/api";
 
 export function ResponsiveFilter({ children }: Readonly<{ children: ReactNode }>) {
   const [isOpen, setIsOpen] = useState(false);
+  const sheetRef = useFocusTrap<HTMLDivElement>(isOpen);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    document.body.classList.add("filter-sheet-open");
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.classList.remove("filter-sheet-open");
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen]);
 
   return (
     <div className="responsive-filter">
@@ -17,11 +32,26 @@ export function ResponsiveFilter({ children }: Readonly<{ children: ReactNode }>
         onClick={() => setIsOpen((current) => !current)}
         type="button"
       >
-        Bộ lọc phòng
+        Lọc phòng
         <Plus aria-hidden="true" className={isOpen ? "rotate-45" : ""} size={20} strokeWidth={1.8} />
       </button>
-      <div className={`${isOpen ? "block" : "hidden"} lg:block`} id="room-filter-content">
-        {children}
+      <div className={`${isOpen ? "fixed" : "hidden"} inset-0 z-[120] lg:static lg:block lg:z-auto`} id="room-filter-content">
+        <button aria-label="Đóng bộ lọc" className="absolute inset-0 bg-on-surface/45 lg:hidden" onClick={() => setIsOpen(false)} type="button" />
+        <div
+          aria-labelledby={isOpen ? "room-filter-title" : undefined}
+          aria-modal={isOpen ? "true" : undefined}
+          className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-lg bg-surface-container-lowest pb-[env(safe-area-inset-bottom)] shadow-elevated lg:static lg:max-h-none lg:overflow-visible lg:rounded-none lg:bg-transparent lg:pb-0 lg:shadow-none"
+          ref={sheetRef}
+          role={isOpen ? "dialog" : undefined}
+        >
+          <div className="sticky top-0 z-10 flex min-h-14 items-center justify-between border-b border-outline-variant/60 bg-surface-container-lowest px-4 lg:hidden">
+            <h2 className="text-lg font-semibold text-on-surface" id="room-filter-title">Lọc phòng</h2>
+            <button aria-label="Đóng bộ lọc" className="inline-flex size-11 items-center justify-center rounded-md text-on-surface-variant hover:bg-surface-container-low" onClick={() => setIsOpen(false)} type="button">
+              <X aria-hidden="true" size={20} />
+            </button>
+          </div>
+          {children}
+        </div>
       </div>
     </div>
   );

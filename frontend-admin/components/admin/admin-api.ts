@@ -106,6 +106,7 @@ export type AdminRoom = {
   ward: number;
   address: string;
   building_code: string;
+  hero_eligible: boolean;
   price: string;
   deposit_type: number | null;
   deposit_type_name: string;

@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element -- Cloudinary optimizes media at the source; native elements avoid a second optimization layer. */
 
-import { ChevronLeft, ChevronRight, ImageOff, LoaderCircle, Play, Video, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageOff, LoaderCircle, Play, Video, X } from "@/components/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useFocusTrap } from "@/hooks/use-focus-trap";

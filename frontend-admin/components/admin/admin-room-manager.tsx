@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Archive, ArrowDown, ArrowUp, Calculator, ImageIcon, Pencil, Plus, RefreshCw, Search, Trash2, Video, X } from "lucide-react";
+import { AlertCircle, Archive, ArrowDown, ArrowUp, Calculator, CheckCircle2, ImageIcon, Pencil, Plus, RefreshCw, Search, Trash2, Video, X } from "@/components/ui/icons";
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -50,6 +50,7 @@ type RoomFormState = {
   deposit_type: string;
   description: string;
   electricity_price_per_kwh: string;
+  hero_eligible: boolean;
   image_urls: string;
   thumbnail: File | null;
   uploaded_images: File[];
@@ -90,6 +91,7 @@ const emptyForm: RoomFormState = {
   deposit_type: "",
   description: "",
   electricity_price_per_kwh: "",
+  hero_eligible: false,
   image_urls: "",
   thumbnail: null,
   uploaded_images: [],
@@ -227,6 +229,7 @@ export function AdminRoomManager() {
       deposit_type: room.deposit_type ? String(room.deposit_type) : "",
       description: room.description,
       electricity_price_per_kwh: room.electricity_price_per_kwh,
+      hero_eligible: room.hero_eligible,
       image_urls: "",
       thumbnail: null,
       uploaded_images: [],
@@ -267,6 +270,7 @@ export function AdminRoomManager() {
       deposit_amount: form.deposit_amount || "0",
       description: form.description.trim(),
       electricity_price_per_kwh: form.electricity_price_per_kwh || "0",
+      hero_eligible: String(form.hero_eligible),
       internal_note: form.internal_note.trim(),
       price: form.price,
       room_type: form.room_type,
@@ -672,7 +676,47 @@ function RoomFormModal({
   const wards = form.city ? lookups.wards.filter((ward) => String(ward.city) === form.city) : lookups.wards;
   const amenityIdSet = new Set(form.amenities);
   const commissionPreview = (Number(form.commission_base_amount || 0) * Number(form.commission_percent || 0)) / 100;
+  const hasHeroThumbnail = Boolean(form.thumbnail || editingRoom?.thumbnail);
+  const hasOverviewMedia = Boolean(
+    editingRoom?.images.some((item) => item.media_type === "IMAGE" && item.label === "OVERVIEW")
+      || form.uploaded_images.some((item) => item.type.startsWith("image/"))
+      || form.image_urls.split(/\r?\n/).some((value) => value.trim()),
+  );
+  const heroReady = hasHeroThumbnail && hasOverviewMedia;
+  const [photoWarnings, setPhotoWarnings] = useState<string[]>([]);
   const modalRef = useFocusTrap<HTMLElement>(true);
+
+  useEffect(() => {
+    const files = [form.thumbnail, ...form.uploaded_images].filter(
+      (file): file is File => Boolean(file?.type.startsWith("image/")),
+    );
+    if (!files.length || typeof createImageBitmap !== "function") {
+      setPhotoWarnings([]);
+      return;
+    }
+
+    let cancelled = false;
+    Promise.all(files.map(async (file) => {
+      const bitmap = await createImageBitmap(file);
+      const warning = bitmap.width < 1200 || bitmap.height < 800
+        ? `${file.name}: ${bitmap.width}×${bitmap.height}px, nên dùng tối thiểu 1200×800px.`
+        : bitmap.width <= bitmap.height
+          ? `${file.name}: ảnh dọc sẽ bị cắt nhiều trên card và hero.`
+          : "";
+      bitmap.close();
+      return warning;
+    }))
+      .then((warnings) => {
+        if (!cancelled) setPhotoWarnings(warnings.filter(Boolean));
+      })
+      .catch(() => {
+        if (!cancelled) setPhotoWarnings(["Không đọc được kích thước một hoặc nhiều ảnh đã chọn."]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [form.thumbnail, form.uploaded_images]);
 
   function update<K extends keyof RoomFormState>(key: K, value: RoomFormState[K]) {
     onFormChange({ ...form, [key]: value });
@@ -861,7 +905,7 @@ function RoomFormModal({
                 <ImageIcon size={18} strokeWidth={1.8} />
                 <h3 className="font-semibold">Ảnh và video</h3>
               </div>
-              <p className="mb-4 text-sm leading-6 text-secondary">Ưu tiên ảnh ngang, đủ sáng và đồng đều góc chụp; ảnh đầu tiên đại diện cho phòng trên danh sách.</p>
+              <p className="mb-4 text-sm leading-6 text-secondary">Ưu tiên ảnh ngang, đủ sáng và đồng đều góc chụp. Card dùng khung 16:10; ảnh đầu tiên có nhãn Toàn cảnh đại diện cho phòng.</p>
               <Field label="Thumbnail">
                 <input
                   accept="image/*"
@@ -893,6 +937,11 @@ function RoomFormModal({
                       <span className="min-w-0 truncate">{mediaFile.name}</span>
                     </div>
                   ))}
+                </div>
+              ) : null}
+              {photoWarnings.length ? (
+                <div className="mt-3 rounded-md border border-warning/30 bg-warning-container/30 px-3 py-2 text-xs leading-5 text-on-warning-container" role="status">
+                  {photoWarnings.map((warning) => <p key={warning}>{warning}</p>)}
                 </div>
               ) : null}
               {editingRoom?.images.length ? (
@@ -971,6 +1020,25 @@ function RoomFormModal({
                   ))}
                 </div>
               ) : null}
+              <div className="mt-5 border-t border-outline-variant/70 pt-4">
+                <label className="flex min-h-11 cursor-pointer items-start gap-3">
+                  <input
+                    checked={form.hero_eligible}
+                    className="mt-1 size-4 rounded border-primary/20 text-primary focus:ring-primary"
+                    disabled={!heroReady}
+                    onChange={(event) => update("hero_eligible", event.target.checked)}
+                    type="checkbox"
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold text-on-surface">Cho phép dùng phòng này ở hero trang chủ</span>
+                    <span className="mt-1 block text-xs leading-5 text-secondary">Chỉ bật cho phòng có ảnh ngang đại diện và ít nhất một ảnh được gắn nhãn Toàn cảnh.</span>
+                  </span>
+                </label>
+                <div className={`mt-3 flex items-start gap-2 rounded-md border px-3 py-2 text-xs leading-5 ${heroReady ? "border-success/25 bg-success-container text-on-success-container" : "border-outline-variant bg-surface-container-low text-secondary"}`}>
+                  {heroReady ? <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0" size={16} /> : <AlertCircle aria-hidden="true" className="mt-0.5 shrink-0" size={16} />}
+                  <span>{heroReady ? "Đủ điều kiện ảnh cơ bản để xuất hiện ở hero." : "Cần thumbnail và ảnh Toàn cảnh trước khi bật hero."}</span>
+                </div>
+              </div>
             </section>
 
             <section className="border-b border-outline-variant/70 pb-5">

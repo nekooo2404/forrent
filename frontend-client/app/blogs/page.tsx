@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, CalendarCheck, ChevronLeft, ChevronRight, ReceiptText, ShieldCheck } from "lucide-react";
+import { ArrowRight, CalendarCheck, ChevronLeft, ChevronRight, ReceiptText, ShieldCheck } from "@/components/ui/icons";
 import { Fragment } from "react";
 
 import { BlogSubmitForm } from "@/components/blog-submit-form";
@@ -75,17 +75,19 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
   const featuredPost = posts[0];
   const gridPosts = posts.slice(1);
   const totalPages = Math.max(1, Math.ceil((blogsResponse?.count ?? posts.length) / 7));
+  const gridClass = gridPosts.length === 1
+    ? "max-w-3xl"
+    : gridPosts.length === 2
+      ? "md:grid-cols-2"
+      : "md:grid-cols-2 xl:grid-cols-3";
 
   return (
     <PublicShell active="blogs">
-      <header className="scroll-reveal mx-auto max-w-container-max px-margin-mobile pb-12 pt-28 text-center md:px-margin-desktop md:pb-16 md:pt-32">
-        <span className="mb-4 block font-label-caps text-label-caps uppercase text-on-primary-container">
-          Kinh nghiệm thuê phòng
-        </span>
+      <header className="scroll-reveal mx-auto max-w-container-max px-margin-mobile pb-10 pt-28 md:px-margin-desktop md:pb-12 md:pt-32">
         <h1 className="mb-5 font-display-lg-mobile text-display-lg-mobile text-on-surface md:text-5xl md:font-extrabold">
           Cẩm nang thuê phòng
         </h1>
-        <p className="mx-auto max-w-2xl font-body-lg text-body-lg leading-relaxed text-secondary">
+        <p className="max-w-2xl font-body-lg text-body-lg leading-relaxed text-secondary">
           Kinh nghiệm thuê phòng thực tế: chọn khu vực, hỏi phí/cọc, kiểm tra phòng và chuẩn bị trước khi ký thuê.
         </p>
       </header>
@@ -144,7 +146,7 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
 
       {gridPosts.length ? (
         <section className="mx-auto mb-24 max-w-container-max px-margin-mobile md:px-margin-desktop">
-          <div className="grid gap-x-gutter gap-y-16 md:grid-cols-3">
+          <div className={`grid gap-x-gutter gap-y-14 ${gridClass}`}>
             {gridPosts.map((post) => (
               <BlogCard key={post.id} post={post} />
             ))}
@@ -154,13 +156,15 @@ export default async function BlogsPage({ searchParams }: BlogsPageProps) {
 
       {posts.length ? <Pagination currentPage={currentPage} totalPages={totalPages} /> : null}
 
-      {posts.length ? <section className="mb-24 bg-surface-container px-margin-mobile py-24">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="mb-6 font-headline-md text-headline-md text-on-surface">Cần tư vấn phòng phù hợp?</h2>
-          <p className="mb-10 font-body-md text-body-md text-secondary">
+      {posts.length ? <section className="mx-auto mb-24 max-w-container-max border-y border-outline-variant/60 px-margin-mobile py-10 md:px-margin-desktop">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="max-w-2xl">
+          <h2 className="font-headline-md text-headline-md text-on-surface">Cần tư vấn phòng phù hợp?</h2>
+          <p className="mt-3 font-body-md text-body-md text-secondary">
             Gửi nhu cầu thuê phòng, nhân viên tư vấn sẽ lọc phòng theo khu vực, giá và lịch xem.
           </p>
-          <Link className="premium-button inline-flex min-h-11 items-center rounded-md bg-primary px-8 py-3 font-button text-button uppercase text-on-primary" href="/contact">
+          </div>
+          <Link className="premium-button inline-flex min-h-11 items-center rounded-md bg-primary px-8 py-3 font-button text-button text-on-primary" href="/contact">
             Liên hệ tư vấn
           </Link>
         </div>
@@ -209,7 +213,7 @@ function BlogCard({ post }: Readonly<{ post: BlogPostView }>) {
   return (
     <article>
       <Link className="group block cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30" href={post.href ?? "/blogs"}>
-        <div className="relative mb-6 aspect-[4/5] overflow-hidden rounded-lg shadow-soft">
+        <div className="relative mb-5 aspect-[16/10] overflow-hidden rounded-lg border border-outline-variant/50 bg-surface-container-low">
           {post.image ? (
             <Image
               alt={post.title}

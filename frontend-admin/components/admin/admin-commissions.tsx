@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleDollarSign, RefreshCw, TrendingUp, UsersRound, WalletCards } from "lucide-react";
+import { CircleDollarSign, RefreshCw, TrendingUp, UsersRound, WalletCards } from "@/components/ui/icons";
 import { useEffect, useState } from "react";
 
 import {

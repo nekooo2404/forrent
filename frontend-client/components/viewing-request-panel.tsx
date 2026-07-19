@@ -1,17 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, CheckCircle2, Clock, Info, LoaderCircle, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { CalendarDays, CheckCircle2, Clock, Info, LoaderCircle, X } from "@/components/ui/icons";
 import type { FormEvent } from "react";
-import { useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { MotionModal } from "@/components/motion";
 import { recordProductDistribution, recordProductMetric } from "@/components/product-insights";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useToast } from "@/hooks/use-toast";
-import { authFetch } from "@/lib/auth-storage";
+import { authFetch, getAuthSession } from "@/lib/auth-storage";
 
 type SubmitState = "idle" | "confirming" | "submitting";
+type AuthState = "loading" | "anonymous" | "authenticated";
 type ViewingTimeSlot = "morning" | "afternoon" | "evening";
 
 type ViewingRequestPanelProps = {
@@ -60,16 +62,25 @@ function errorText(payload: ViewingRequestApiResponse) {
 }
 
 export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequestPanelProps) {
+  const pathname = usePathname();
+  const [authState, setAuthState] = useState<AuthState>("loading");
   const [state, setState] = useState<SubmitState>("idle");
   const [formSnapshot, setFormSnapshot] = useState<{ date: string; timeSlot: ViewingTimeSlot } | null>(null);
   const [submittedRequest, setSubmittedRequest] = useState<{ date: string; timeSlot: ViewingTimeSlot } | null>(null);
+  const [draftDate, setDraftDate] = useState("");
+  const [draftTimeSlot, setDraftTimeSlot] = useState<ViewingTimeSlot | "">("");
+  const [validationError, setValidationError] = useState("");
   const today = useSyncExternalStore(subscribeToDate, getTodaySnapshot, getServerTodaySnapshot);
   const { toast } = useToast();
   const confirmModalRef = useFocusTrap<HTMLDivElement>(state === "confirming" || state === "submitting");
   const formStartedAt = useRef<number | null>(null);
   const submissionInFlight = useRef(false);
 
-  const isReady = useMemo(() => !disabled && Number.isInteger(roomId) && Number(roomId) > 0, [disabled, roomId]);
+  const isReady = useMemo(
+    () => authState === "authenticated" && !disabled && Number.isInteger(roomId) && Number(roomId) > 0,
+    [authState, disabled, roomId],
+  );
+  const draftStorageKey = `forrent:viewing-request:${roomId ?? "unknown"}`;
   const metricAttributes = useMemo(
     () => ({
       has_room_id: Number.isInteger(roomId) && Number(roomId) > 0,
@@ -77,6 +88,32 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
     }),
     [roomId],
   );
+
+  useEffect(() => {
+    let mounted = true;
+    getAuthSession()
+      .then((authenticated) => {
+        if (mounted) setAuthState(authenticated ? "authenticated" : "anonymous");
+      })
+      .catch(() => {
+        if (mounted) setAuthState("anonymous");
+      });
+
+    try {
+      const saved = window.sessionStorage.getItem(draftStorageKey);
+      if (saved) {
+        const draft = JSON.parse(saved) as { date?: string; timeSlot?: ViewingTimeSlot };
+        setDraftDate(draft.date ?? "");
+        setDraftTimeSlot(draft.timeSlot ?? "");
+      }
+    } catch {
+      window.sessionStorage.removeItem(draftStorageKey);
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, [draftStorageKey]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -88,17 +125,14 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
       });
       return;
     }
-    const form = event.currentTarget;
-    if (!form.checkValidity()) {
-      form.reportValidity();
+    if (!draftDate || !draftTimeSlot) {
+      setValidationError("Vui l\u00f2ng ch\u1ecdn ng\u00e0y v\u00e0 khung gi\u1edd mong mu\u1ed1n.");
       return;
     }
-
-    const formData = new FormData(form);
-    setFormSnapshot({
-      date: String(formData.get("date") ?? ""),
-      timeSlot: String(formData.get("time_slot") ?? "morning") as ViewingTimeSlot,
-    });
+    setValidationError("");
+    const snapshot = { date: draftDate, timeSlot: draftTimeSlot };
+    setFormSnapshot(snapshot);
+    window.sessionStorage.setItem(draftStorageKey, JSON.stringify(snapshot));
     setState("confirming");
   }
 
@@ -134,6 +168,7 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
           response.status === 401
             ? "Vui lòng đăng nhập tài khoản khách thuê trước khi yêu cầu xem phòng."
             : errorText(payload);
+        if (response.status === 401) setAuthState("anonymous");
         setState("idle");
         toast({
           type: "error",
@@ -149,6 +184,9 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
 
       setState("idle");
       setSubmittedRequest(formSnapshot);
+      setDraftDate("");
+      setDraftTimeSlot("");
+      window.sessionStorage.removeItem(draftStorageKey);
       recordProductMetric("viewing_request_submitted", metricAttributes);
       if (formStartedAt.current !== null) {
         recordProductDistribution("viewing_request_completion_time", performance.now() - formStartedAt.current);
@@ -171,6 +209,8 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
       submissionInFlight.current = false;
     }
   }
+
+  const signInHref = `/log-in?next=${encodeURIComponent(`${pathname || "/rooms"}#viewing-request`)}`;
 
   return (
     <>
@@ -206,7 +246,37 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
           )}
         </div>
 
-        {submittedRequest ? (
+        {disabled ? (
+          <Link className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-outline-variant/70 px-4 py-3 font-semibold text-on-surface hover:bg-surface-container-low" href="/rooms">
+            Tìm phòng khác
+          </Link>
+        ) : authState === "loading" ? (
+          <div aria-busy="true" className="space-y-3" role="status">
+            <div className="h-11 rounded-md bg-surface-container" />
+            <div className="h-11 rounded-md bg-surface-container" />
+            <p className="text-sm text-on-surface-variant">Đang kiểm tra phiên đăng nhập...</p>
+          </div>
+        ) : authState === "anonymous" ? (
+          <div className="border-t border-outline-variant/50 pt-5">
+            <h3 className="font-semibold text-on-surface">Đăng nhập trước khi chọn lịch</h3>
+            <p className="mt-2 text-sm leading-6 text-on-surface-variant">
+              Tài khoản giúp bạn theo dõi trạng thái xác nhận và tránh nhập lại thông tin liên hệ.
+            </p>
+            {draftDate && draftTimeSlot ? (
+              <p className="mt-3 rounded-md bg-surface-container-low p-3 text-sm text-on-surface-variant">
+                Lịch đã lưu: {draftDate} · {timeSlotLabels[draftTimeSlot]}
+              </p>
+            ) : null}
+            <div className="mt-5 grid gap-2">
+              <Link className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 py-3 font-semibold text-on-primary transition-colors hover:bg-primary/90" href={signInHref}>
+                Đăng nhập để đặt lịch
+              </Link>
+              <Link className="inline-flex min-h-11 items-center justify-center rounded-md border border-outline-variant/70 px-4 py-3 font-semibold text-on-surface transition-colors hover:bg-surface-container-low" href="/contact">
+                Chưa có tài khoản? Gửi nhu cầu
+              </Link>
+            </div>
+          </div>
+        ) : submittedRequest ? (
           <div className="rounded-md border border-tertiary/30 bg-tertiary-container/50 p-4" data-testid="viewing-request-submitted" role="status">
             <div className="flex items-start gap-3">
               <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-tertiary" size={21} strokeWidth={1.8} />
@@ -229,6 +299,7 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
         ) : (
         <form
           className="space-y-5"
+          noValidate
           onFocusCapture={() => {
             if (formStartedAt.current === null) {
               formStartedAt.current = performance.now();
@@ -249,13 +320,19 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
                 strokeWidth={1.8}
               />
               <input
+                aria-describedby={validationError ? "viewing-request-error" : undefined}
+                aria-invalid={Boolean(validationError && !draftDate)}
                 className="min-h-11 w-full rounded-md border border-outline-variant/70 bg-surface-container-low px-3 py-3 pl-10 text-base text-on-surface outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary/10"
                 id="viewing-date"
                 min={today || undefined}
                 name="date"
-                required
                 disabled={disabled}
+                onChange={(event) => {
+                  setDraftDate(event.target.value);
+                  if (validationError) setValidationError("");
+                }}
                 type="date"
+                value={draftDate}
               />
             </div>
           </div>
@@ -272,12 +349,17 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
                 strokeWidth={1.8}
               />
               <select
+                aria-describedby={validationError ? "viewing-request-error" : undefined}
+                aria-invalid={Boolean(validationError && !draftTimeSlot)}
                 className="min-h-11 w-full rounded-md border border-outline-variant/70 bg-surface-container-low px-3 py-3 pl-10 text-base text-on-surface outline-none transition-colors duration-200 focus:border-primary focus:ring-2 focus:ring-primary/10"
-                defaultValue=""
                 id="viewing-time"
                 name="time_slot"
-                required
                 disabled={disabled}
+                onChange={(event) => {
+                  setDraftTimeSlot(event.target.value as ViewingTimeSlot | "");
+                  if (validationError) setValidationError("");
+                }}
+                value={draftTimeSlot}
               >
                 <option disabled value="">
                   Chọn thời gian
@@ -289,10 +371,16 @@ export function ViewingRequestPanel({ disabled = false, roomId }: ViewingRequest
             </div>
           </div>
 
+          {validationError ? (
+            <p className="rounded-md border border-error/30 bg-error-container px-3 py-2 text-sm text-on-error-container" id="viewing-request-error" role="alert">
+              {validationError}
+            </p>
+          ) : null}
+
           <div className="mt-8 border-t border-outline-variant/20 pt-4">
             <div className="mb-6 flex items-center justify-between">
               <span className="font-body-md text-body-md text-secondary">Phí hỗ trợ</span>
-              <span className="font-body-md text-body-md text-primary">Miễn phí</span>
+              <span className="font-body-md text-body-md font-semibold text-tertiary">Miễn phí</span>
             </div>
             <button
               className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 py-3 font-button text-button text-on-primary transition-colors duration-200 hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
