@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, RefreshCw } from "@/components/ui/icons";
 import { useEffect, useMemo, useState } from "react";
 
 import { adminList, adminMessageFrom, leadStatusLabel, type AdminViewingRequest } from "./admin-api";

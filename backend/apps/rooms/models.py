@@ -8,6 +8,7 @@ from django.db import models
 from apps.common.models import ActiveQuerySet, TimeStampedModel
 from apps.common.utils import calculate_percent_amount, unique_slugify
 from apps.locations.models import Amenity, AreaRange, City, Ward
+from apps.rooms.public_copy import room_search_document
 
 
 class RoomQuerySet(models.QuerySet):
@@ -99,6 +100,8 @@ class Room(TimeStampedModel):
     short_description = models.TextField(blank=True)
     description = models.TextField()
     thumbnail = models.ImageField(upload_to="room-thumbnails/", null=True, blank=True)
+    hero_eligible = models.BooleanField(default=False, db_index=True)
+    search_document = models.TextField(blank=True, editable=False)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
     commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
     commission_base_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0, validators=[MinValueValidator(Decimal("0"))])
@@ -136,6 +139,9 @@ class Room(TimeStampedModel):
             self.commission_base_amount,
             self.commission_percent,
         )
+        self.search_document = room_search_document(self)
+        if kwargs.get("update_fields") is not None:
+            kwargs["update_fields"] = tuple(set(kwargs["update_fields"]) | {"search_document"})
         super().save(*args, **kwargs)
 
     def clean(self):

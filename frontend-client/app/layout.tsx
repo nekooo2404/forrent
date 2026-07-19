@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import "@fontsource/be-vietnam-pro/400.css";
+import "@fontsource/be-vietnam-pro/500.css";
+import "@fontsource/be-vietnam-pro/600.css";
+import "@fontsource/be-vietnam-pro/700.css";
+import "@fontsource-variable/newsreader";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";

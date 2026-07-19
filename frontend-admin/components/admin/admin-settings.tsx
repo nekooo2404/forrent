@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Pencil, Plus, RefreshCw, ShieldCheck, Trash2, UserRound, X } from "lucide-react";
+import { Check, Pencil, Plus, RefreshCw, ShieldCheck, Trash2, UserRound, X } from "@/components/ui/icons";
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 

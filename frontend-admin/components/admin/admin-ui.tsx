@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronLeft, ChevronRight, LoaderCircle } from "@/components/ui/icons";
 
 import { blogStatusLabel, blogStatusTone, contactStatusLabel, contactStatusTone, leadStatusLabel, leadStatusTone, roomStatusTone } from "./admin-api";
 

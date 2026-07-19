@@ -14,7 +14,7 @@ import {
   RefreshCcw,
   UsersRound,
   WalletCards,
-} from "lucide-react";
+} from "@/components/ui/icons";
 import { useEffect, useState } from "react";
 
 import {
@@ -159,21 +159,20 @@ export function AdminDashboard() {
           </div>
           <p className="text-sm text-secondary">Mở từng hàng đợi để xử lý theo mức độ khẩn cấp.</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="divide-y divide-outline-variant/70 border-y border-outline-variant/70 bg-surface-container-lowest">
           {workQueue.map((item) => (
             <Link
-              className="group flex min-h-28 items-start justify-between gap-4 rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-4 shadow-soft transition-colors duration-200 hover:border-primary/40 hover:bg-surface-container-low"
+              className="group grid min-h-20 grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-3 px-3 py-4 transition-colors duration-200 hover:bg-surface-container-low sm:gap-4 sm:px-4"
               href={item.href}
               key={item.label}
             >
+              <span className="grid size-10 place-items-center rounded-md bg-surface-container text-primary">{item.icon}</span>
               <span className="min-w-0">
                 <span className="block text-sm font-semibold text-on-surface">{item.label}</span>
                 <span className="mt-1 block text-xs leading-5 text-secondary">{item.caption}</span>
               </span>
-              <span className="flex shrink-0 flex-col items-end gap-3">
-                <span className="grid size-9 place-items-center rounded-md bg-primary-container text-primary">{item.icon}</span>
-                <span className="text-2xl font-bold tabular-nums text-on-surface">{item.value}</span>
-              </span>
+              <span className="text-2xl font-semibold tabular-nums text-on-surface">{item.value}</span>
+              <ArrowRight aria-hidden="true" className="text-secondary transition-transform group-hover:translate-x-1" size={17} />
             </Link>
           ))}
         </div>

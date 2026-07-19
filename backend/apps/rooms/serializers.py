@@ -13,7 +13,7 @@ from apps.common.image_validation import (
 )
 from apps.locations.serializers import AmenitySerializer, AreaRangeSerializer, CitySerializer, WardSerializer
 from apps.rooms.models import DepositType, Room, RoomImage, RoomSubtype
-from apps.rooms.public_copy import public_room_title
+from apps.rooms.public_copy import public_room_description, public_room_title_for
 
 
 def allowed_room_image_url_hosts():
@@ -80,6 +80,7 @@ class RoomImageSerializer(serializers.ModelSerializer):
 
 
 class PublicRoomListSerializer(serializers.ModelSerializer):
+    title = serializers.SerializerMethodField()
     city = CitySerializer(read_only=True)
     ward = WardSerializer(read_only=True)
     area_range = AreaRangeSerializer(read_only=True)
@@ -87,6 +88,7 @@ class PublicRoomListSerializer(serializers.ModelSerializer):
     deposit_type_name = serializers.SerializerMethodField()
     public_title = serializers.SerializerMethodField()
     room_subtype_name = serializers.SerializerMethodField()
+    short_description = serializers.SerializerMethodField()
     thumbnail_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -128,7 +130,9 @@ class PublicRoomListSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if obj.thumbnail:
             return request.build_absolute_uri(obj.thumbnail.url) if request else obj.thumbnail.url
-        for media in obj.images.all():
+        media_items = list(obj.images.all())
+        media_items.sort(key=lambda media: (media.label != RoomImage.Label.OVERVIEW, media.sort_order, media.id))
+        for media in media_items:
             if media.media_type != RoomImage.MediaType.IMAGE:
                 continue
             if media.image_url:
@@ -141,17 +145,30 @@ class PublicRoomListSerializer(serializers.ModelSerializer):
         return obj.deposit_type_name_snapshot or (obj.deposit_type.name if obj.deposit_type_id else "")
 
     def get_public_title(self, obj):
-        return public_room_title(obj.title, proper_nouns=[obj.city.name if obj.city_id else "", obj.ward.name if obj.ward_id else ""])
+        return public_room_title_for(obj)
+
+    def get_title(self, obj):
+        return public_room_title_for(obj)
+
+    def get_short_description(self, obj):
+        return public_room_description(obj.short_description)
 
     def get_room_subtype_name(self, obj):
         return obj.room_subtype.name if obj.room_subtype_id else ""
 
 
 class PublicRoomDetailSerializer(PublicRoomListSerializer):
+    description = serializers.SerializerMethodField()
     images = RoomImageSerializer(many=True, read_only=True)
 
     class Meta(PublicRoomListSerializer.Meta):
         fields = PublicRoomListSerializer.Meta.fields + ("description", "images")
+
+    def get_description(self, obj):
+        return public_room_description(
+            obj.description,
+            fallback="Th\u00f4ng tin chi ti\u1ebft \u0111ang \u0111\u01b0\u1ee3c c\u1eadp nh\u1eadt. Nh\u00e2n vi\u00ean t\u01b0 v\u1ea5n s\u1ebd x\u00e1c nh\u1eadn tr\u01b0\u1edbc l\u1ecbch xem.",
+        )
 
 
 class AdminRoomImageWriteSerializer(serializers.ModelSerializer):
@@ -214,6 +231,7 @@ class AdminRoomSerializer(serializers.ModelSerializer):
             "short_description",
             "description",
             "thumbnail",
+            "hero_eligible",
             "status",
             "commission_percent",
             "commission_base_amount",
@@ -272,6 +290,23 @@ class AdminRoomSerializer(serializers.ModelSerializer):
                 validate_uploaded_image_file(thumbnail, "thumbnail")
             except serializers.ValidationError as exc:
                 errors.update(exc.detail)
+        hero_eligible = attrs.get("hero_eligible", getattr(self.instance, "hero_eligible", False))
+        effective_thumbnail = thumbnail if thumbnail is not None else getattr(self.instance, "thumbnail", None)
+        if hero_eligible and not effective_thumbnail:
+            errors["hero_eligible"] = "A homepage hero room requires a representative thumbnail."
+        existing_overview = bool(
+            self.instance
+            and self.instance.images.filter(
+                label=RoomImage.Label.OVERVIEW,
+                media_type=RoomImage.MediaType.IMAGE,
+            ).exists()
+        )
+        new_overview = bool(image_urls) or any(
+            uploaded_room_media_type(upload) == RoomImage.MediaType.IMAGE
+            for upload in uploaded_images
+        )
+        if hero_eligible and not (existing_overview or new_overview):
+            errors["hero_eligible"] = "A homepage hero room requires an overview gallery image."
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
@@ -287,7 +322,7 @@ class AdminRoomSerializer(serializers.ModelSerializer):
         return obj.deposit_type_name_snapshot or (obj.deposit_type.name if obj.deposit_type_id else "")
 
     def get_public_title(self, obj):
-        return public_room_title(obj.title, proper_nouns=[obj.city.name if obj.city_id else "", obj.ward.name if obj.ward_id else ""])
+        return public_room_title_for(obj)
 
     def get_room_subtype_name(self, obj):
         return obj.room_subtype.name if obj.room_subtype_id else ""
@@ -315,16 +350,33 @@ class AdminRoomSerializer(serializers.ModelSerializer):
 
     def _create_images(self, room, uploaded_images, image_urls):
         next_order = room.images.count()
+        has_overview = room.images.filter(
+            label=RoomImage.Label.OVERVIEW,
+            media_type=RoomImage.MediaType.IMAGE,
+        ).exists()
         for offset, upload in enumerate(uploaded_images):
+            media_type = uploaded_room_media_type(upload)
+            label = RoomImage.Label.VIDEO_TOUR
+            if media_type == RoomImage.MediaType.IMAGE:
+                label = RoomImage.Label.OTHER if has_overview else RoomImage.Label.OVERVIEW
+                has_overview = True
             RoomImage.objects.create(
                 room=room,
                 image=upload,
-                media_type=uploaded_room_media_type(upload),
+                media_type=media_type,
+                label=label,
                 sort_order=next_order + offset,
             )
         next_order = room.images.count()
         for offset, image_url in enumerate(image_urls):
-            RoomImage.objects.create(room=room, image_url=image_url, sort_order=next_order + offset)
+            label = RoomImage.Label.OTHER if has_overview else RoomImage.Label.OVERVIEW
+            has_overview = True
+            RoomImage.objects.create(
+                room=room,
+                image_url=image_url,
+                label=label,
+                sort_order=next_order + offset,
+            )
 
 
 class RoomFiltersSerializer(serializers.Serializer):

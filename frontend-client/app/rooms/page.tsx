@@ -3,21 +3,21 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   ImageOff,
   MessageCircle,
   Search,
   ShieldCheck,
   X,
-} from "lucide-react";
-import { Fragment, type ReactNode } from "react";
+} from "@/components/ui/icons";
+import { Suspense, type ReactNode } from "react";
 
 import { PublicShell } from "@/components/public-shell";
 import { ProductMetric } from "@/components/product-insights";
 import { ResponsiveFilter, RoomTypeSubtypeFilter } from "@/components/responsive-filter";
 import { RoomCompareBar, RoomCompareToggle, type RoomCompareItem } from "@/components/room-compare-panel";
 import { RoomsSortForm } from "@/components/rooms-sort-form";
+import { RoomsScrollMemory } from "@/components/rooms-scroll-memory";
+import { RoomsImagePreloader, RoomsResultsTransition } from "@/components/rooms-results-transition";
 import { StructuredData } from "@/components/structured-data";
 import { EmptyState } from "@/components/ui/empty-state";
 import { fastImageUrl, isCloudinaryImage, ROOM_IMAGE_BLUR_DATA_URL } from "@/lib/image";
@@ -174,8 +174,15 @@ function roomsHref(params: Record<string, string | string[] | undefined>, nextPa
     }
     search.set(key, value);
   });
-  search.set("page", String(nextPage));
-  return `/rooms?${search.toString()}`;
+  if (nextPage > 1) search.set("page", String(nextPage));
+  const query = search.toString();
+  return query ? `/rooms?${query}` : "/rooms";
+}
+
+function paginationPages(currentPage: number, totalPages: number) {
+  return Array.from(new Set([1, currentPage - 1, currentPage, currentPage + 1, totalPages]))
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((left, right) => left - right);
 }
 
 function withoutFilterHref(params: Record<string, string | string[] | undefined>, filter: ActiveFilter) {
@@ -209,22 +216,25 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   const amenities = joinedParam(params.amenities);
   const activeAmenities = amenities?.split(",").filter(Boolean) ?? [];
   const currentPage = Math.max(1, Number(page) || 1);
+  const roomsQuery = {
+    page_size: ROOMS_PAGE_SIZE,
+    ordering,
+    search,
+    city,
+    ward,
+    room_type: roomType,
+    room_subtype: roomSubtype,
+    area_range: areaRange,
+    status,
+    min_price: minPrice,
+    max_price: maxPrice,
+    amenities,
+  };
 
   const [roomsResponse, filtersResponse] = await Promise.all([
     getRooms({
+      ...roomsQuery,
       page: currentPage,
-      page_size: ROOMS_PAGE_SIZE,
-      ordering,
-      search,
-      city,
-      ward,
-      room_type: roomType,
-      room_subtype: roomSubtype,
-      area_range: areaRange,
-      status,
-      min_price: minPrice,
-      max_price: maxPrice,
-      amenities,
     }).catch(() => null),
     getCachedRoomFilters().catch(() => null),
   ]);
@@ -236,6 +246,12 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   };
   const totalCount = roomsResponse?.count ?? rooms.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / ROOMS_PAGE_SIZE));
+  const pageLinks = paginationPages(currentPage, totalPages).map((item) => ({
+    href: roomsHref(params, item),
+    page: item,
+  }));
+  const previousHref = roomsHref(params, Math.max(1, currentPage - 1));
+  const nextHref = currentPage < totalPages ? roomsHref(params, currentPage + 1) : undefined;
   const roomListStructuredData = {
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -279,6 +295,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
 
   return (
     <PublicShell active="rooms">
+      <RoomsScrollMemory />
       <ProductMetric attributes={resultMetricAttributes} stage="room_results_loaded" />
       <StructuredData data={roomListStructuredData} />
       <header className="border-b border-outline-variant/50 bg-surface-container-lowest px-margin-mobile pb-8 pt-24 md:px-margin-desktop md:pt-28">
@@ -315,37 +332,52 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
           search={search}
         />
 
-        <div className="flex min-w-0 flex-1 flex-col gap-8">
-          <ResultHeader activeFilters={activeFilterLabels} currentPage={currentPage} params={params} totalCount={totalCount} />
-          {rooms.length > 1 ? <RoomCompareBar rooms={rooms.map(toCompareItem)} /> : null}
-          {rooms.length ? (
-            <div className={`stagger-list grid w-full grid-cols-1 gap-gutter ${rooms.length > 1 ? "xl:grid-cols-2" : ""}`} data-room-grid>
-              {rooms.map((room, index) => (
-                <RoomCard
-                  compareItem={rooms.length > 1 ? toCompareItem(room) : undefined}
-                  key={room.id}
-                  priority={index < 2}
-                  room={room}
-                  wide={rooms.length === 1}
-                />
-              ))}
+        <div className="min-w-0 flex-1">
+          <RoomsResultsTransition
+            currentPage={currentPage}
+            nextHref={nextHref}
+            pageLinks={rooms.length ? pageLinks : []}
+            previousHref={previousHref}
+            roomsOnPage={rooms.length}
+            totalPages={rooms.length ? totalPages : 1}
+          >
+            <div className="flex flex-col gap-8">
+              <ResultHeader activeFilters={activeFilterLabels} currentPage={currentPage} params={params} totalCount={totalCount} />
+              {rooms.length > 1 ? <RoomCompareBar rooms={rooms.map(toCompareItem)} /> : null}
+              {rooms.length ? (
+                <div className={`stagger-list grid w-full grid-cols-1 gap-gutter ${rooms.length > 1 ? "xl:grid-cols-2" : ""}`} data-room-grid>
+                  {rooms.map((room, index) => (
+                    <RoomCard
+                      compareItem={rooms.length > 1 ? toCompareItem(room) : undefined}
+                      key={room.id}
+                      priority={index < 2}
+                      room={room}
+                      wide={rooms.length === 1}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <ProductMetric
+                    attributes={resultMetricAttributes}
+                    stage={activeFilterLabels.length ? "zero_result_search" : "empty_inventory_viewed"}
+                  />
+                  <EmptyState
+                    action={{ href: "/rooms", label: "Xóa bộ lọc" }}
+                    description="Thử xóa bớt bộ lọc hoặc gửi nhu cầu. Nhân viên tư vấn sẽ báo khi có phòng đúng khu vực và ngân sách."
+                    icon={<Search aria-hidden="true" size={30} strokeWidth={1.7} />}
+                    secondaryAction={{ href: "/contact", label: "Gửi nhu cầu thuê phòng" }}
+                    title="Chưa có phòng phù hợp"
+                  />
+                </>
+              )}
             </div>
-          ) : (
-            <>
-              <ProductMetric
-                attributes={resultMetricAttributes}
-                stage={activeFilterLabels.length ? "zero_result_search" : "empty_inventory_viewed"}
-              />
-              <EmptyState
-                action={{ href: "/rooms", label: "Xóa bộ lọc" }}
-                description="Thử xóa bớt bộ lọc hoặc gửi nhu cầu. Nhân viên tư vấn sẽ báo khi có phòng đúng khu vực và ngân sách."
-                icon={<Search aria-hidden="true" size={30} strokeWidth={1.7} />}
-                secondaryAction={{ href: "/contact", label: "Gửi nhu cầu thuê phòng" }}
-                title="Chưa có phòng phù hợp"
-              />
-            </>
-          )}
-          <Pagination currentPage={currentPage} params={params} totalPages={totalPages} />
+          </RoomsResultsTransition>
+          {nextHref ? (
+            <Suspense fallback={null}>
+              <AdjacentRoomImagesPreload href={nextHref} nextPage={currentPage + 1} query={roomsQuery} />
+            </Suspense>
+          ) : null}
         </div>
       </section>
 
@@ -369,8 +401,8 @@ function ResultHeader({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase text-on-surface-variant">Phòng phù hợp</p>
-          <h2 className="mt-1 font-headline-sm text-headline-sm text-on-surface">
-            {totalCount} phòng phù hợp · trang {currentPage}
+          <h2 className="mt-1 font-headline-sm text-headline-sm text-on-surface focus:outline-none" id="room-results-heading" tabIndex={-1}>
+            {totalCount ? `${totalCount} phòng phù hợp · trang ${currentPage}` : "Chưa có kết quả phù hợp"}
           </h2>
         </div>
         <Link className="inline-flex min-h-11 items-center gap-2 rounded-md px-2 py-2 text-sm font-semibold text-secondary transition-colors hover:text-primary" href="/contact">
@@ -585,10 +617,11 @@ function RoomCard({
         room.unavailable ? "opacity-80" : ""
       }`}
       data-layout={wide ? "wide" : "standard"}
+      data-room-card-id={room.id}
       data-room-card
     >
       <div className={`relative h-[260px] overflow-hidden bg-surface-container sm:h-[280px] ${wide ? "xl:h-full xl:min-h-[350px]" : ""} ${room.unavailable ? "grayscale-[30%]" : ""}`}>
-        <Link aria-label={`Xem chi tiết ${room.title}`} className="absolute inset-0" href={detailHref}>
+        <Link aria-label={`Xem chi tiết ${room.title}`} className="absolute inset-0" data-room-detail-link data-room-id={room.id} href={detailHref}>
           {room.image ? (
             <Image
               alt={room.alt}
@@ -625,7 +658,7 @@ function RoomCard({
       <div className="flex flex-grow flex-col p-5 md:p-6">
         <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0">
-            <Link className="line-clamp-2 block min-h-11 font-headline-sm text-xl leading-snug text-on-surface hover:text-primary" href={detailHref}>
+            <Link className="line-clamp-2 block min-h-11 font-headline-sm text-xl leading-snug text-on-surface hover:text-primary" data-room-detail-link data-room-id={room.id} href={detailHref}>
               {room.title}
             </Link>
             <p className="mt-2 font-body-md text-base font-medium text-on-surface-variant">{room.primaryMeta} · {room.area}</p>
@@ -645,11 +678,11 @@ function RoomCard({
         <div className="mt-auto grid grid-cols-2 gap-px overflow-hidden rounded-md border border-outline-variant/50 bg-outline-variant/50" data-room-cost-summary>
           <div className="min-w-0 bg-surface-container-lowest p-3 text-sm text-on-surface-variant">
             <span className="font-semibold text-on-surface">Giá thuê</span>
-            <span className="mt-1 block [overflow-wrap:anywhere] text-base font-bold tabular-nums text-on-surface" data-room-price>{room.price}</span>
+            <span className="mt-1 block whitespace-normal text-base font-bold leading-tight tabular-nums text-on-surface" data-room-price>{room.price}</span>
           </div>
           <div className="min-w-0 bg-surface-container-lowest p-3 text-sm text-on-surface-variant">
             <span className="flex items-center gap-2 font-semibold text-on-surface">
-              <ShieldCheck aria-hidden="true" className="shrink-0 text-primary" size={17} strokeWidth={1.8} />
+              <ShieldCheck aria-hidden="true" className="shrink-0 text-secondary" size={17} strokeWidth={1.8} />
               Cọc
             </span>
             <span className="mt-1 block break-words tabular-nums">{room.depositLabel}: {room.deposit}</span>
@@ -665,7 +698,7 @@ function RoomCard({
           </div>
         </div>
         <div className="mt-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-          <Link className="premium-button urban-cta inline-flex min-h-11 items-center justify-center rounded-md px-4 py-3 font-body-md text-sm" href={detailHref}>
+          <Link className="premium-button urban-cta inline-flex min-h-11 items-center justify-center rounded-md px-4 py-3 font-body-md text-sm" data-room-detail-link data-room-id={room.id} href={detailHref}>
             Xem chi tiết và đặt lịch
           </Link>
           {compareItem ? <RoomCompareToggle room={compareItem} /> : null}
@@ -675,64 +708,22 @@ function RoomCard({
   );
 }
 
-function Pagination({
-  currentPage,
-  params,
-  totalPages,
+async function AdjacentRoomImagesPreload({
+  href,
+  nextPage,
+  query,
 }: Readonly<{
-  currentPage: number;
-  params: Record<string, string | string[] | undefined>;
-  totalPages: number;
+  href: string;
+  nextPage: number;
+  query: NonNullable<Parameters<typeof getRooms>[0]>;
 }>) {
-  const pages = Array.from(
-    new Set([1, currentPage - 1, currentPage, currentPage + 1, totalPages]),
-  )
-    .filter((page) => page >= 1 && page <= totalPages)
-    .sort((left, right) => left - right);
+  const response = await getRooms({ ...query, page: nextPage }).catch(() => null);
+  const imageUrls = (response?.results ?? [])
+    .slice(0, 2)
+    .map(mapRoom)
+    .flatMap((room) => room.image ? [fastImageUrl(room.image, 1200, 82)] : []);
 
-  return (
-    <div className="mt-12 flex items-center justify-center gap-2 font-button text-button">
-      <Link
-        aria-label="Trang trước"
-        aria-disabled={currentPage <= 1}
-        className={`motion-chip flex size-11 items-center justify-center rounded-md border border-outline-variant/60 text-secondary transition-colors hover:border-primary hover:text-primary ${
-          currentPage <= 1 ? "pointer-events-none opacity-45" : ""
-        }`}
-        href={roomsHref(params, Math.max(1, currentPage - 1))}
-      >
-        <ChevronLeft size={18} strokeWidth={1.8} />
-      </Link>
-      {pages.map((page, index) => (
-        <Fragment key={page}>
-          {index > 0 && page - pages[index - 1] > 1 ? (
-            <span aria-hidden="true" className="px-1 text-secondary">…</span>
-          ) : null}
-          <Link
-            aria-current={page === currentPage ? "page" : undefined}
-            aria-label={`Trang ${page}`}
-            className={
-              page === currentPage
-                ? "motion-chip flex size-11 items-center justify-center rounded-md bg-primary text-on-primary"
-                : "motion-chip flex size-11 items-center justify-center rounded-md border border-outline-variant/60 text-secondary transition-colors hover:border-primary hover:text-primary"
-            }
-            href={roomsHref(params, page)}
-          >
-            {page}
-          </Link>
-        </Fragment>
-      ))}
-      <Link
-        aria-label="Trang sau"
-        aria-disabled={currentPage >= totalPages}
-        className={`motion-chip flex size-11 items-center justify-center rounded-md border border-outline-variant/60 text-secondary transition-colors hover:border-primary hover:text-primary ${
-          currentPage >= totalPages ? "pointer-events-none opacity-45" : ""
-        }`}
-        href={roomsHref(params, Math.min(totalPages, currentPage + 1))}
-      >
-        <ChevronRight size={18} strokeWidth={1.8} />
-      </Link>
-    </div>
-  );
+  return <RoomsImagePreloader href={href} imageUrls={imageUrls} />;
 }
 
 function ImagePlaceholder() {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronDown, Mail, Phone } from "lucide-react";
+import { ChevronDown, Mail, Phone } from "@/components/ui/icons";
 
 import {
   BUSINESS_REGISTRATION,

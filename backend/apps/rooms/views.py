@@ -23,7 +23,7 @@ from apps.common.viewsets import StandardResponseModelViewSetMixin, StandardResp
 from apps.locations.models import Amenity, AreaRange, City, Ward
 from apps.locations.serializers import AmenitySerializer, AreaRangeSerializer, CitySerializer, WardSerializer
 from apps.locations.services import ActiveFlagDeleteMixin
-from apps.rooms.filters import RoomFilter
+from apps.rooms.filters import PublicRoomFilter, RoomFilter
 from apps.rooms.models import DepositType, Room, RoomSubtype
 from apps.rooms.selectors import admin_rooms_queryset, public_room_details_queryset, public_rooms_queryset
 from apps.rooms.serializers import (
@@ -49,8 +49,7 @@ class RoomHistoryConflict(APIException):
 class PublicRoomViewSet(StandardResponseReadOnlyMixin, ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
     lookup_field = "slug"
-    filterset_class = RoomFilter
-    search_fields = ("title", "address", "description")
+    filterset_class = PublicRoomFilter
     ordering_fields = ("price", "actual_area", "created_at")
 
     def get_queryset(self):

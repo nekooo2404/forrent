@@ -13,10 +13,10 @@ export function RoomsSortForm({ ordering, params }: RoomsSortFormProps) {
         const values = Array.isArray(value) ? value : [value];
         return values.filter(Boolean).map((item) => <input key={`${key}-${item}`} name={key} type="hidden" value={item} />);
       })}
-      <label className="flex items-center gap-3">
+      <label className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 md:flex md:w-auto">
         <span className="shrink-0 text-sm font-semibold text-on-surface-variant">Sắp xếp</span>
         <select
-          className="min-h-11 min-w-0 flex-1 rounded-md border border-outline-variant/70 bg-surface-container-lowest px-4 py-3 font-button text-button text-on-surface shadow-sm transition-colors focus:border-primary focus:ring-primary md:w-52 md:flex-none"
+          className="min-h-11 min-w-0 w-full rounded-md border border-outline-variant/70 bg-surface-container-lowest px-3 py-3 font-button text-button text-on-surface transition-colors focus:border-primary focus:ring-primary md:w-52 md:flex-none md:px-4"
           defaultValue={ordering}
           name="ordering"
           onChange={(event) => event.currentTarget.form?.requestSubmit()}

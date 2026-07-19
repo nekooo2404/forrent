@@ -148,6 +148,10 @@ test('axe accessibility audit passes on the gallery modal', async ({ page }, tes
 test('axe accessibility audit passes on the viewing request confirmation modal', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium', 'Run axe once in the desktop Chromium project.');
 
+  await page.route('**/api/auth/session', (route) => route.fulfill({
+    contentType: 'application/json',
+    body: JSON.stringify({ success: true, message: 'Success', data: { authenticated: true } }),
+  }));
   await page.goto('/rooms/e2e-room');
   await page.getByLabel('Ngày mong muốn').fill('2099-01-15');
   await page.getByLabel('Thời gian').selectOption('morning');

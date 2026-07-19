@@ -40,7 +40,7 @@ const nextConfig: NextConfig = {
 
   // Performance: Experimental features
   experimental: {
-    optimizePackageImports: ['lucide-react'],
+        optimizePackageImports: ['@phosphor-icons/react/ssr'],
     webpackBuildWorker: true,
   },
 

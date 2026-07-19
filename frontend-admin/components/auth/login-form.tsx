@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertCircle, Eye, EyeOff, LoaderCircle } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, LoaderCircle } from "@/components/ui/icons";
 import type { ChangeEvent, FormEvent } from "react";
 import { useEffect, useRef, useState } from "react";
 

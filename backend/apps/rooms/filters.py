@@ -1,6 +1,7 @@
 import django_filters
 
 from apps.rooms.models import Room
+from apps.rooms.public_copy import normalize_search_text
 
 
 class RoomFilter(django_filters.FilterSet):
@@ -25,4 +26,15 @@ class RoomFilter(django_filters.FilterSet):
             "room_subtype": ["exact"],
             "area_range": ["exact"],
             "status": ["exact"],
+            "hero_eligible": ["exact"],
         }
+
+
+class PublicRoomFilter(RoomFilter):
+    search = django_filters.CharFilter(method="filter_search")
+
+    def filter_search(self, queryset, _name, value):
+        tokens = normalize_search_text(value).split()
+        for token in tokens:
+            queryset = queryset.filter(search_document__icontains=token)
+        return queryset

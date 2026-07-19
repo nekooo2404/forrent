@@ -59,7 +59,7 @@ test('rooms listing visual regression', async ({ page }, testInfo) => {
   await page.goto('/rooms');
   await expect(page.locator('[data-room-card]:visible').first()).toHaveAttribute('data-layout', 'wide');
   const themedOption = page.getByRole('option', { name: 'Tất cả phường' });
-  await expect(themedOption).toHaveCSS('background-color', 'rgb(255, 253, 249)');
+  await expect(themedOption).toHaveCSS('background-color', 'rgb(255, 255, 253)');
   await expect(themedOption).toHaveCSS('color', 'rgb(42, 35, 31)');
   await expect(page.locator('main')).toHaveScreenshot('rooms-list-light.png', {
     maxDiffPixelRatio: 0.01,
@@ -72,7 +72,7 @@ test('rooms mobile visual regression', async ({ page }, testInfo) => {
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/rooms');
-  await expect(page.getByRole('button', { name: 'Bộ lọc phòng' })).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByRole('button', { name: 'Lọc phòng' })).toHaveAttribute('aria-expanded', 'false');
   await expect(page).toHaveScreenshot('rooms-list-light-mobile.png', {
     maxDiffPixelRatio: 0.01,
     threshold: 0.2,

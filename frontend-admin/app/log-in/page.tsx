@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { KeyRound } from "lucide-react";
+import { KeyRound } from "@/components/ui/icons";
 
 import { LoginForm } from "@/components/auth/login-form";
 

@@ -25,8 +25,8 @@ class RoomImageInline(admin.TabularInline):
 
 @admin.register(Room)
 class RoomAdmin(admin.ModelAdmin):
-    list_display = ("title", "building_code", "room_type", "city", "ward", "price", "deposit_type", "deposit_amount", "status", "estimated_commission_amount")
-    list_filter = ("room_type", "status", "city", "ward", "deposit_type")
+    list_display = ("title", "building_code", "room_type", "city", "ward", "price", "deposit_type", "deposit_amount", "hero_eligible", "status", "estimated_commission_amount")
+    list_filter = ("room_type", "status", "city", "ward", "deposit_type", "hero_eligible")
     search_fields = ("title", "building_code", "address", "description", "internal_note")
     prepopulated_fields = {"slug": ("title",)}
     inlines = [RoomImageInline]

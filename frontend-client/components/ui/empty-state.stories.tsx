@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { EmptyState } from "./empty-state";
-import { Inbox, Search, Home } from "lucide-react";
+import { Inbox, Search, Home } from "@/components/ui/icons";
 
 const meta = {
   title: "UI/EmptyState",

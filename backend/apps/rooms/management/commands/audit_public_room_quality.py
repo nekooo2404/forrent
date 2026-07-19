@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 from django.core.management.base import BaseCommand, CommandError
 
 from apps.rooms.models import Room, RoomImage
+from apps.rooms.public_copy import normalize_search_text, public_room_title_for
 
 
 ALLOWED_MEDIA_HOSTS = {"res.cloudinary.com", "api.forrent.io.vn"}
@@ -59,7 +60,7 @@ class Command(BaseCommand):
             raise CommandError(f"Public room quality audit failed with {len(issues)} issue(s).")
 
     def _title_issues(self, room):
-        title = (room.title or "").strip()
+        title = public_room_title_for(room)
         room_label = self._room_label(room)
         issues = []
         if not title:
@@ -80,6 +81,9 @@ class Command(BaseCommand):
             uppercase_ratio = sum(1 for char in letters if char.isupper()) / len(letters)
             if uppercase_ratio > 0.65:
                 issues.append(f"{room_label}: title is mostly uppercase; use sentence case.")
+        location = room.ward.name if room.ward_id else room.city.name
+        if location and normalize_search_text(location) not in normalize_search_text(title):
+            issues.append(f"{room_label}: public title must include a renter-facing location.")
         return issues
 
     def _media_issues(self, room, min_gallery_items, require_cloudinary):
@@ -101,7 +105,15 @@ class Command(BaseCommand):
         if not image_items:
             issues.append(f"{room_label}: gallery needs at least one still image; video-only galleries hurt scanning.")
 
+        overview_items = [item for item in image_items if item.label == RoomImage.Label.OVERVIEW]
+        if room.hero_eligible and not overview_items:
+            issues.append(f"{room_label}: homepage hero rooms require an OVERVIEW gallery image.")
+        if room.hero_eligible and not thumbnail_source:
+            issues.append(f"{room_label}: homepage hero rooms require a representative thumbnail.")
+
         for item in media_items:
+            if not item.label:
+                issues.append(f"{room_label}: gallery item {item.id or 'new'} needs a semantic media label.")
             source = self._media_source(item)
             if not source:
                 issues.append(f"{room_label}: gallery item {item.id or 'new'} has no media source.")

@@ -54,6 +54,24 @@ function isCacheablePublicPage(request: NextRequest) {
   return cacheablePublicPaths.has(pathname) || cacheablePublicPrefixes.some((prefix) => pathname.startsWith(prefix));
 }
 
+async function roomDocumentIsMissing(request: NextRequest) {
+  if ((request.method !== "GET" && request.method !== "HEAD") || request.headers.get("rsc") === "1") return false;
+  const match = request.nextUrl.pathname.match(/^\/rooms\/([^/]+)\/?$/);
+  if (!match) return false;
+
+  const apiBaseUrl = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || productionApiOrigin;
+  try {
+    const slug = encodeURIComponent(decodeURIComponent(match[1]));
+    const response = await fetch(`${apiBaseUrl.replace(/\/$/, "")}/api/rooms/${slug}/`, {
+      cache: "no-store",
+      method: "HEAD",
+    });
+    return response.status === 404;
+  } catch {
+    return false;
+  }
+}
+
 function csrfFailure(request: NextRequest) {
   if (!request.nextUrl.pathname.startsWith("/api/") || !unsafeMethods.has(request.method)) {
     return null;
@@ -78,10 +96,25 @@ function csrfFailure(request: NextRequest) {
   return null;
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const blocked = csrfFailure(request);
   if (blocked) {
     return blocked;
+  }
+
+  if (await roomDocumentIsMissing(request)) {
+    try {
+      const errorPage = await fetch(new URL("/room-not-found", request.url), {
+        cache: "no-store",
+        headers: request.headers,
+        method: request.method,
+      });
+      const headers = new Headers(errorPage.headers);
+      headers.set("Cache-Control", publicCacheControl);
+      return new NextResponse(errorPage.body, { headers, status: 404 });
+    } catch {
+      return new NextResponse(null, { status: 404 });
+    }
   }
 
   const requestHeaders = new Headers(request.headers);

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BarChart3, X } from "lucide-react";
+import { BarChart3, X } from "@/components/ui/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export type RoomCompareItem = {

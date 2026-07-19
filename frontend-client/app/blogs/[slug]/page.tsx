@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, CalendarDays, UserRound } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, UserRound } from "@/components/ui/icons";
 
 import { PublicShell } from "@/components/public-shell";
 import { formatDate, getBlogs, getCachedBlogDetail, resolveMediaUrl, type ApiBlog } from "@/lib/api";

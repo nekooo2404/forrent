@@ -59,6 +59,36 @@ class TestContactAdminAPI:
         assert contact.room == room
         assert contact.phone == "0912345679"
 
+    @pytest.mark.parametrize(
+        ("contact_fields", "expected_phone", "expected_email"),
+        [
+            ({"phone": "0912345682"}, "0912345682", ""),
+            ({"email": "email-only@example.com"}, "", "email-only@example.com"),
+        ],
+    )
+    def test_public_contact_accepts_one_contact_method(self, contact_fields, expected_phone, expected_email):
+        response = self.client.post(
+            "/api/contact/",
+            {"full_name": "Nguyen Van D", **contact_fields},
+            format="json",
+        )
+
+        assert response.status_code == 201
+        contact = ContactMessage.objects.latest("id")
+        assert contact.phone == expected_phone
+        assert contact.email == expected_email
+        assert contact.message == ""
+
+    def test_public_contact_requires_at_least_one_contact_method(self):
+        response = self.client.post(
+            "/api/contact/",
+            {"full_name": "Nguyen Van E", "message": "Can tu van"},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "contact" in response.data["errors"]
+
     def test_convert_contact_reuses_user_after_phone_normalization(self):
         admin = create_admin()
         room = create_room(created_by=admin)

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { UserRound } from "lucide-react";
+import { UserRound } from "@/components/ui/icons";
 import { useEffect, useRef, useState } from "react";
 
 import {

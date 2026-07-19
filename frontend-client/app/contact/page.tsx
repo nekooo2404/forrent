@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CalendarCheck, Clock3, Mail, MapPin, Phone, ReceiptText } from "lucide-react";
+import { CalendarCheck, Clock3, Mail, MapPin, Phone, ReceiptText } from "@/components/ui/icons";
 import type { ReactNode } from "react";
 
 import { ContactForm } from "@/components/contact-form";

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Clock3, Mail, MapPin, Phone, UserRound } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock3, Mail, MapPin, Phone, UserRound } from "@/components/ui/icons";
 import type { FormEvent, ReactNode } from "react";
 import { useEffect, useState } from "react";
 

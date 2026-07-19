@@ -5,8 +5,8 @@
 
 :root {
   color-scheme: light;
-  --font-body: "Open Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-display: ui-serif, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-body: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Newsreader Variable", "Newsreader", ui-serif, Georgia, serif;
   --font-open-sans: var(--font-body);
 
   /* Motion system */
@@ -20,7 +20,7 @@
   --ease-smooth: var(--ease-out);
 
   /* Light theme colors (RGB values for alpha support) */
-  --surface-container-low: 242 237 231;
+  --surface-container-low: 241 238 233;
   --on-secondary-fixed: 54 46 40;
   --on-tertiary: 255 255 255;
   --primary-fixed: 248 229 215;
@@ -30,7 +30,7 @@
   --on-primary-fixed-variant: 128 55 24;
   --primary: 151 65 28;
   --secondary-fixed-dim: 223 213 203;
-  --surface-container-high: 229 220 211;
+  --surface-container-high: 232 227 221;
   --on-tertiary-fixed: 48 61 34;
   --on-secondary: 255 255 255;
   --primary-fixed-dim: 238 203 179;
@@ -41,12 +41,12 @@
   --primary-container: 250 235 224;
   --on-error-container: 140 20 20;
   --surface-container-highest: 219 208 198;
-  --surface-container-lowest: 255 253 249;
+  --surface-container-lowest: 255 255 253;
   --surface-dim: 230 226 221;
   --inverse-primary: 245 174 124;
   --on-error: 255 255 255;
   --tertiary-fixed-dim: 198 211 177;
-  --background: 247 244 239;
+  --background: 248 247 244;
   --outline: 134 123 115;
   --on-tertiary-container: 54 68 38;
   --tertiary: 79 98 57;
@@ -55,14 +55,14 @@
   --on-primary-fixed: 68 31 16;
   --on-secondary-fixed-variant: 95 71 57;
   --surface-tint: 128 55 24;
-  --outline-variant: 218 210 202;
+  --outline-variant: 216 211 205;
   --surface-bright: 255 253 249;
   --on-surface: 42 35 31;
   --error-container: 254 226 226;
   --surface-variant: 237 230 223;
-  --surface-container: 235 228 221;
+  --surface-container: 238 234 229;
   --secondary-container: 237 229 222;
-  --surface: 250 248 244;
+  --surface: 250 249 247;
   --secondary-fixed: 242 235 228;
   --on-tertiary-fixed-variant: 65 82 46;
   --on-background: 42 35 31;
@@ -112,7 +112,8 @@ body {
 }
 
 body.mobile-menu-open,
-body.gallery-modal-open {
+body.gallery-modal-open,
+body.filter-sheet-open {
   overflow-y: hidden;
 }
 

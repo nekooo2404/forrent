@@ -40,8 +40,8 @@ Runtime client va admin duoc build trong hai Docker context rieng, vi vay token 
 
 ## Typography
 
-- Display: `ui-serif`, Iowan Old Style, Palatino Linotype, Book Antiqua, Georgia; weight 700; roman only.
-- Body/UI: existing Open Sans-compatible system stack for Vietnamese coverage; weight 400.
+- Display: self-hosted `Newsreader Variable`; weight 650-700; roman only.
+- Body/UI: self-hosted `Be Vietnam Pro` for stable Vietnamese metrics; weight 400.
 - Buttons and labels: body stack, weight 600-700; clickable text stays on one line.
 - Body minimum: 16px, line-height 1.5-1.65, measure 45-75ch.
 - Display hierarchy: 32/40/48px caps by context; heading wraps with `overflow-wrap: anywhere`.
@@ -86,6 +86,7 @@ Every button, link-control, input, select and disclosure supports default, hover
 ## Public Marketplace Rules
 
 - Hero starts with search and representative room media. Overlay preserves image evidence.
+- Only rooms explicitly marked `hero_eligible` may supply hero media; hero inventory requires a representative thumbnail and an `OVERVIEW` gallery image.
 - Primary filters: keyword, area, price and room type. Ward, area size and amenities live in `Nang cao`.
 - Every room card presents a single decision cluster in this order: price, deposit, fixed monthly fee, electricity/water.
 - Status palette: sage for available, amber for waiting/soon, warm grey for rented/archived.
