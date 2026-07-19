@@ -218,7 +218,10 @@ test.describe('Public critical flows', () => {
     const offline = await request.get('/offline');
 
     expect(manifest.ok()).toBeTruthy();
-    expect(await manifest.json()).toMatchObject({ name: 'ForRent', display: 'standalone' });
+    expect(await manifest.json()).toMatchObject({
+      name: 'ForRent - Tìm CCMN, CHDV giá tốt tại Hà Nội',
+      display: 'standalone',
+    });
     expect(serviceWorker.ok()).toBeTruthy();
     const serviceWorkerSource = await serviceWorker.text();
     expect(serviceWorkerSource).toContain('forrent-static');
