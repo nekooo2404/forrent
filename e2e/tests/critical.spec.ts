@@ -436,6 +436,39 @@ test.describe('Public critical flows', () => {
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(43.5);
   });
 
+  test('amenity filter searches every option without accents and pins selections', async ({ page }) => {
+    await page.goto('/rooms');
+    const filterForm = page.locator('form[action="/rooms"]').filter({ has: page.locator('input[name="search"]') });
+    const filterToggle = page.getByRole('button', { name: 'Lọc phòng' });
+    if (await filterToggle.isVisible()) await filterToggle.click();
+    const advanced = filterForm.locator('details');
+    await advanced.locator('summary').click();
+
+    const amenitySearch = filterForm.getByRole('searchbox', { name: 'Tìm tiện ích' });
+    await expect(filterForm.getByText('Hiển thị 8/12 tiện ích')).toBeVisible();
+    await amenitySearch.fill('dieu hoa');
+    await expect(filterForm.getByText('Tìm thấy 1/12 tiện ích')).toBeVisible();
+    await expect(filterForm.getByRole('checkbox', { name: 'Điều hòa' })).toBeVisible();
+
+    await filterForm.getByRole('checkbox', { name: 'Điều hòa' }).check();
+    await amenitySearch.fill('tu lanh');
+    await expect(filterForm.getByText('Đã chọn (1)')).toBeVisible();
+    await expect(filterForm.getByRole('checkbox', { name: 'Điều hòa' })).toBeChecked();
+    await expect(filterForm.getByRole('checkbox', { name: 'Tủ lạnh' })).toBeVisible();
+    await filterForm.getByRole('checkbox', { name: 'Tủ lạnh' }).check();
+    await expect(filterForm.getByText('Đã chọn (2)')).toBeVisible();
+
+    await amenitySearch.fill('');
+    await filterForm.getByRole('button', { name: 'Xem tất cả tiện ích' }).click();
+    await expect(filterForm.getByText('Hiển thị 12/12 tiện ích')).toBeVisible();
+    await expect(filterForm.getByRole('checkbox', { name: 'Dọn phòng' })).toBeVisible();
+
+    await filterForm.locator('button[type="submit"]').click();
+    await expect(page).toHaveURL(/amenities=1/);
+    const submittedAmenities = new URL(page.url()).searchParams.getAll('amenities');
+    expect(submittedAmenities).toEqual(['1', '9']);
+  });
+
   test('room cards group decision costs and allow long prices to wrap', async ({ page }) => {
     await page.goto('/rooms?search=visual-12');
 

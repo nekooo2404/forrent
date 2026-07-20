@@ -12,6 +12,7 @@ import {
 import { Suspense, type ReactNode } from "react";
 
 import { PublicShell } from "@/components/public-shell";
+import { AmenityFilter } from "@/components/amenity-filter";
 import { ProductMetric } from "@/components/product-insights";
 import { ResponsiveFilter, RoomTypeSubtypeFilter } from "@/components/responsive-filter";
 import { RoomCompareBar, RoomCompareToggle, type RoomCompareItem } from "@/components/room-compare-panel";
@@ -462,7 +463,6 @@ function FilterSidebar({
   const visibleWards = filters.wards.filter((ward) => !effectiveCity || String(ward.city) === effectiveCity);
   const selectedSubtype = filters.room_subtypes.find((item) => String(item.id) === activeRoomSubtype);
   const selectedParentType = activeRoomType || selectedSubtype?.parent_type;
-  const activeAmenitySet = new Set(activeAmenities);
   const hasAdvancedFilters = Boolean(activeWard || activeAreaRange || activeAmenities.length);
 
   return (
@@ -563,14 +563,11 @@ function FilterSidebar({
 
                 {filters.amenities.length ? (
                   <FilterSection title="Tiện ích">
-                    <div className="space-y-1">
-                      {filters.amenities.slice(0, 5).map((item) => (
-                        <label className="group flex min-h-11 cursor-pointer items-center gap-3 py-2" key={item.id}>
-                          <input className="size-4 rounded border-outline-variant bg-surface-container-lowest text-primary focus:ring-primary" defaultChecked={activeAmenitySet.has(String(item.id))} name="amenities" type="checkbox" value={item.id} />
-                          <span className="font-body-md text-body-md text-on-surface-variant transition-colors group-hover:text-on-surface">{item.name}</span>
-                        </label>
-                      ))}
-                    </div>
+                    <AmenityFilter
+                      activeAmenityIds={activeAmenities}
+                      amenities={filters.amenities}
+                      key={activeAmenities.slice().sort().join(",")}
+                    />
                   </FilterSection>
                 ) : null}
               </div>
