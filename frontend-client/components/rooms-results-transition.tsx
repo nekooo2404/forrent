@@ -15,7 +15,8 @@ import {
 import { ChevronLeft, ChevronRight, LoaderCircle } from "@/components/ui/icons";
 
 const NAVIGATION_MARKER_KEY = "forrent:rooms-pagination-target";
-const NAVIGATION_TIMEOUT_MS = 15_000;
+const NAVIGATION_MARKER_MAX_AGE_MS = 15_000;
+const NAVIGATION_RECOVERY_TIMEOUT_MS = 4_000;
 const IMAGE_WARMUP_WAIT_MS = 650;
 const imageWarmups = new Map<string, Promise<void>>();
 
@@ -70,18 +71,26 @@ export function RoomsResultsTransition({
     }
 
     const currentHref = `${window.location.pathname}${window.location.search}`;
-    const shouldRestore = marker
-      && marker.page === currentPage
-      && marker.href === currentHref
-      && Date.now() - marker.savedAt < NAVIGATION_TIMEOUT_MS;
+    const markerIsFresh = Boolean(marker && Date.now() - marker.savedAt < NAVIGATION_MARKER_MAX_AGE_MS);
+    const shouldRestore = Boolean(markerIsFresh && marker?.page === currentPage && marker.href === currentHref);
+    const wasRedirected = Boolean(
+      markerIsFresh
+      && marker
+      && marker.page !== currentPage
+      && new URL(marker.href, window.location.origin).pathname === window.location.pathname,
+    );
 
-    if (!shouldRestore) return;
+    if (!shouldRestore && !wasRedirected) return;
 
     window.sessionStorage.removeItem(NAVIGATION_MARKER_KEY);
     if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current);
     navigationTimerRef.current = null;
     setPendingPage(null);
-    setAnnouncement(`Đã tải trang ${currentPage}, hiển thị ${roomsOnPage} phòng.`);
+    setAnnouncement(
+      wasRedirected
+        ? `Trang ${marker?.page} không còn dữ liệu. Đã chuyển đến trang ${currentPage}, hiển thị ${roomsOnPage} phòng.`
+        : `Đã tải trang ${currentPage}, hiển thị ${roomsOnPage} phòng.`,
+    );
 
     const frame = window.requestAnimationFrame(() => {
       resultsRef.current?.scrollIntoView({ behavior: "auto", block: "start" });
@@ -112,15 +121,17 @@ export function RoomsResultsTransition({
     setPendingPage(targetPage);
     setAnnouncement(`Đang tải trang ${targetPage}.`);
 
+    // A distant page can become invalid while the user is browsing.
+    // A document navigation lets the server resolve the latest valid page atomically;
+    // adjacent pages keep the faster in-app transition and image warmup path.
+    if (Math.abs(targetPage - currentPage) > 1) {
+      window.location.assign(targetHref);
+      return;
+    }
+
     navigationTimerRef.current = setTimeout(() => {
-      try {
-        window.sessionStorage.removeItem(NAVIGATION_MARKER_KEY);
-      } catch {
-        // Storage may be disabled in hardened browser contexts.
-      }
-      setPendingPage(null);
-      setAnnouncement("Chưa thể tải trang mới. Vui lòng thử lại.");
-    }, NAVIGATION_TIMEOUT_MS);
+      window.location.assign(targetHref);
+    }, NAVIGATION_RECOVERY_TIMEOUT_MS);
 
     void waitForImageWarmup(href).then(() => {
       startTransition(() => router.push(href, { scroll: false }));
@@ -199,6 +210,15 @@ export function RoomsImagePreloader({ href, imageUrls }: Readonly<{ href: string
       Promise.all(urls.map(preloadImage)).then(() => undefined),
     );
   }, [href, serializedImageUrls]);
+
+  return null;
+}
+
+export function RoomsUrlCanonicalizer({ href }: Readonly<{ href: string }>) {
+  useEffect(() => {
+    const currentHref = `${window.location.pathname}${window.location.search}`;
+    if (currentHref !== href) window.history.replaceState(window.history.state, "", href);
+  }, [href]);
 
   return null;
 }

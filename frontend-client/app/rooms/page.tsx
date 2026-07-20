@@ -18,11 +18,16 @@ import { ResponsiveFilter, RoomTypeSubtypeFilter } from "@/components/responsive
 import { RoomCompareBar, RoomCompareToggle, type RoomCompareItem } from "@/components/room-compare-panel";
 import { RoomsSortForm } from "@/components/rooms-sort-form";
 import { RoomsScrollMemory } from "@/components/rooms-scroll-memory";
-import { RoomsImagePreloader, RoomsResultsTransition } from "@/components/rooms-results-transition";
+import {
+  RoomsImagePreloader,
+  RoomsResultsTransition,
+  RoomsUrlCanonicalizer,
+} from "@/components/rooms-results-transition";
 import { StructuredData } from "@/components/structured-data";
 import { EmptyState } from "@/components/ui/empty-state";
 import { fastImageUrl, isCloudinaryImage, ROOM_IMAGE_BLUR_DATA_URL } from "@/lib/image";
 import {
+  ApiError,
   formatArea,
   formatMonthlyVnd,
   formatOptionalVnd,
@@ -186,6 +191,33 @@ function paginationPages(currentPage: number, totalPages: number) {
     .sort((left, right) => left - right);
 }
 
+type RoomsQuery = NonNullable<Parameters<typeof getRooms>[0]>;
+
+async function resolveRoomsPage(query: RoomsQuery, requestedPage: number) {
+  try {
+    const response = await getRooms({ ...query, page: requestedPage });
+    const lastPage = Math.max(1, Math.ceil(response.count / ROOMS_PAGE_SIZE));
+    if (requestedPage <= lastPage) return { page: requestedPage, response };
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 404 || requestedPage <= 1) throw error;
+  }
+
+  // A listing can disappear between rendering page controls and following a link.
+  // Recount with a distinct page size so stale cached page data cannot select the vanished page again.
+  const countResponse = await getRooms({ ...query, page: 1, page_size: 1 });
+  const lastPage = Math.max(1, Math.ceil(countResponse.count / ROOMS_PAGE_SIZE));
+  const fallbackPage = Math.min(requestedPage - 1, lastPage);
+
+  try {
+    const response = await getRooms({ ...query, page: fallbackPage });
+    return { page: fallbackPage, response };
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 404 || fallbackPage <= 1) throw error;
+    const response = await getRooms({ ...query, page: 1 });
+    return { page: 1, response };
+  }
+}
+
 function withoutFilterHref(params: Record<string, string | string[] | undefined>, filter: ActiveFilter) {
   const search = new URLSearchParams();
 
@@ -216,7 +248,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
   const ordering = firstParam(params.ordering) || "-created_at";
   const amenities = joinedParam(params.amenities);
   const activeAmenities = amenities?.split(",").filter(Boolean) ?? [];
-  const currentPage = Math.max(1, Number(page) || 1);
+  const requestedPage = Math.max(1, Number(page) || 1);
   const roomsQuery = {
     page_size: ROOMS_PAGE_SIZE,
     ordering,
@@ -232,20 +264,21 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
     amenities,
   };
 
-  const [roomsResponse, filtersResponse] = await Promise.all([
-    getRooms({
-      ...roomsQuery,
-      page: currentPage,
-    }).catch(() => null),
+  const [roomsPage, filtersResponse] = await Promise.all([
+    resolveRoomsPage(roomsQuery, requestedPage),
     getCachedRoomFilters().catch(() => null),
   ]);
 
-  const rooms = roomsResponse?.results.map(mapRoom) ?? [];
+  const roomsResponse = roomsPage.response;
+  const currentPage = roomsPage.page;
+  const canonicalPageHref = currentPage === requestedPage ? null : roomsHref(params, currentPage);
+
+  const rooms = roomsResponse.results.map(mapRoom);
   const filters = {
     ...(filtersResponse ?? fallbackFilters),
     room_subtypes: filtersResponse?.room_subtypes ?? [],
   };
-  const totalCount = roomsResponse?.count ?? rooms.length;
+  const totalCount = roomsResponse.count;
   const totalPages = Math.max(1, Math.ceil(totalCount / ROOMS_PAGE_SIZE));
   const pageLinks = paginationPages(currentPage, totalPages).map((item) => ({
     href: roomsHref(params, item),
@@ -296,6 +329,7 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
 
   return (
     <PublicShell active="rooms">
+      {canonicalPageHref ? <RoomsUrlCanonicalizer href={canonicalPageHref} /> : null}
       <RoomsScrollMemory />
       <ProductMetric attributes={resultMetricAttributes} stage="room_results_loaded" />
       <StructuredData data={roomListStructuredData} />

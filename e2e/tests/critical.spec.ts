@@ -342,6 +342,23 @@ test.describe('Public critical flows', () => {
     }).toBeLessThan(180);
   });
 
+  test('room pagination recovers when a stale last page no longer exists', async ({ page }) => {
+    await page.goto('/rooms?search=pagination-stale-last-page');
+
+    await expect(page.getByRole('heading', { name: '32 phòng phù hợp · trang 1' })).toBeVisible();
+    const pagination = page.getByRole('navigation', { name: 'Phân trang' });
+    await expect(pagination.getByRole('link', { name: 'Trang 6' })).toBeVisible();
+
+    await pagination.getByRole('link', { name: 'Trang 6' }).click();
+
+    await expect(page).toHaveURL(/search=pagination-stale-last-page&(?:.*&)?page=5(?:&|$)/);
+    await expect(page.getByRole('heading', { name: '30 phòng phù hợp · trang 5' })).toBeFocused();
+    await expect(page.locator('[data-room-card-id="25"]')).toBeVisible();
+    await expect(page.locator('[data-room-card]')).toHaveCount(6);
+    await expect(page.getByRole('heading', { name: 'Chưa có phòng phù hợp' })).toHaveCount(0);
+    await expect(page.locator('[data-rooms-results]')).toHaveAttribute('aria-busy', 'false');
+  });
+
   test('an empty room result does not render a fake page one control', async ({ page }) => {
     await page.goto('/rooms?search=visual-empty');
 
