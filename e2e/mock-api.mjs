@@ -9,6 +9,20 @@ const amenities = [
   { id: 1, name: 'Dieu hoa', icon: 'wind', is_active: true },
   { id: 2, name: 'May giat', icon: 'washing-machine', is_active: true },
 ];
+const filterAmenities = [
+  { id: 1, name: 'Điều hòa', icon: 'wind', is_active: true },
+  { id: 2, name: 'Máy giặt', icon: 'washing-machine', is_active: true },
+  { id: 3, name: 'Wifi tốc độ cao', icon: 'wifi', is_active: true },
+  { id: 4, name: 'Bếp riêng', icon: 'cooking-pot', is_active: true },
+  { id: 5, name: 'Ban công', icon: 'building', is_active: true },
+  { id: 6, name: 'Thang máy', icon: 'building', is_active: true },
+  { id: 7, name: 'Bãi để xe', icon: 'parking', is_active: true },
+  { id: 8, name: 'Camera an ninh', icon: 'shield', is_active: true },
+  { id: 9, name: 'Tủ lạnh', icon: 'appliance', is_active: true },
+  { id: 10, name: 'Bàn làm việc', icon: 'desk', is_active: true },
+  { id: 11, name: 'Dọn phòng', icon: 'sparkles', is_active: true },
+  { id: 12, name: 'Máy sấy', icon: 'wind', is_active: true },
+];
 const areaRange = { id: 1, name: '20-30 m2', min_area: '20.00', max_area: '30.00', is_active: true };
 const imageDataUrl = (color) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="${color}"/><rect x="180" y="160" width="840" height="480" rx="24" fill="#fff7ed" opacity=".82"/></svg>`)}`;
 const roomImages = ['#9a5b31', '#3f7664', '#b78348'].map((color, index) => ({
@@ -112,7 +126,7 @@ const server = http.createServer((request, response) => {
     sendJson(response, 200, envelope({
       cities: [city],
       wards: [ward],
-      amenities,
+      amenities: filterAmenities,
       area_ranges: [areaRange],
       deposit_types: [{ id: 1, name: 'Coc 1 thang', is_active: true }],
       room_types: [{ value: 'CCDV', label: 'Can ho dich vu' }],

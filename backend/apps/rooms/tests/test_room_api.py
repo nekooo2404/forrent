@@ -10,7 +10,7 @@ from rest_framework.test import APIClient
 from apps.common.models import AuditLog
 from apps.common.image_validation import validate_uploaded_image_file, validate_uploaded_room_media_file
 from apps.rooms.tests.factories import create_admin, create_room, create_user
-from apps.locations.models import AreaRange
+from apps.locations.models import Amenity, AreaRange
 from apps.rooms.models import DepositType, Room, RoomImage, RoomSubtype
 from apps.rooms.serializers import validate_room_image_url
 from apps.viewing_requests.models import ViewingRequest
@@ -77,6 +77,23 @@ class TestRoomAPI:
 
         assert response.status_code == 200
         assert response.data["data"]["results"] == []
+
+    def test_public_room_filter_requires_every_selected_amenity(self):
+        wifi_only_room = create_room()
+        fully_matched_room = create_room()
+        wifi = Amenity.objects.get(name="Wifi")
+        washing_machine = Amenity.objects.create(name="Máy giặt", icon="washing-machine")
+        fully_matched_room.amenities.add(washing_machine)
+
+        response = self.client.get(
+            "/api/rooms/",
+            {"amenities": f"{wifi.id},{washing_machine.id}"},
+        )
+
+        assert response.status_code == 200
+        room_ids = [item["id"] for item in response.data["data"]["results"]]
+        assert room_ids == [fully_matched_room.id]
+        assert wifi_only_room.id not in room_ids
 
     def test_public_room_list_can_select_homepage_hero_inventory(self):
         regular_room = create_room()
