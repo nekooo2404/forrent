@@ -16,4 +16,3 @@ def record_celery_heartbeat():
         timeout=settings.CELERY_PIPELINE_HEARTBEAT_TTL,
     )
     return heartbeat_at
-

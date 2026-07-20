@@ -75,4 +75,3 @@ task_prerun.connect(task_started, weak=False, dispatch_uid="forrent-celery-task-
 task_postrun.connect(task_finished, weak=False, dispatch_uid="forrent-celery-task-finished")
 task_retry.connect(task_will_retry, weak=False, dispatch_uid="forrent-celery-task-retry")
 task_failure.connect(task_failed, weak=False, dispatch_uid="forrent-celery-task-failed")
-
