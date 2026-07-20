@@ -8,6 +8,7 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
       RUN_DJANGO_STARTUP_TASKS: "1"
+      REDIS_CACHE_URL: ${REDIS_CACHE_URL:-redis://redis_cache:6379/0}
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
@@ -17,6 +18,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      redis_cache:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; req=urllib.request.Request('http://127.0.0.1:8000/api/health/', headers={'X-Forwarded-Proto':'https'}); urllib.request.urlopen(req, timeout=8)"]
@@ -82,37 +85,59 @@ services:
 
   celery_worker:
     build: .
-    command: celery -A config worker -l info
+    command: celery -A config worker --loglevel=INFO --queues=critical,notifications,maintenance,default --hostname=worker@%h
+    init: true
     restart: unless-stopped
+    stop_grace_period: 1m
     env_file:
       - .env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
       RUN_DJANGO_STARTUP_TASKS: "0"
+      REDIS_CACHE_URL: ${REDIS_CACHE_URL:-redis://redis_cache:6379/0}
     depends_on:
       backend:
         condition: service_healthy
       redis:
         condition: service_healthy
+      redis_cache:
+        condition: service_healthy
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect --timeout 5 --destination worker@$$(hostname) ping | grep -q pong"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   celery_beat:
     build: .
-    command: celery -A config beat -l info
+    command: celery -A config beat --loglevel=INFO --schedule=/tmp/celerybeat-schedule --pidfile=/tmp/celerybeat.pid
+    init: true
     restart: unless-stopped
+    stop_grace_period: 30s
     env_file:
       - .env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings.production
       RUN_DJANGO_STARTUP_TASKS: "0"
+      REDIS_CACHE_URL: ${REDIS_CACHE_URL:-redis://redis_cache:6379/0}
     depends_on:
       backend:
         condition: service_healthy
       redis:
         condition: service_healthy
+      redis_cache:
+        condition: service_healthy
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "test -s /tmp/celerybeat.pid && kill -0 $$(cat /tmp/celerybeat.pid)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   postgres:
     image: postgres:16-alpine
@@ -132,8 +157,42 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --save
+      - "60"
+      - "1000"
+      - --maxmemory
+      - ${REDIS_DURABLE_MAXMEMORY:-512mb}
+      - --maxmemory-policy
+      - noeviction
     ports:
       - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  redis_cache:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -142,3 +201,4 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:

@@ -9,7 +9,15 @@ if "sqlite" in DATABASES["default"]["ENGINE"]:  # noqa: F405
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
             "LOCATION": "rental-local-cache",
-        }
+        },
+        "sessions": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "rental-local-sessions",
+        },
+        "coordination": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "rental-local-coordination",
+        },
     }
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True

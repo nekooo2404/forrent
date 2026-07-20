@@ -1,6 +1,5 @@
 from urllib.parse import urlparse
 
-from django.core.cache import cache
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 from django.utils.decorators import method_decorator
@@ -19,6 +18,13 @@ from apps.common.models import AuditLog
 from apps.common.permissions import IsAdmin
 from apps.common.responses import success_response
 from apps.common.audit import audit_event
+from apps.common.cache_utils import (
+    PublicResponseCacheMixin,
+    ROOM_DETAIL_CACHE_NAMESPACE,
+    ROOM_FILTER_CACHE_NAMESPACE,
+    ROOM_LIST_CACHE_NAMESPACE,
+    get_or_set_versioned,
+)
 from apps.common.viewsets import StandardResponseModelViewSetMixin, StandardResponseReadOnlyMixin
 from apps.locations.models import Amenity, AreaRange, City, Ward
 from apps.locations.serializers import AmenitySerializer, AreaRangeSerializer, CitySerializer, WardSerializer
@@ -46,11 +52,32 @@ class RoomHistoryConflict(APIException):
 
 @method_decorator(cache_control(public=True, max_age=30), name="list")
 @method_decorator(cache_control(public=True, max_age=30), name="retrieve")
-class PublicRoomViewSet(StandardResponseReadOnlyMixin, ReadOnlyModelViewSet):
+class PublicRoomViewSet(PublicResponseCacheMixin, StandardResponseReadOnlyMixin, ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
     lookup_field = "slug"
     filterset_class = PublicRoomFilter
     ordering_fields = ("price", "actual_area", "created_at")
+    public_cache_namespaces = {
+        "list": ROOM_LIST_CACHE_NAMESPACE,
+        "retrieve": ROOM_DETAIL_CACHE_NAMESPACE,
+    }
+    public_cache_timeouts = {"list": 60, "retrieve": 120}
+    public_cache_query_parameters = {
+        "amenities",
+        "area_range",
+        "city",
+        "hero_eligible",
+        "max_price",
+        "min_price",
+        "ordering",
+        "page",
+        "page_size",
+        "room_subtype",
+        "room_type",
+        "search",
+        "status",
+        "ward",
+    }
 
     def get_queryset(self):
         if self.action == "retrieve":
@@ -70,10 +97,8 @@ class PublicRoomFiltersAPIView(APIView):
     @extend_schema(responses=RoomFiltersSerializer)
     @method_decorator(cache_control(public=True, max_age=1800))
     def get(self, request):
-        cache_key = "public-room-filters"
-        data = cache.get(cache_key)
-        if data is None:
-            data = {
+        def serialize_filters():
+            return {
                 "cities": CitySerializer(City.objects.active(), many=True).data,
                 "wards": WardSerializer(Ward.objects.active().select_related("city"), many=True).data,
                 "amenities": AmenitySerializer(Amenity.objects.active(), many=True).data,
@@ -85,8 +110,16 @@ class PublicRoomFiltersAPIView(APIView):
                     {"value": Room.Status.PUBLISHED, "label": "Còn trống"},
                 ],
             }
-            cache.set(cache_key, data, 60 * 10)
-        return success_response(data=data)
+
+        data, hit = get_or_set_versioned(
+            ROOM_FILTER_CACHE_NAMESPACE,
+            request.path,
+            serialize_filters,
+            timeout=60 * 30,
+        )
+        response = success_response(data=data)
+        response["X-Cache"] = "HIT" if hit else "MISS"
+        return response
 
 
 class AdminRoomViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
@@ -256,12 +289,8 @@ class AdminRoomSubtypeViewSet(StandardResponseModelViewSetMixin, ActiveFlagDelet
     search_fields = ("name",)
     ordering_fields = ("parent_type", "name", "created_at")
 
-    def _invalidate_public_filters(self):
-        cache.delete("public-room-filters")
-
     def perform_create(self, serializer):
         subtype = serializer.save()
-        self._invalidate_public_filters()
         audit_event(
             "room_subtype.created",
             request=self.request,
@@ -276,7 +305,6 @@ class AdminRoomSubtypeViewSet(StandardResponseModelViewSetMixin, ActiveFlagDelet
             "is_active": serializer.instance.is_active,
         }
         subtype = serializer.save()
-        self._invalidate_public_filters()
         audit_event(
             "room_subtype.updated",
             request=self.request,
@@ -290,7 +318,6 @@ class AdminRoomSubtypeViewSet(StandardResponseModelViewSetMixin, ActiveFlagDelet
     def perform_destroy(self, instance):
         was_used = instance.rooms.exists()
         instance.delete()
-        self._invalidate_public_filters()
         audit_event(
             "room_subtype.deactivated" if was_used else "room_subtype.deleted",
             request=self.request,

@@ -3,7 +3,7 @@ import logging
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.core.cache import cache
+from django.core.cache import caches
 from django.db import connections
 from django.http import JsonResponse
 from django.urls import include, path
@@ -13,6 +13,7 @@ from rest_framework.routers import DefaultRouter
 from apps.accounts.views import AdminUserViewSet
 from apps.blogs.views import AdminBlogViewSet, PublicBlogViewSet
 from apps.common.views import SendifyTemplatesAPIView
+from apps.common.tasks import CELERY_PIPELINE_HEARTBEAT_KEY
 from apps.contacts.views import ContactCreateAPIView, AdminContactMessageViewSet
 from apps.locations.views import (
     AdminAmenityViewSet,
@@ -60,6 +61,8 @@ def health_check(_request):
     checks = {
         "database": False,
         "cache": False,
+        "session_cache": False,
+        "coordination_cache": False,
         "media_storage": media_storage_configured(),
     }
 
@@ -70,11 +73,17 @@ def health_check(_request):
     except Exception:
         logger.exception("Database health check failed")
 
-    try:
-        cache.set("health-check", "ok", timeout=5)
-        checks["cache"] = cache.get("health-check") == "ok"
-    except Exception:
-        logger.exception("Cache health check failed")
+    for alias, check_name in (
+        ("default", "cache"),
+        ("sessions", "session_cache"),
+        ("coordination", "coordination_cache"),
+    ):
+        try:
+            cache_backend = caches[alias]
+            cache_backend.set("health-check", "ok", timeout=5)
+            checks[check_name] = cache_backend.get("health-check") == "ok"
+        except Exception:
+            logger.exception("%s health check failed", check_name)
 
     healthy = all(checks.values())
     return JsonResponse(
@@ -83,8 +92,21 @@ def health_check(_request):
     )
 
 
+def celery_health_check(_request):
+    try:
+        healthy = bool(caches["coordination"].get(CELERY_PIPELINE_HEARTBEAT_KEY))
+    except Exception:
+        logger.exception("Celery pipeline health check failed")
+        healthy = False
+    return JsonResponse(
+        {"status": "ok" if healthy else "error", "checks": {"celery_pipeline": healthy}},
+        status=200 if healthy else 503,
+    )
+
+
 urlpatterns = [
     path("api/health/", health_check, name="health-check"),
+    path("api/health/celery/", celery_health_check, name="celery-health-check"),
     path("django-admin/", admin.site.urls),
     path("api/auth/", include("apps.accounts.urls")),
     path("api/rooms/filters/", PublicRoomFiltersAPIView.as_view(), name="room-filters"),
