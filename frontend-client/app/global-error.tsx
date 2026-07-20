@@ -1,8 +1,8 @@
 "use client";
 
-import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
 import { useEffect } from "react";
+import { runWithSentry } from "@/lib/sentry-client";
 
 export default function GlobalError({
   error,
@@ -10,7 +10,7 @@ export default function GlobalError({
   error: Error & { digest?: string };
 }>) {
   useEffect(() => {
-    Sentry.captureException(error);
+    runWithSentry((client) => client.captureException(error), { immediate: true });
   }, [error]);
 
   return (

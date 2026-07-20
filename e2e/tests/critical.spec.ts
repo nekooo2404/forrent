@@ -140,11 +140,30 @@ test.describe('Public critical flows', () => {
     await expect(hero).toHaveAttribute('data-hero-source', 'listing');
     await expect(hero).toHaveAttribute('data-hero-room-id', '2');
     await expect(hero).toHaveAttribute('data-hero-room-slug', 'e2e-room-hero');
-    await expect(hero.locator('img')).not.toHaveAttribute('src', /forrent-hero-old-quarter/);
-    await expect.poll(() => hero.locator('img').evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+    const heroImage = hero.locator('img');
+    await expect(heroImage).not.toHaveAttribute('src', /forrent-hero-old-quarter/);
+    await expect(heroImage).toHaveAttribute('fetchpriority', 'high');
+    await expect(heroImage).toHaveAttribute('loading', 'eager');
+    await expect(heroImage).not.toHaveAttribute('src', /\/_next\/image/);
+    await expect.poll(() => heroImage.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
     await expect(hero.locator('[aria-hidden="true"]').first()).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await expect(hero.getByRole('button', { name: 'Tìm phòng' })).toBeVisible();
     await expect(page.getByText('Phòng mới sẽ được cập nhật tại đây')).toHaveCount(0);
+  });
+
+  test('brand hero fallbacks stay within the first-load image budget', async ({ request }) => {
+    const assets = [
+      { path: '/brand/forrent-hero-old-quarter-mobile-768.avif', type: 'image/avif', maxBytes: 70_000 },
+      { path: '/brand/forrent-hero-old-quarter-1280.avif', type: 'image/avif', maxBytes: 90_000 },
+      { path: '/brand/forrent-hero-old-quarter-1920.avif', type: 'image/avif', maxBytes: 150_000 },
+    ];
+
+    for (const asset of assets) {
+      const response = await request.get(asset.path);
+      expect(response.ok(), asset.path).toBeTruthy();
+      expect(response.headers()['content-type']).toContain(asset.type);
+      expect((await response.body()).byteLength, asset.path).toBeLessThanOrEqual(asset.maxBytes);
+    }
   });
 
   test('homepage is led by marketplace search rather than a marketing banner', async ({ page }) => {

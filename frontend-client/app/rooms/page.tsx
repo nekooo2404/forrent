@@ -329,6 +329,9 @@ export default async function RoomsPage({ searchParams }: RoomsPageProps) {
 
   return (
     <PublicShell active="rooms">
+      {rooms.some((room) => room.image && isCloudinaryImage(room.image)) ? (
+        <link href="https://res.cloudinary.com" rel="preconnect" />
+      ) : null}
       {canonicalPageHref ? <RoomsUrlCanonicalizer href={canonicalPageHref} /> : null}
       <RoomsScrollMemory />
       <ProductMetric attributes={resultMetricAttributes} stage="room_results_loaded" />
@@ -665,7 +668,7 @@ function RoomCard({
               priority={priority}
               quality={78}
               sizes="(min-width: 1280px) 500px, (min-width: 768px) 50vw, 100vw"
-              src={fastImageUrl(room.image, priority ? 1200 : 768, priority ? 82 : 78)}
+              src={fastImageUrl(room.image, wide ? 1200 : 768, priority ? 82 : 78)}
               unoptimized={isCloudinaryImage(room.image)}
             />
           ) : (
@@ -749,10 +752,12 @@ async function AdjacentRoomImagesPreload({
   query: NonNullable<Parameters<typeof getRooms>[0]>;
 }>) {
   const response = await getRooms({ ...query, page: nextPage }).catch(() => null);
-  const imageUrls = (response?.results ?? [])
-    .slice(0, 2)
-    .map(mapRoom)
-    .flatMap((room) => room.image ? [fastImageUrl(room.image, 1200, 82)] : []);
+  const rooms = (response?.results ?? []).slice(0, 2).map(mapRoom);
+  const imageWidth = response?.results.length === 1 ? 1200 : 768;
+  const imageUrls = rooms.reduce<string[]>((urls, room) => {
+    if (room.image) urls.push(fastImageUrl(room.image, imageWidth, 82));
+    return urls;
+  }, []);
 
   return <RoomsImagePreloader href={href} imageUrls={imageUrls} />;
 }
