@@ -7,6 +7,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.rooms.models import Room
 from apps.common.audit import audit_event
+from apps.common.tasking import enqueue_task_on_commit
 from apps.viewing_requests.models import RoomLease, ViewingRequest, ViewingRequestActivity
 from apps.viewing_requests.tasks import send_appointment_confirmed_email, send_viewing_request_received_email
 
@@ -102,7 +103,7 @@ class ViewingRequestService:
             actual_commission_amount=0,
         )
         logger.info("Viewing request created: id=%s user_id=%s room_id=%s", viewing_request.id, user.id, room.id)
-        transaction.on_commit(lambda: send_viewing_request_received_email.delay(viewing_request.id))
+        enqueue_task_on_commit(send_viewing_request_received_email, viewing_request.id)
         return viewing_request
 
     @staticmethod
@@ -127,7 +128,7 @@ class ViewingRequestService:
             actual_commission_amount=0,
         )
         logger.info("Viewing request converted from contact: id=%s user_id=%s room_id=%s", viewing_request.id, user.id, room.id)
-        transaction.on_commit(lambda: send_viewing_request_received_email.delay(viewing_request.id))
+        enqueue_task_on_commit(send_viewing_request_received_email, viewing_request.id)
         return viewing_request
 
     @staticmethod
@@ -256,7 +257,7 @@ class ViewingRequestService:
             target=viewing_request,
             metadata={"appointment_date": appointment_date.isoformat(), "appointment_time_slot": appointment_time_slot},
         )
-        transaction.on_commit(lambda: send_appointment_confirmed_email.delay(viewing_request.id))
+        enqueue_task_on_commit(send_appointment_confirmed_email, viewing_request.id)
         return viewing_request
 
     @staticmethod

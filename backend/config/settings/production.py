@@ -18,8 +18,24 @@ if len(SECRET_KEY) < 32 or SECRET_KEY.startswith("unsafe-"):  # noqa: F405
     raise ImproperlyConfigured("Production requires a strong DJANGO_SECRET_KEY.")
 if DATABASES["default"]["ENGINE"] == "django.db.backends.sqlite3":  # noqa: F405
     raise ImproperlyConfigured("Production requires DATABASE_URL for PostgreSQL.")
-if not REDIS_URL.startswith(("redis://", "rediss://")):  # noqa: F405
-    raise ImproperlyConfigured("Production requires a valid REDIS_URL.")
+redis_service_urls = (  # noqa: F405
+    REDIS_URL,
+    REDIS_CACHE_URL,
+    REDIS_RESULT_URL,
+    REDIS_SESSION_URL,
+    REDIS_COORDINATION_URL,
+    CELERY_BROKER_URL,
+    CELERY_RESULT_BACKEND,
+)
+if any(not url.startswith(("redis://", "rediss://")) for url in redis_service_urls):
+    raise ImproperlyConfigured("Production requires valid Redis service URLs.")
+if (
+    CELERY_WORKER_CONCURRENCY < 1  # noqa: F405
+    or CELERY_WORKER_MAX_TASKS_PER_CHILD < 1  # noqa: F405
+    or CELERY_WORKER_MAX_MEMORY_PER_CHILD < 64_000  # noqa: F405
+    or CELERY_PIPELINE_HEARTBEAT_TTL <= 60  # noqa: F405
+):
+    raise ImproperlyConfigured("Production Celery worker and heartbeat limits are invalid.")
 if not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS or not CORS_ALLOWED_ORIGINS or not CSRF_TRUSTED_ORIGINS:  # noqa: F405
     raise ImproperlyConfigured("Production hosts and CORS/CSRF origins must be explicitly configured.")
 if not (CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET):  # noqa: F405

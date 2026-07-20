@@ -1,10 +1,12 @@
 import pytest
 from django.contrib.auth import get_user_model
-from django.core.cache import cache
+from django.core.cache import cache, caches
 from django.core import mail
+from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIClient
 
 from apps.accounts.models import PasswordResetToken
+from apps.accounts.services import AuthService
 from apps.common.models import AuditLog
 from apps.rooms.tests.factories import create_admin, create_user
 
@@ -19,6 +21,7 @@ def otp_from_email(message):
 class TestAuthAPI:
     def setup_method(self):
         cache.clear()
+        caches["coordination"].clear()
         self.client = APIClient()
         self.payload = {
             "full_name": "Nguyen Van A",
@@ -42,6 +45,19 @@ class TestAuthAPI:
         assert response.status_code == 400
         assert response.data["success"] is False
         assert "email" in response.data["errors"]
+
+    def test_login_scope_is_rate_limited_by_redis_coordination_cache(self):
+        responses = [
+            self.client.post(
+                "/api/auth/login/",
+                {"identifier": "missing@example.com", "password": "WrongPassword@123"},
+                format="json",
+            )
+            for _attempt in range(11)
+        ]
+
+        assert [response.status_code for response in responses[:10]] == [401] * 10
+        assert responses[10].status_code == 429
 
     def test_create_superuser_does_not_assign_saler_role(self):
         user = User.objects.create_superuser(
@@ -370,6 +386,87 @@ class TestAuthAPI:
         assert missing_otp.status_code == 400
         assert valid_response.status_code == 201
         assert User.objects.filter(email="tenant@example.com").exists()
+
+    def test_otp_requests_enforce_an_account_and_purpose_cooldown(
+        self,
+        django_capture_on_commit_callbacks,
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            first = self.client.post(
+                "/api/auth/otp/",
+                {"email": "tenant@example.com", "purpose": "REGISTER"},
+                format="json",
+            )
+        second = self.client.post(
+            "/api/auth/otp/",
+            {"email": "tenant@example.com", "purpose": "REGISTER"},
+            format="json",
+        )
+
+        assert first.status_code == 200
+        assert second.status_code == 400
+        assert PasswordResetToken.objects.count() == 1
+        assert len(mail.outbox) == 1
+
+    def test_password_reset_cooldown_does_not_disclose_whether_an_account_exists(self):
+        User.objects.create_user(
+            email="existing@example.com",
+            phone="0912222222",
+            password="Password@123",
+            full_name="Existing Tenant",
+        )
+
+        existing_first = self.client.post(
+            "/api/auth/password-reset/",
+            {"email": "existing@example.com"},
+            format="json",
+        )
+        existing_second = self.client.post(
+            "/api/auth/password-reset/",
+            {"email": "existing@example.com"},
+            format="json",
+        )
+        missing_first = self.client.post(
+            "/api/auth/password-reset/",
+            {"email": "missing@example.com"},
+            format="json",
+        )
+        missing_second = self.client.post(
+            "/api/auth/password-reset/",
+            {"email": "missing@example.com"},
+            format="json",
+        )
+
+        assert (existing_first.status_code, existing_second.status_code) == (200, 400)
+        assert (missing_first.status_code, missing_second.status_code) == (200, 400)
+
+    def test_otp_is_invalidated_after_the_maximum_failed_attempts(
+        self,
+        django_capture_on_commit_callbacks,
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            token = AuthService.issue_otp(
+                email="tenant@example.com",
+                purpose=PasswordResetToken.Purpose.REGISTER,
+            )
+        valid_otp = otp_from_email(mail.outbox[0])
+        invalid_otp = "000000" if valid_otp != "000000" else "111111"
+
+        for _attempt in range(5):
+            with pytest.raises(ValidationError, match="OTP is invalid or has expired"):
+                AuthService.confirm_otp(
+                    email="tenant@example.com",
+                    otp=invalid_otp,
+                    purpose=PasswordResetToken.Purpose.REGISTER,
+                )
+
+        assert caches["coordination"].get(f"otp:attempts:{token.id}") == 5
+        with pytest.raises(ValidationError, match="OTP is invalid or has expired"):
+            AuthService.confirm_otp(
+                email="tenant@example.com",
+                otp=valid_otp,
+                purpose=PasswordResetToken.Purpose.REGISTER,
+            )
 
     def test_profile_email_change_requires_otp(self, django_capture_on_commit_callbacks):
         tenant = User.objects.create_user(

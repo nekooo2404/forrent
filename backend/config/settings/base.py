@@ -2,8 +2,11 @@ import base64
 import importlib.util
 from datetime import timedelta
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 import environ
+from celery.schedules import crontab
+from kombu import Queue
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
@@ -21,6 +24,18 @@ env = environ.Env(
     SENDIFY_API_TIMEOUT=(int, 15),
     CELERY_TASK_ALWAYS_EAGER=(bool, False),
     CELERY_TASK_EAGER_PROPAGATES=(bool, False),
+    CELERY_RESULT_EXPIRES=(int, 3600),
+    CELERY_WORKER_CONCURRENCY=(int, 2),
+    CELERY_WORKER_MAX_TASKS_PER_CHILD=(int, 200),
+    CELERY_WORKER_MAX_MEMORY_PER_CHILD=(int, 256000),
+    CELERY_PIPELINE_HEARTBEAT_TTL=(int, 180),
+    REDIS_MAX_CONNECTIONS=(int, 50),
+    REDIS_SOCKET_TIMEOUT=(float, 2.0),
+    OTP_REQUEST_COOLDOWN_SECONDS=(int, 60),
+    OTP_MAX_ATTEMPTS=(int, 5),
+    OTP_ATTEMPT_WINDOW_SECONDS=(int, 600),
+    AUTH_TOKEN_RETENTION_DAYS=(int, 30),
+    APPOINTMENT_REMINDERS_ENABLED=(bool, True),
     SENTRY_TRACES_SAMPLE_RATE=(float, 0.0),
     EXPOSE_API_DOCS=(bool, False),
     AUDIT_LOG_FAIL_CLOSED=(bool, False),
@@ -175,7 +190,7 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "apps.common.exceptions.custom_exception_handler",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.ScopedRateThrottle",
+        "apps.common.throttling.CoordinationScopedRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
         "login": "10/min",
@@ -227,15 +242,118 @@ SPECTACULAR_SETTINGS = {
     },
 }
 
+def redis_url_for_db(base_url, database):
+    parsed = urlsplit(base_url)
+    return urlunsplit((parsed.scheme, parsed.netloc, f"/{database}", parsed.query, parsed.fragment))
+
+
 REDIS_URL = env("REDIS_URL", default="redis://redis:6379/0")
-CELERY_BROKER_URL = REDIS_URL
-CELERY_RESULT_BACKEND = REDIS_URL
+REDIS_CACHE_URL = env("REDIS_CACHE_URL", default=redis_url_for_db(REDIS_URL, 1))
+REDIS_RESULT_URL = env("REDIS_RESULT_URL", default=redis_url_for_db(REDIS_URL, 2))
+REDIS_SESSION_URL = env("REDIS_SESSION_URL", default=redis_url_for_db(REDIS_URL, 3))
+REDIS_COORDINATION_URL = env("REDIS_COORDINATION_URL", default=redis_url_for_db(REDIS_URL, 4))
+REDIS_MAX_CONNECTIONS = env("REDIS_MAX_CONNECTIONS")
+REDIS_SOCKET_TIMEOUT = env("REDIS_SOCKET_TIMEOUT")
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=REDIS_URL)
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default=REDIS_RESULT_URL)
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ALWAYS_EAGER = env("CELERY_TASK_ALWAYS_EAGER")
 CELERY_TASK_EAGER_PROPAGATES = env(
     "CELERY_TASK_EAGER_PROPAGATES",
     default=CELERY_TASK_ALWAYS_EAGER,
 )
+CELERY_RESULT_EXPIRES = env("CELERY_RESULT_EXPIRES")
+CELERY_WORKER_CONCURRENCY = env("CELERY_WORKER_CONCURRENCY")
+CELERY_WORKER_MAX_TASKS_PER_CHILD = env("CELERY_WORKER_MAX_TASKS_PER_CHILD")
+CELERY_WORKER_MAX_MEMORY_PER_CHILD = env("CELERY_WORKER_MAX_MEMORY_PER_CHILD")
+CELERY_PIPELINE_HEARTBEAT_TTL = env("CELERY_PIPELINE_HEARTBEAT_TTL")
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_ENABLE_UTC = True
+CELERY_TASK_DEFAULT_QUEUE = "default"
+CELERY_TASK_DEFAULT_EXCHANGE = "default"
+CELERY_TASK_DEFAULT_ROUTING_KEY = "default"
+CELERY_TASK_DEFAULT_PRIORITY = 5
+CELERY_TASK_DEFAULT_DELIVERY_MODE = 2
+CELERY_TASK_INHERIT_PARENT_PRIORITY = True
+CELERY_TASK_CREATE_MISSING_QUEUES = False
+CELERY_TASK_QUEUES = (
+    Queue("critical", routing_key="critical"),
+    Queue("notifications", routing_key="notifications"),
+    Queue("maintenance", routing_key="maintenance"),
+    Queue("default", routing_key="default"),
+)
+CELERY_TASK_ROUTES = {
+    "apps.accounts.tasks.send_otp_email": {"queue": "critical", "priority": 9},
+    "apps.accounts.tasks.cleanup_expired_auth_records": {"queue": "maintenance", "priority": 2},
+    "apps.viewing_requests.tasks.send_viewing_request_received_email": {
+        "queue": "notifications",
+        "priority": 5,
+    },
+    "apps.viewing_requests.tasks.send_appointment_confirmed_email": {
+        "queue": "notifications",
+        "priority": 7,
+    },
+    "apps.viewing_requests.tasks.send_appointment_reminder_email": {
+        "queue": "notifications",
+        "priority": 7,
+    },
+    "apps.viewing_requests.tasks.dispatch_appointment_reminders": {
+        "queue": "maintenance",
+        "priority": 5,
+    },
+    "apps.common.tasks.record_celery_heartbeat": {"queue": "maintenance", "priority": 9},
+}
+CELERY_TASK_PUBLISH_RETRY = True
+CELERY_TASK_PUBLISH_RETRY_POLICY = {
+    "max_retries": 5,
+    "interval_start": 0,
+    "interval_step": 1,
+    "interval_max": 5,
+}
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_WORKER_CANCEL_LONG_RUNNING_TASKS_ON_CONNECTION_LOSS = True
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_SOFT_TIME_LIMIT = 90
+CELERY_TASK_TIME_LIMIT = 120
+CELERY_BROKER_POOL_LIMIT = 10
+CELERY_BROKER_CONNECTION_RETRY = True
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BROKER_CONNECTION_MAX_RETRIES = None
+CELERY_RESULT_BACKEND_ALWAYS_RETRY = True
+CELERY_RESULT_BACKEND_MAX_RETRIES = 3
+CELERY_VISIBILITY_TIMEOUT = 3600
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    "global_keyprefix": "forrent:broker:",
+    "visibility_timeout": CELERY_VISIBILITY_TIMEOUT,
+    "priority_steps": list(range(10)),
+    "queue_order_strategy": "priority",
+    "retry_on_timeout": True,
+}
+CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {
+    "global_keyprefix": "forrent:result:",
+    "visibility_timeout": CELERY_VISIBILITY_TIMEOUT,
+}
+CELERY_BEAT_SCHEDULE = {
+    "celery-pipeline-heartbeat": {
+        "task": "apps.common.tasks.record_celery_heartbeat",
+        "schedule": 60.0,
+        "options": {"expires": 50, "priority": 9},
+    },
+    "cleanup-expired-auth-records": {
+        "task": "apps.accounts.tasks.cleanup_expired_auth_records",
+        "schedule": crontab(hour=3, minute=15),
+        "options": {"expires": 60 * 60, "priority": 2},
+    },
+    "dispatch-appointment-reminders": {
+        "task": "apps.viewing_requests.tasks.dispatch_appointment_reminders",
+        "schedule": crontab(hour=8, minute=0),
+        "options": {"expires": 60 * 60, "priority": 5},
+    },
+}
 
 FRONTEND_BASE_URL = env("FRONTEND_BASE_URL", default="http://localhost:3000")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="no-reply@forrent.io.vn")
@@ -255,6 +373,11 @@ SENDIFY_API_URL = env("SENDIFY_API_URL", default="https://sendify.vn/api/emails"
 SENDIFY_ACCOUNT_KEY = env("SENDIFY_ACCOUNT_KEY", default="")
 SENDIFY_TEMPLATES_URL = env("SENDIFY_TEMPLATES_URL", default="https://sendify.vn/api/templates")
 SENDIFY_API_TIMEOUT = env("SENDIFY_API_TIMEOUT")
+OTP_REQUEST_COOLDOWN_SECONDS = env("OTP_REQUEST_COOLDOWN_SECONDS")
+OTP_MAX_ATTEMPTS = env("OTP_MAX_ATTEMPTS")
+OTP_ATTEMPT_WINDOW_SECONDS = env("OTP_ATTEMPT_WINDOW_SECONDS")
+AUTH_TOKEN_RETENTION_DAYS = env("AUTH_TOKEN_RETENTION_DAYS")
+APPOINTMENT_REMINDERS_ENABLED = env("APPOINTMENT_REMINDERS_ENABLED")
 
 SENTRY_DSN = env("SENTRY_DSN", default="")
 SENTRY_ENVIRONMENT = env("SENTRY_ENVIRONMENT", default="local")
@@ -275,9 +398,49 @@ if SENTRY_DSN:
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": REDIS_URL,
-    }
+        "LOCATION": REDIS_CACHE_URL,
+        "KEY_PREFIX": "forrent",
+        "TIMEOUT": 300,
+        "OPTIONS": {
+            "pool_class": "redis.BlockingConnectionPool",
+            "max_connections": REDIS_MAX_CONNECTIONS,
+            "timeout": REDIS_SOCKET_TIMEOUT,
+            "socket_connect_timeout": REDIS_SOCKET_TIMEOUT,
+            "socket_timeout": REDIS_SOCKET_TIMEOUT,
+            "health_check_interval": 30,
+        },
+    },
+    "sessions": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_SESSION_URL,
+        "KEY_PREFIX": "forrent-session",
+        "TIMEOUT": 60 * 60 * 24,
+        "OPTIONS": {
+            "pool_class": "redis.BlockingConnectionPool",
+            "max_connections": REDIS_MAX_CONNECTIONS,
+            "timeout": REDIS_SOCKET_TIMEOUT,
+            "socket_connect_timeout": REDIS_SOCKET_TIMEOUT,
+            "socket_timeout": REDIS_SOCKET_TIMEOUT,
+            "health_check_interval": 30,
+        },
+    },
+    "coordination": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": REDIS_COORDINATION_URL,
+        "KEY_PREFIX": "forrent-coordination",
+        "TIMEOUT": 60 * 60,
+        "OPTIONS": {
+            "pool_class": "redis.BlockingConnectionPool",
+            "max_connections": REDIS_MAX_CONNECTIONS,
+            "timeout": REDIS_SOCKET_TIMEOUT,
+            "socket_connect_timeout": REDIS_SOCKET_TIMEOUT,
+            "socket_timeout": REDIS_SOCKET_TIMEOUT,
+            "health_check_interval": 30,
+        },
+    },
 }
+SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
+SESSION_CACHE_ALIAS = "sessions"
 
 LOGGING = {
     "version": 1,

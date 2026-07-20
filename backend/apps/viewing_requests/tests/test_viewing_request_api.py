@@ -31,7 +31,7 @@ class TestViewingRequestAPI:
         room = create_room()
         self.client.force_authenticate(tenant)
 
-        with patch("apps.viewing_requests.services.send_viewing_request_received_email.delay") as send_email:
+        with patch("apps.viewing_requests.services.enqueue_task_on_commit") as enqueue_email:
             with django_capture_on_commit_callbacks(execute=True):
                 response = self.client.post(
                     "/api/viewing-requests/",
@@ -52,7 +52,8 @@ class TestViewingRequestAPI:
         assert lead.preferred_viewing_time_slot == ViewingRequest.TimeSlot.MORNING
         assert lead.confirmed_at is None
         assert lead.estimated_commission_amount == Decimal("2500000.00")
-        send_email.assert_called_once_with(lead.id)
+        assert enqueue_email.call_args.args[0].name == "apps.viewing_requests.tasks.send_viewing_request_received_email"
+        assert enqueue_email.call_args.args[1:] == (lead.id,)
 
     def test_duplicate_active_viewing_request_is_rejected(self):
         tenant = create_user()
@@ -239,7 +240,7 @@ class TestViewingRequestAPI:
         )
         self.client.force_authenticate(admin)
 
-        with patch("apps.viewing_requests.services.send_appointment_confirmed_email.delay") as send_email:
+        with patch("apps.viewing_requests.services.enqueue_task_on_commit") as enqueue_email:
             with django_capture_on_commit_callbacks(execute=True):
                 response = self.client.post(
                     f"/api/admin/viewing-requests/{lead.id}/confirm-appointment/",
@@ -259,7 +260,8 @@ class TestViewingRequestAPI:
         assert lead.status == ViewingRequest.Status.SCHEDULED
         assert ViewingRequestActivity.objects.filter(viewing_request=lead, action="SCHEDULE_APPOINTMENT").exists()
         assert AuditLog.objects.filter(event="viewing_request.scheduled", target_id=str(lead.id)).exists()
-        send_email.assert_called_once_with(lead.id)
+        assert enqueue_email.call_args.args[0].name == "apps.viewing_requests.tasks.send_appointment_confirmed_email"
+        assert enqueue_email.call_args.args[1:] == (lead.id,)
 
     def test_admin_list_can_filter_confirmed_appointments_by_date(self):
         tenant = create_user()

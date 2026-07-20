@@ -21,7 +21,63 @@ User = get_user_model()
 @pytest.mark.django_db
 class TestRoomAPI:
     def setup_method(self):
+        cache.clear()
         self.client = APIClient()
+
+    def test_public_room_cache_hits_and_invalidates_after_room_commit(
+        self,
+        django_capture_on_commit_callbacks,
+    ):
+        room = create_room()
+        cache.clear()
+
+        first_list = self.client.get("/api/rooms/")
+        second_list = self.client.get("/api/rooms/")
+        first_detail = self.client.get(f"/api/rooms/{room.slug}/")
+        second_detail = self.client.get(f"/api/rooms/{room.slug}/")
+
+        assert first_list.headers["X-Cache"] == "MISS"
+        assert second_list.headers["X-Cache"] == "HIT"
+        assert first_detail.headers["X-Cache"] == "MISS"
+        assert second_detail.headers["X-Cache"] == "HIT"
+
+        with django_capture_on_commit_callbacks(execute=True):
+            room.address = "Dia chi moi sau invalidation"
+            room.save(update_fields=("address", "updated_at"))
+
+        refreshed_list = self.client.get("/api/rooms/")
+        refreshed_detail = self.client.get(f"/api/rooms/{room.slug}/")
+        assert refreshed_list.headers["X-Cache"] == "MISS"
+        assert refreshed_detail.headers["X-Cache"] == "MISS"
+        assert refreshed_detail.data["data"]["address"] == "Dia chi moi sau invalidation"
+
+    def test_public_filter_cache_invalidates_when_an_amenity_changes(
+        self,
+        django_capture_on_commit_callbacks,
+    ):
+        cache.clear()
+
+        first = self.client.get("/api/rooms/filters/")
+        second = self.client.get("/api/rooms/filters/")
+        assert first.headers["X-Cache"] == "MISS"
+        assert second.headers["X-Cache"] == "HIT"
+
+        with django_capture_on_commit_callbacks(execute=True):
+            amenity = Amenity.objects.create(name="May say quan ao", icon="wind")
+
+        refreshed = self.client.get("/api/rooms/filters/")
+        assert refreshed.headers["X-Cache"] == "MISS"
+        assert amenity.id in {item["id"] for item in refreshed.data["data"]["amenities"]}
+
+    def test_unknown_query_parameters_cannot_fragment_the_public_room_cache(self):
+        create_room()
+        cache.clear()
+
+        first = self.client.get("/api/rooms/", {"ignored": "attacker-value-1"})
+        equivalent = self.client.get("/api/rooms/", {"ignored": "attacker-value-2"})
+
+        assert first.headers["X-Cache"] == "MISS"
+        assert equivalent.headers["X-Cache"] == "HIT"
 
     def test_public_room_api_does_not_return_internal_note_or_commission_data(self):
         room = create_room()

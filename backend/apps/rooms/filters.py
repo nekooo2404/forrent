@@ -33,7 +33,7 @@ class RoomFilter(django_filters.FilterSet):
                 filter=Q(amenities__id__in=amenity_ids),
                 distinct=True,
             ),
-        ).filter(matched_selected_amenities=len(amenity_ids))
+        ).filter(matched_selected_amenities=len(amenity_ids)).order_by("-created_at", "-id")
 
     class Meta:
         model = Room

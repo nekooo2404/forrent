@@ -7,12 +7,15 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
+from django.core.cache import caches
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import AuthenticationFailed, ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import PasswordResetToken
+from apps.common.cache_utils import CoordinationServiceUnavailable, increment_with_ttl
+from apps.common.tasking import enqueue_task_on_commit
 from apps.common.validators import normalize_vietnamese_phone
 
 logger = logging.getLogger(__name__)
@@ -88,8 +91,30 @@ class AuthService:
         return hmac.new(settings.SECRET_KEY.encode("utf-8"), raw_token.encode("utf-8"), hashlib.sha256).hexdigest()
 
     @staticmethod
-    def issue_otp(*, email, purpose, requested_ip=None, user_agent="", user=None):
+    def claim_otp_cooldown(*, email, purpose):
+        coordination_cache = caches["coordination"]
         normalized_email = email.lower()
+        email_hash = AuthService.hash_reset_token(normalized_email)[:32]
+        cooldown_key = f"otp:cooldown:{purpose}:{email_hash}"
+        try:
+            claimed = coordination_cache.add(
+                cooldown_key,
+                True,
+                timeout=settings.OTP_REQUEST_COOLDOWN_SECONDS,
+            )
+        except Exception as exc:
+            logger.exception("OTP cooldown cache unavailable")
+            raise CoordinationServiceUnavailable() from exc
+        if not claimed:
+            raise ValidationError(
+                {"email": f"Please wait {settings.OTP_REQUEST_COOLDOWN_SECONDS} seconds before requesting another OTP."}
+            )
+
+    @staticmethod
+    def issue_otp(*, email, purpose, requested_ip=None, user_agent="", user=None, enforce_cooldown=True):
+        normalized_email = email.lower()
+        if enforce_cooldown:
+            AuthService.claim_otp_cooldown(email=normalized_email, purpose=purpose)
         now = timezone.now()
         otp = "".join(secrets.choice(string.digits) for _ in range(6))
         PasswordResetToken.objects.filter(
@@ -109,18 +134,25 @@ class AuthService:
         )
         from apps.accounts.tasks import send_otp_email
 
-        transaction.on_commit(lambda: send_otp_email.delay(normalized_email, otp, purpose, token.id))
+        enqueue_task_on_commit(
+            send_otp_email,
+            normalized_email,
+            otp,
+            purpose,
+            token.id,
+            redact_args=True,
+        )
         return token
 
     @staticmethod
     @transaction.atomic
     def confirm_otp(*, email, otp, purpose):
+        coordination_cache = caches["coordination"]
         token = (
             PasswordResetToken.objects.select_for_update()
             .filter(
                 email__iexact=email,
                 purpose=purpose,
-                token_hash=AuthService.hash_reset_token(otp),
                 used_at__isnull=True,
                 expires_at__gt=timezone.now(),
             )
@@ -128,12 +160,43 @@ class AuthService:
         )
         if token is None:
             raise ValidationError({"otp": "OTP is invalid or has expired."})
+
+        attempt_key = f"otp:attempts:{token.id}"
+        try:
+            attempts = int(coordination_cache.get(attempt_key, 0))
+        except Exception as exc:
+            logger.exception("OTP attempt cache unavailable")
+            raise CoordinationServiceUnavailable() from exc
+        if attempts >= settings.OTP_MAX_ATTEMPTS:
+            raise ValidationError({"otp": "OTP is invalid or has expired."})
+
+        supplied_hash = AuthService.hash_reset_token(otp)
+        if not hmac.compare_digest(token.token_hash, supplied_hash):
+            try:
+                attempts = increment_with_ttl(
+                    attempt_key,
+                    timeout=settings.OTP_ATTEMPT_WINDOW_SECONDS,
+                    cache_alias="coordination",
+                )
+            except Exception as exc:
+                logger.exception("OTP attempt counter update failed")
+                raise CoordinationServiceUnavailable() from exc
+            raise ValidationError({"otp": "OTP is invalid or has expired."})
+
+        try:
+            coordination_cache.delete(attempt_key)
+        except Exception:
+            logger.warning("OTP attempt counter cleanup failed", exc_info=True)
         token.mark_used()
         return token
 
     @staticmethod
     @transaction.atomic
     def request_password_reset(*, email, requested_ip=None, user_agent=""):
+        AuthService.claim_otp_cooldown(
+            email=email,
+            purpose=PasswordResetToken.Purpose.PASSWORD_RESET,
+        )
         user = User.objects.filter(email__iexact=email, is_active=True).first()
         if user is None:
             logger.info("Password reset requested for non-existing email hash=%s", AuthService.hash_reset_token(email.lower())[:12])
@@ -151,6 +214,7 @@ class AuthService:
             requested_ip=requested_ip,
             user_agent=user_agent,
             user=user,
+            enforce_cooldown=False,
         )
         logger.info("Password reset OTP created: user_id=%s token_id=%s", user.id, reset_token.id)
         return reset_token

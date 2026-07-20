@@ -1,5 +1,6 @@
 import json
 from html import escape
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from django.conf import settings
@@ -11,7 +12,17 @@ class SendifyEmailError(RuntimeError):
     pass
 
 
+class SendifyEmailTransientError(SendifyEmailError):
+    pass
+
+
+RETRYABLE_SENDIFY_STATUSES = {408, 425, 429}
 MAX_SENDIFY_TEMPLATE_RESPONSE_BYTES = 2 * 1024 * 1024
+
+
+def sendify_status_error(status):
+    error_class = SendifyEmailTransientError if status in RETRYABLE_SENDIFY_STATUSES or status >= 500 else SendifyEmailError
+    return error_class(f"Sendify returned HTTP {status}.")
 
 
 def fetch_sendify_templates():
@@ -96,8 +107,14 @@ class SendifyEmailBackend(BaseEmailBackend):
                 )
                 with urlopen(request, timeout=settings.SENDIFY_API_TIMEOUT) as response:
                     if not 200 <= response.status < 300:
-                        raise SendifyEmailError(f"Sendify returned HTTP {response.status}.")
-            except (OSError, SendifyEmailError):
+                        raise sendify_status_error(response.status)
+            except HTTPError as exc:
+                if not self.fail_silently:
+                    raise sendify_status_error(exc.code) from exc
+            except OSError as exc:
+                if not self.fail_silently:
+                    raise SendifyEmailTransientError("Unable to send email through Sendify.") from exc
+            except SendifyEmailError:
                 if not self.fail_silently:
                     raise
             else:
