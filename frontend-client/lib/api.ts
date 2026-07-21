@@ -1,6 +1,7 @@
 import { cache } from "react";
 
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
+const DEFAULT_DOCKER_API_BASE_URL = "http://backend:8000";
 export const PUBLIC_REVALIDATE_SECONDS = 300;
 export const STATIC_LOOKUP_REVALIDATE_SECONDS = 1800;
 export const AVAILABILITY_REVALIDATE_SECONDS = 30;
@@ -14,9 +15,13 @@ const publicDateFormatter = new Intl.DateTimeFormat("vi-VN", {
   year: "numeric",
 });
 
+const DEFAULT_SERVER_API_BASE_URL =
+  process.env.NODE_ENV === "production" ? DEFAULT_DOCKER_API_BASE_URL : DEFAULT_API_BASE_URL;
+
+export const SERVER_API_BASE_URL = process.env.API_BASE_URL || DEFAULT_SERVER_API_BASE_URL;
 export const API_BASE_URL =
-  process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || DEFAULT_API_BASE_URL;
-export const PUBLIC_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || API_BASE_URL;
+  typeof window === "undefined" ? SERVER_API_BASE_URL : process.env.NEXT_PUBLIC_API_BASE_URL || SERVER_API_BASE_URL;
+export const PUBLIC_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || SERVER_API_BASE_URL;
 
 function buildRequestHeaders(initHeaders?: HeadersInit, hasBody = false) {
   const headers = new Headers(initHeaders);
