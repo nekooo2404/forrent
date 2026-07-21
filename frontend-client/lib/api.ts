@@ -340,7 +340,6 @@ export async function getRooms(params?: {
 
 export async function getRoomDetail(slug: string) {
   return apiFetch<ApiRoomDetail>(`/api/rooms/${encodeURIComponent(slug)}/`, {
-    apiBaseUrl: PUBLIC_API_BASE_URL,
     next: { revalidate: AVAILABILITY_REVALIDATE_SECONDS },
   });
 }
