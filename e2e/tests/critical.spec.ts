@@ -140,11 +140,30 @@ test.describe('Public critical flows', () => {
     await expect(hero).toHaveAttribute('data-hero-source', 'listing');
     await expect(hero).toHaveAttribute('data-hero-room-id', '2');
     await expect(hero).toHaveAttribute('data-hero-room-slug', 'e2e-room-hero');
-    await expect(hero.locator('img')).not.toHaveAttribute('src', /forrent-hero-old-quarter/);
-    await expect.poll(() => hero.locator('img').evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+    const heroImage = hero.locator('img');
+    await expect(heroImage).not.toHaveAttribute('src', /forrent-hero-old-quarter/);
+    await expect(heroImage).toHaveAttribute('fetchpriority', 'high');
+    await expect(heroImage).toHaveAttribute('loading', 'eager');
+    await expect(heroImage).not.toHaveAttribute('src', /\/_next\/image/);
+    await expect.poll(() => heroImage.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
     await expect(hero.locator('[aria-hidden="true"]').first()).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     await expect(hero.getByRole('button', { name: 'Tìm phòng' })).toBeVisible();
     await expect(page.getByText('Phòng mới sẽ được cập nhật tại đây')).toHaveCount(0);
+  });
+
+  test('brand hero fallbacks stay within the first-load image budget', async ({ request }) => {
+    const assets = [
+      { path: '/brand/forrent-hero-old-quarter-mobile-768.avif', type: 'image/avif', maxBytes: 70_000 },
+      { path: '/brand/forrent-hero-old-quarter-1280.avif', type: 'image/avif', maxBytes: 90_000 },
+      { path: '/brand/forrent-hero-old-quarter-1920.avif', type: 'image/avif', maxBytes: 150_000 },
+    ];
+
+    for (const asset of assets) {
+      const response = await request.get(asset.path);
+      expect(response.ok(), asset.path).toBeTruthy();
+      expect(response.headers()['content-type']).toContain(asset.type);
+      expect((await response.body()).byteLength, asset.path).toBeLessThanOrEqual(asset.maxBytes);
+    }
   });
 
   test('homepage is led by marketplace search rather than a marketing banner', async ({ page }) => {
@@ -340,6 +359,23 @@ test.describe('Public critical flows', () => {
       const box = await page.getByRole('heading', { name: '12 phòng phù hợp · trang 2' }).boundingBox();
       return box?.y ?? Number.POSITIVE_INFINITY;
     }).toBeLessThan(180);
+  });
+
+  test('room pagination recovers when a stale last page no longer exists', async ({ page }) => {
+    await page.goto('/rooms?search=pagination-stale-last-page');
+
+    await expect(page.getByRole('heading', { name: '32 phòng phù hợp · trang 1' })).toBeVisible();
+    const pagination = page.getByRole('navigation', { name: 'Phân trang' });
+    await expect(pagination.getByRole('link', { name: 'Trang 6' })).toBeVisible();
+
+    await pagination.getByRole('link', { name: 'Trang 6' }).click();
+
+    await expect(page).toHaveURL(/search=pagination-stale-last-page&(?:.*&)?page=5(?:&|$)/);
+    await expect(page.getByRole('heading', { name: '30 phòng phù hợp · trang 5' })).toBeFocused();
+    await expect(page.locator('[data-room-card-id="25"]')).toBeVisible();
+    await expect(page.locator('[data-room-card]')).toHaveCount(6);
+    await expect(page.getByRole('heading', { name: 'Chưa có phòng phù hợp' })).toHaveCount(0);
+    await expect(page.locator('[data-rooms-results]')).toHaveAttribute('aria-busy', 'false');
   });
 
   test('an empty room result does not render a fake page one control', async ({ page }) => {

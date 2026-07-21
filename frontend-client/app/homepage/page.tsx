@@ -121,10 +121,12 @@ export default async function Homepage() {
   const properties = allProperties.slice(0, 3);
   const listingHeroProperty = heroResponse?.results.map(mapProperty).find((property) => property.image);
   const listingHeroImage = listingHeroProperty?.image;
-  const heroImage = listingHeroImage ? fastImageUrl(listingHeroImage, 1920, 82) : "/brand/forrent-hero-old-quarter.jpg";
+  const heroImage = listingHeroImage ? fastImageUrl(listingHeroImage, 1920, 82) : null;
+  const usesCloudinaryHero = Boolean(listingHeroImage && isCloudinaryImage(listingHeroImage));
 
   return (
     <PublicShell active="home">
+      {usesCloudinaryHero ? <link href="https://res.cloudinary.com" rel="preconnect" /> : null}
       <header
         className="relative mt-16 min-h-[550px] overflow-hidden lg:mt-20 lg:min-h-[560px]"
         data-hero-room-id={listingHeroProperty?.id}
@@ -133,16 +135,53 @@ export default async function Homepage() {
         data-search-led-marketplace="true"
         data-testid="homepage-hero"
       >
-        <Image
-          alt=""
-          className="object-cover object-[58%_center] lg:object-center"
-          fill
-          priority
-          quality={82}
-          sizes="100vw"
-          src={heroImage}
-          unoptimized={Boolean(listingHeroImage && isCloudinaryImage(listingHeroImage))}
-        />
+        {heroImage ? (
+          <Image
+            alt=""
+            className="object-cover object-[58%_center] lg:object-center"
+            fetchPriority="high"
+            fill
+            loading="eager"
+            priority
+            quality={82}
+            sizes="100vw"
+            src={heroImage}
+            unoptimized={usesCloudinaryHero}
+          />
+        ) : (
+          <picture className="absolute inset-0 block">
+            <source
+              media="(max-width: 767px)"
+              srcSet="/brand/forrent-hero-old-quarter-mobile-768.avif"
+              type="image/avif"
+            />
+            <source
+              media="(max-width: 767px)"
+              srcSet="/brand/forrent-hero-old-quarter-mobile-768.webp"
+              type="image/webp"
+            />
+            <source
+              sizes="100vw"
+              srcSet="/brand/forrent-hero-old-quarter-1280.avif 1280w, /brand/forrent-hero-old-quarter-1920.avif 1920w"
+              type="image/avif"
+            />
+            <source
+              sizes="100vw"
+              srcSet="/brand/forrent-hero-old-quarter-1280.webp 1280w, /brand/forrent-hero-old-quarter-1920.webp 1920w"
+              type="image/webp"
+            />
+            <Image
+              alt=""
+              className="object-cover object-[58%_center] lg:object-center"
+              fetchPriority="high"
+              fill
+              loading="eager"
+              sizes="100vw"
+              src="/brand/forrent-hero-old-quarter-1280.webp"
+              unoptimized
+            />
+          </picture>
+        )}
         <div aria-hidden="true" className="absolute inset-0 bg-inverse-surface/[0.48]" />
 
         <div className="relative mx-auto flex min-h-[550px] w-full max-w-container-max flex-col justify-center px-margin-mobile pb-12 pt-8 text-inverse-on-surface md:px-margin-desktop lg:min-h-[560px] lg:pb-16 lg:pt-10">
@@ -367,7 +406,7 @@ function PropertyCard({ featured = false, property }: Readonly<{ featured?: bool
               placeholder="blur"
               quality={78}
               sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
-              src={fastImageUrl(property.image, 1200, 78)}
+              src={fastImageUrl(property.image, 768, 78)}
               unoptimized={isCloudinaryImage(property.image)}
             />
           ) : (

@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import "@fontsource/be-vietnam-pro/400.css";
-import "@fontsource/be-vietnam-pro/500.css";
-import "@fontsource/be-vietnam-pro/600.css";
-import "@fontsource/be-vietnam-pro/700.css";
-import "@fontsource-variable/newsreader";
+import "@fontsource/be-vietnam-pro/vietnamese-400.css";
+import "@fontsource/be-vietnam-pro/latin-400.css";
+import "@fontsource/be-vietnam-pro/vietnamese-500.css";
+import "@fontsource/be-vietnam-pro/latin-500.css";
+import "@fontsource/be-vietnam-pro/vietnamese-600.css";
+import "@fontsource/be-vietnam-pro/latin-600.css";
+import "@fontsource/be-vietnam-pro/vietnamese-700.css";
+import "@fontsource/be-vietnam-pro/latin-700.css";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/toast-provider";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
@@ -72,10 +75,6 @@ export default async function RootLayout({
 
   return (
     <html className="light" lang="vi" suppressHydrationWarning>
-      <head>
-        <link href="https://res.cloudinary.com" rel="preconnect" />
-        <link href={process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"} rel="preconnect" />
-      </head>
       <body className="bg-surface font-sans text-body-md text-on-surface antialiased">
         <SkipToContentLink />
         <ToastProvider>

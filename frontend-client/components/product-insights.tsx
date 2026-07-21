@@ -1,22 +1,23 @@
 "use client";
 
-import * as Sentry from "@sentry/nextjs";
 import { usePathname } from "next/navigation";
 import { useReportWebVitals } from "next/web-vitals";
 import { useCallback, useEffect } from "react";
+import { runWithSentry } from "@/lib/sentry-client";
 
 type MetricAttributes = Record<string, boolean | number | string>;
 
-const enabled = Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN);
-
 export function recordProductMetric(stage: string, attributes: MetricAttributes = {}) {
-  if (!enabled) return;
-  Sentry.metrics.count("forrent.product.funnel", 1, { attributes: { stage, ...attributes } });
+  runWithSentry((client) => {
+    client.metrics.count("forrent.product.funnel", 1, { attributes: { stage, ...attributes } });
+  });
 }
 
 export function recordProductDistribution(name: string, value: number, unit = "millisecond") {
-  if (!enabled || !Number.isFinite(value)) return;
-  Sentry.metrics.distribution(`forrent.product.${name}`, value, { unit });
+  if (!Number.isFinite(value)) return;
+  runWithSentry((client) => {
+    client.metrics.distribution(`forrent.product.${name}`, value, { unit });
+  });
 }
 
 function stableAttributes(attributes: MetricAttributes) {
@@ -26,9 +27,10 @@ function stableAttributes(attributes: MetricAttributes) {
 export function ProductInsights() {
   const pathname = usePathname();
   const reportWebVital = useCallback((metric: { name: string; value: number }) => {
-    if (!enabled) return;
-    Sentry.metrics.distribution(`forrent.web_vital.${metric.name.toLowerCase()}`, metric.value, {
-      ...(metric.name === "CLS" ? {} : { unit: "millisecond" }),
+    runWithSentry((client) => {
+      client.metrics.distribution(`forrent.web_vital.${metric.name.toLowerCase()}`, metric.value, {
+        ...(metric.name === "CLS" ? {} : { unit: "millisecond" }),
+      });
     });
   }, []);
 
@@ -49,8 +51,6 @@ export function ProductInsights() {
   }, [pathname]);
 
   useEffect(() => {
-    if (!enabled) return;
-
     function handleSubmit(event: Event) {
       if (!(event.target instanceof HTMLFormElement)) return;
       const stage = event.target.dataset.productEvent;

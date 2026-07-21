@@ -186,8 +186,25 @@ const server = http.createServer((request, response) => {
       sendJson(response, 200, envelope({ count: 0, next: null, previous: null, results: [] }));
       return;
     }
-    if (search === 'visual-12' || search === 'pagination-125' || search === 'pagination-images') {
-      const roomCount = search === 'pagination-125' ? 125 : 12;
+    if (
+      search === 'visual-12'
+      || search === 'pagination-125'
+      || search === 'pagination-images'
+      || search === 'pagination-stale-last-page'
+    ) {
+      const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
+      const pageSize = Math.max(1, Number(url.searchParams.get('page_size')) || 6);
+      if (search === 'pagination-stale-last-page' && page === 6) {
+        sendJson(response, 404, { success: false, message: 'Invalid page.', errors: { detail: 'Invalid page.' } });
+        return;
+      }
+      const roomCount = search === 'pagination-125'
+        ? 125
+        : search === 'pagination-stale-last-page' && page === 1 && pageSize === 6
+          ? 32
+          : search === 'pagination-stale-last-page'
+            ? 30
+            : 12;
       const rooms = Array.from({ length: roomCount }, (_, index) => ({
         ...room,
         id: index + 1,
@@ -197,8 +214,6 @@ const server = http.createServer((request, response) => {
           ? { thumbnail_url: `https://res.cloudinary.com/forrent-test/image/upload/v1/pagination-${index + 1}.jpg` }
           : {}),
       }));
-      const page = Math.max(1, Number(url.searchParams.get('page')) || 1);
-      const pageSize = Math.max(1, Number(url.searchParams.get('page_size')) || 6);
       const offset = (page - 1) * pageSize;
       sendJson(response, 200, envelope({
         count: rooms.length,
