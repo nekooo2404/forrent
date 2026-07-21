@@ -825,12 +825,15 @@ test.describe('Public critical flows', () => {
     await expect(page.getByText('Phòng này hiện không còn hiển thị')).toHaveCount(0);
   });
 
-  test('room detail uses the low-latency public API once for metadata and page content', async ({ page, request }) => {
+  test('room detail uses the internal API once for metadata and page content', async ({ page, request }, testInfo) => {
     const publicCountersUrl = 'http://127.0.0.1:4100/__test__/request-counts/';
     const internalCountersUrl = 'http://127.0.0.1:4101/__test__/request-counts/';
+    const projectSlug = testInfo.project.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const roomSlug = `e2e-room-performance-${projectSlug}`;
+    const detailPath = `/api/rooms/${roomSlug}/`;
     await Promise.all([request.delete(publicCountersUrl), request.delete(internalCountersUrl)]);
 
-    await page.goto('/rooms/e2e-room-performance');
+    await page.goto(`/rooms/${roomSlug}`);
     await expect(page.getByRole('heading', { name: 'Can ho dich vu Nam Tu Liem', level: 1 })).toBeVisible();
 
     const [publicResponse, internalResponse] = await Promise.all([
@@ -839,15 +842,46 @@ test.describe('Public critical flows', () => {
     ]);
     const publicPayload = await publicResponse.json() as { data: Record<string, number> };
     const internalPayload = await internalResponse.json() as { data: Record<string, number> };
-    expect(publicPayload.data['GET /api/rooms/e2e-room-performance/']).toBe(1);
-    expect(internalPayload.data['GET /api/rooms/e2e-room-performance/']).toBeUndefined();
+    expect(publicPayload.data[`GET ${detailPath}`]).toBeUndefined();
+    expect(internalPayload.data[`GET ${detailPath}`]).toBe(1);
 
-    const warmResponse = await request.get('/rooms/e2e-room-performance');
+    const warmResponse = await request.get(`/rooms/${roomSlug}`);
     expect(warmResponse.ok()).toBe(true);
 
-    const cachedPublicResponse = await request.get(publicCountersUrl);
-    const cachedPublicPayload = await cachedPublicResponse.json() as { data: Record<string, number> };
-    expect(cachedPublicPayload.data['GET /api/rooms/e2e-room-performance/']).toBe(1);
+    const cachedInternalResponse = await request.get(internalCountersUrl);
+    const cachedInternalPayload = await cachedInternalResponse.json() as { data: Record<string, number> };
+    expect(cachedInternalPayload.data[`GET ${detailPath}`]).toBe(1);
+  });
+
+  test('the last visible room prefetches and opens in under one second', async ({ page, request }, testInfo) => {
+    const publicCountersUrl = 'http://127.0.0.1:4100/__test__/request-counts/';
+    const internalCountersUrl = 'http://127.0.0.1:4101/__test__/request-counts/';
+    const projectSlug = testInfo.project.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const roomSlug = `e2e-room-prefetch-${projectSlug}-6`;
+    const detailPath = `/api/rooms/${roomSlug}/`;
+    await Promise.all([request.delete(publicCountersUrl), request.delete(internalCountersUrl)]);
+
+    await page.goto(`/rooms?search=pagination-prefetch-${projectSlug}`);
+    const card = page.locator('[data-room-card]').nth(5);
+    const detailLink = card.locator('[data-room-detail-link]').last();
+    await expect(detailLink).toHaveAttribute('href', `/rooms/${roomSlug}`);
+    await card.scrollIntoViewIfNeeded();
+
+    await expect.poll(async () => {
+      const response = await request.get(internalCountersUrl);
+      const payload = await response.json() as { data: Record<string, number> };
+      return payload.data[`GET ${detailPath}`] ?? 0;
+    }).toBe(1);
+
+    const publicResponse = await request.get(publicCountersUrl);
+    const publicPayload = await publicResponse.json() as { data: Record<string, number> };
+    expect(publicPayload.data[`GET ${detailPath}`]).toBeUndefined();
+
+    const startedAt = Date.now();
+    await detailLink.click();
+    await expect(page).toHaveURL(new RegExp(`/rooms/${roomSlug}$`));
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    expect(Date.now() - startedAt).toBeLessThan(1_000);
   });
 
   test('contact form uses localized validation and accepts one contact method', async ({ page }) => {

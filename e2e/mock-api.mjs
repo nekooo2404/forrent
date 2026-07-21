@@ -137,7 +137,7 @@ const server = http.createServer((request, response) => {
   }
   const cloudinaryRoomMatch = decodedPathname.match(/^\/api\/rooms\/(e2e-room-cloudinary)\/$/);
   const roomDetailMatch = cloudinaryRoomMatch ?? decodedPathname.match(
-    /^\/api\/rooms\/(e2e-room(?:-(?:one|many|water-meter|operational-title|performance)|-\d+)?|phòng-đẹp-hà-nội)\/$/,
+    /^\/api\/rooms\/(e2e-room(?:-(?:one|many|water-meter|operational-title|performance(?:-[a-z0-9-]+)?|prefetch-[a-z0-9-]+-\d+|\d+))?|phòng-đẹp-hà-nội)\/$/,
   );
   if (roomDetailMatch) {
     const slug = roomDetailMatch[1];
@@ -160,7 +160,7 @@ const server = http.createServer((request, response) => {
       description: 'Can ho dich vu day du thong tin de dat lich xem.',
       images,
     });
-    if (slug.endsWith('-performance') && roomDetailDelayMs > 0) {
+    if (slug.includes('-performance') && roomDetailDelayMs > 0) {
       setTimeout(() => sendJson(response, 200, body), roomDetailDelayMs);
       return;
     }
@@ -189,6 +189,7 @@ const server = http.createServer((request, response) => {
     if (
       search === 'visual-12'
       || search === 'pagination-125'
+      || search?.startsWith('pagination-prefetch-')
       || search === 'pagination-images'
       || search === 'pagination-stale-last-page'
     ) {
@@ -200,6 +201,8 @@ const server = http.createServer((request, response) => {
       }
       const roomCount = search === 'pagination-125'
         ? 125
+        : search?.startsWith('pagination-prefetch-')
+          ? 6
         : search === 'pagination-stale-last-page' && page === 1 && pageSize === 6
           ? 32
           : search === 'pagination-stale-last-page'
@@ -208,7 +211,9 @@ const server = http.createServer((request, response) => {
       const rooms = Array.from({ length: roomCount }, (_, index) => ({
         ...room,
         id: index + 1,
-        slug: `e2e-room-${index + 1}`,
+        slug: search?.startsWith('pagination-prefetch-')
+          ? `e2e-room-prefetch-${search.slice('pagination-prefetch-'.length)}-${index + 1}`
+          : `e2e-room-${index + 1}`,
         title: `Can ho dich vu ${index + 1}`,
         ...(search === 'pagination-images'
           ? { thumbnail_url: `https://res.cloudinary.com/forrent-test/image/upload/v1/pagination-${index + 1}.jpg` }

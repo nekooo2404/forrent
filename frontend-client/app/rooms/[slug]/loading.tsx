@@ -1,22 +1,38 @@
 import { PublicShell } from "@/components/public-shell";
 
-export default function RoomDetailsLoading() {
+const skeleton = "motion-safe:animate-pulse rounded-md bg-surface-container";
+
+export default function RoomDetailLoading() {
   return (
     <PublicShell active="rooms">
-      <div aria-busy="true" aria-label="Đang tải thông tin phòng" className="mx-auto w-full max-w-container-max px-margin-mobile pb-24 pt-28 md:px-margin-desktop md:pt-32" role="status">
-        <div className="mb-8 h-6 w-44 rounded bg-surface-container skeleton-shimmer" />
-        <div className="mb-5 h-52 rounded-lg bg-surface-container skeleton-shimmer md:hidden" />
-        <div className="mb-6 h-[320px] rounded-lg bg-surface-container skeleton-shimmer md:h-[440px]" />
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="space-y-6">
-            <div className="hidden h-44 rounded-lg bg-surface-container skeleton-shimmer md:block" />
-            <div className="h-48 rounded-lg bg-surface-container skeleton-shimmer" />
-            <div className="h-36 rounded-lg bg-surface-container skeleton-shimmer" />
-          </div>
-          <div className="h-[520px] rounded-lg bg-surface-container skeleton-shimmer" />
+      <main
+        aria-busy="true"
+        className="mx-auto w-full max-w-container-max flex-grow px-margin-mobile pb-24 pt-28 md:px-margin-desktop md:pt-32"
+      >
+        <p className="sr-only" role="status">Đang tải thông tin phòng.</p>
+        <div className={`${skeleton} mb-8 h-11 w-52`} />
+
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+          <section aria-hidden="true" className="min-w-0">
+            <div className={`${skeleton} aspect-[16/10] w-full`} />
+            <div className="mt-6 space-y-4">
+              <div className={`${skeleton} h-8 w-4/5`} />
+              <div className={`${skeleton} h-5 w-3/5`} />
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <div className={`${skeleton} h-20`} key={index} />
+                ))}
+              </div>
+              <div className={`${skeleton} h-32 w-full`} />
+            </div>
+          </section>
+
+          <aside aria-hidden="true" className="space-y-4">
+            <div className={`${skeleton} h-52 w-full`} />
+            <div className={`${skeleton} h-72 w-full`} />
+          </aside>
         </div>
-        <span className="sr-only">Đang tải thông tin phòng...</span>
-      </div>
+      </main>
     </PublicShell>
   );
 }
