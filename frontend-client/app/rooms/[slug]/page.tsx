@@ -45,12 +45,14 @@ import {
 import { absoluteUrl, cleanRoomTitle, shortDescription, SITE_NAME } from "@/lib/seo";
 import { getCachedRoomDetail } from "@/lib/server/room-detail";
 import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/site-config";
+import { type ApiRoom, type Paginated } from "@/lib/api";
 
 type RoomSlugPageProps = {
   params: Promise<{ slug: string }>;
 };
 
 type ProductMetricAttributes = Record<string, boolean | number | string>;
+const staticParamsPageSize = 100;
 
 function decodeRouteSlug(slug: string) {
   try {
@@ -114,6 +116,35 @@ export async function generateMetadata({ params }: RoomSlugPageProps): Promise<M
       images: image ? [image] : undefined,
     },
   };
+}
+
+export async function generateStaticParams() {
+  const slugs: Array<{ slug: string }> = [];
+  const publicApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.forrent.io.vn";
+  let page = 1;
+
+  while (true) {
+    const url = new URL("/api/rooms/", publicApiBaseUrl);
+    url.searchParams.set("page", String(page));
+    url.searchParams.set("page_size", String(staticParamsPageSize));
+    url.searchParams.set("status", "PUBLISHED");
+    url.searchParams.set("ordering", "-updated_at");
+
+    const response = await fetch(url, {
+      headers: { Accept: "application/json", "X-Forwarded-Proto": "https" },
+      next: { revalidate: 3600 },
+    });
+    const payload = (await response.json().catch(() => null)) as { success?: boolean; data?: Paginated<Pick<ApiRoom, "slug">> } | null;
+
+    if (!response.ok || !payload?.success || !payload.data) break;
+
+    slugs.push(...payload.data.results.map((room) => ({ slug: room.slug })));
+
+    if (!payload.data.next) break;
+    page += 1;
+  }
+
+  return slugs;
 }
 
 function galleryFor(room: ApiRoomDetail) {
