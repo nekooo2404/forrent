@@ -25,6 +25,7 @@ from apps.rooms.views import (
     AdminDepositTypeViewSet,
     AdminRoomSubtypeViewSet,
     AdminRoomViewSet,
+    LandlordRoomViewSet,
     PublicRoomFiltersAPIView,
     PublicRoomViewSet,
 )
@@ -44,6 +45,9 @@ admin_router.register("viewing-requests", AdminViewingRequestViewSet, basename="
 admin_router.register("blogs", AdminBlogViewSet, basename="admin-blog")
 admin_router.register("contacts", AdminContactMessageViewSet, basename="admin-contact")
 admin_router.register("users", AdminUserViewSet, basename="admin-user")
+
+landlord_router = DefaultRouter()
+landlord_router.register("rooms", LandlordRoomViewSet, basename="landlord-room")
 
 public_router = DefaultRouter()
 public_router.register("rooms", PublicRoomViewSet, basename="room")
@@ -113,6 +117,7 @@ urlpatterns = [
     path("api/", include(public_router.urls)),
     path("api/viewing-requests/", include("apps.viewing_requests.urls")),
     path("api/contact/", ContactCreateAPIView.as_view(), name="contact"),
+    path("api/landlord/", include(landlord_router.urls)),
     path("api/admin/dashboard/", include("apps.commissions.dashboard_urls")),
     path("api/admin/commissions/", include("apps.commissions.urls")),
     path(

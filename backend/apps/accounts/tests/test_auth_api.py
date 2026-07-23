@@ -8,7 +8,8 @@ from rest_framework.test import APIClient
 from apps.accounts.models import PasswordResetToken
 from apps.accounts.services import AuthService
 from apps.common.models import AuditLog
-from apps.rooms.tests.factories import create_admin, create_user
+from apps.rooms.models import Room
+from apps.rooms.tests.factories import create_admin, create_room, create_user
 
 User = get_user_model()
 
@@ -387,6 +388,42 @@ class TestAuthAPI:
         assert valid_response.status_code == 201
         assert User.objects.filter(email="tenant@example.com").exists()
 
+    def test_register_can_create_landlord_with_email_otp(self, django_capture_on_commit_callbacks):
+        with django_capture_on_commit_callbacks(execute=True):
+            otp_response = self.client.post(
+                "/api/auth/otp/",
+                {"email": "landlord@example.com", "purpose": "REGISTER"},
+                format="json",
+            )
+        otp = otp_from_email(mail.outbox[0])
+
+        response = self.client.post(
+            "/api/auth/register/",
+            {**self.payload, "email": "landlord@example.com", "phone": "0911111199", "role": User.Role.LANDLORD, "otp": otp},
+            format="json",
+        )
+
+        assert otp_response.status_code == 200
+        assert response.status_code == 201
+        assert response.data["data"]["role"] == User.Role.LANDLORD
+        landlord = User.objects.get(email="landlord@example.com")
+        assert landlord.role == User.Role.LANDLORD
+        assert landlord.is_staff is False
+        assert landlord.is_superuser is False
+        registration_log = AuditLog.objects.get(event="auth.registered", target_id=str(landlord.id))
+        assert registration_log.actor == landlord
+        assert registration_log.metadata == {"role": User.Role.LANDLORD}
+
+    def test_public_register_rejects_saler_role(self):
+        response = self.client.post(
+            "/api/auth/register/",
+            {**self.payload, "role": User.Role.SALER, "otp": "123456"},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "role" in response.data["errors"]
+
     def test_otp_requests_enforce_an_account_and_purpose_cooldown(
         self,
         django_capture_on_commit_callbacks,
@@ -571,6 +608,28 @@ class TestAuthAPI:
         assert response.data["data"]["role"] == User.Role.TENANT
         assert User.objects.filter(email="new-tenant@example.com", role=User.Role.TENANT).exists()
 
+    def test_saler_admin_can_create_landlord_user(self):
+        saler = create_admin()
+        self.client.force_authenticate(saler)
+
+        response = self.client.post(
+            "/api/admin/users/",
+            {
+                "full_name": "New Landlord",
+                "phone": "0987654328",
+                "email": "new-landlord@example.com",
+                "role": User.Role.LANDLORD,
+                "password": "Password@123",
+            },
+            format="json",
+        )
+
+        assert response.status_code == 201
+        assert response.data["data"]["role"] == User.Role.LANDLORD
+        created_landlord = User.objects.get(email="new-landlord@example.com")
+        assert created_landlord.is_staff is False
+        assert created_landlord.is_superuser is False
+
     def test_creating_saler_requires_current_admin_password(self):
         saler = create_admin()
         self.client.force_authenticate(saler)
@@ -651,6 +710,67 @@ class TestAuthAPI:
 
         assert response.status_code == 200
         assert AuditLog.objects.filter(event="admin.user_password_changed", actor=saler, target_id=str(tenant.id)).exists()
+
+    def test_landlord_with_active_rooms_cannot_be_changed_to_another_role(self):
+        saler = create_admin()
+        landlord = create_user(
+            email="landlord-with-rooms@example.com",
+            phone="0987654391",
+            role=User.Role.LANDLORD,
+        )
+        create_room(created_by=landlord, status=Room.Status.DRAFT)
+        self.client.force_authenticate(saler)
+
+        response = self.client.patch(
+            f"/api/admin/users/{landlord.id}/",
+            {"role": User.Role.TENANT, "current_password": "Password@123"},
+            format="json",
+        )
+
+        landlord.refresh_from_db()
+        assert response.status_code == 400
+        assert "role" in response.data["errors"]
+        assert landlord.role == User.Role.LANDLORD
+
+    def test_landlord_with_only_archived_rooms_can_be_changed_to_another_role(self):
+        saler = create_admin()
+        landlord = create_user(
+            email="former-landlord@example.com",
+            phone="0987654392",
+            role=User.Role.LANDLORD,
+        )
+        create_room(created_by=landlord, status=Room.Status.ARCHIVED)
+        self.client.force_authenticate(saler)
+
+        response = self.client.patch(
+            f"/api/admin/users/{landlord.id}/",
+            {"role": User.Role.TENANT, "current_password": "Password@123"},
+            format="json",
+        )
+
+        landlord.refresh_from_db()
+        assert response.status_code == 200
+        assert landlord.role == User.Role.TENANT
+
+    def test_landlord_with_active_rooms_can_be_deactivated_for_emergency_access_revocation(self):
+        saler = create_admin()
+        landlord = create_user(
+            email="active-landlord@example.com",
+            phone="0987654393",
+            role=User.Role.LANDLORD,
+        )
+        create_room(created_by=landlord, status=Room.Status.PUBLISHED)
+        self.client.force_authenticate(saler)
+
+        response = self.client.patch(
+            f"/api/admin/users/{landlord.id}/",
+            {"is_active": False},
+            format="json",
+        )
+
+        landlord.refresh_from_db()
+        assert response.status_code == 200
+        assert landlord.is_active is False
 
     def test_last_active_saler_cannot_be_demoted_or_deactivated(self):
         saler = create_admin()

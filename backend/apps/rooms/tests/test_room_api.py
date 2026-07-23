@@ -9,11 +9,11 @@ from rest_framework.test import APIClient
 
 from apps.common.models import AuditLog
 from apps.common.image_validation import validate_uploaded_image_file, validate_uploaded_room_media_file
-from apps.rooms.tests.factories import create_admin, create_room, create_user
+from apps.rooms.tests.factories import create_admin, create_location_graph, create_room, create_user
 from apps.locations.models import Amenity, AreaRange
 from apps.rooms.models import DepositType, Room, RoomImage, RoomSubtype
 from apps.rooms.serializers import validate_room_image_url
-from apps.viewing_requests.models import ViewingRequest
+from apps.viewing_requests.models import RoomLease, ViewingRequest
 
 User = get_user_model()
 
@@ -298,6 +298,488 @@ class TestRoomAPI:
         response = self.client.get("/api/admin/rooms/")
 
         assert response.status_code == 403
+
+    def test_landlord_cannot_access_admin_api(self):
+        landlord = create_user(email="landlord-admin-denied@example.com", phone="0912223300", role=User.Role.LANDLORD)
+        self.client.force_authenticate(landlord)
+
+        response = self.client.get("/api/admin/rooms/")
+
+        assert response.status_code == 403
+
+    def test_inactive_landlord_cannot_access_landlord_room_api(self):
+        landlord = create_user(
+            email="inactive-landlord@example.com",
+            phone="0912223399",
+            role=User.Role.LANDLORD,
+        )
+        landlord.is_active = False
+        landlord.save(update_fields=("is_active", "updated_at"))
+        self.client.force_authenticate(landlord)
+
+        response = self.client.get("/api/landlord/rooms/")
+
+        assert response.status_code == 403
+
+    def test_landlord_room_api_is_scoped_to_owned_rooms(self):
+        landlord = create_user(email="landlord@example.com", phone="0912223301", role=User.Role.LANDLORD)
+        other_landlord = create_user(email="other-landlord@example.com", phone="0912223302", role=User.Role.LANDLORD)
+        own_room = create_room(created_by=landlord, status=Room.Status.DRAFT)
+        other_room = create_room(created_by=other_landlord, status=Room.Status.DRAFT)
+        self.client.force_authenticate(landlord)
+
+        response = self.client.get("/api/landlord/rooms/")
+
+        assert response.status_code == 200
+        room_ids = [room["id"] for room in response.data["data"]["results"]]
+        assert room_ids == [own_room.id]
+        assert other_room.id not in room_ids
+
+    def test_room_code_and_creator_metadata_are_exposed_only_to_authorized_users(self):
+        landlord = create_user(email="landlord-code@example.com", phone="0912223310", role=User.Role.LANDLORD)
+        other_landlord = create_user(
+            email="other-landlord-code@example.com",
+            phone="0912223311",
+            role=User.Role.LANDLORD,
+        )
+        own_room = create_room(created_by=landlord, status=Room.Status.PUBLISHED)
+        other_room = create_room(created_by=other_landlord, status=Room.Status.DRAFT)
+
+        public_response = self.client.get(f"/api/rooms/{own_room.slug}/")
+        assert public_response.status_code == 200
+        assert "room_code" not in public_response.data["data"]
+        assert "created_by" not in public_response.data["data"]
+        public_list_response = self.client.get("/api/rooms/?page_size=100")
+        assert public_list_response.status_code == 200
+        public_room = next(room for room in public_list_response.data["data"]["results"] if room["id"] == own_room.id)
+        assert "room_code" not in public_room
+        assert "created_by" not in public_room
+        public_code_search_response = self.client.get(f"/api/rooms/?search={own_room.room_code}")
+        assert public_code_search_response.status_code == 200
+        assert public_code_search_response.data["data"]["results"] == []
+
+        self.client.force_authenticate(landlord)
+        landlord_response = self.client.get("/api/landlord/rooms/")
+        assert landlord_response.status_code == 200
+        landlord_results = landlord_response.data["data"]["results"]
+        assert [room["id"] for room in landlord_results] == [own_room.id]
+        assert landlord_results[0]["room_code"] == own_room.room_code
+        assert landlord_results[0]["room_code"].startswith("FR-")
+        assert landlord_results[0]["room_code"] != f"FR-{own_room.id:06d}"
+        assert "created_by" not in landlord_results[0]
+        assert "created_by_name" not in landlord_results[0]
+        assert other_room.id not in [room["id"] for room in landlord_results]
+        foreign_detail_response = self.client.get(f"/api/landlord/rooms/{other_room.id}/")
+        foreign_code_search_response = self.client.get(f"/api/landlord/rooms/?search={other_room.room_code}")
+        assert foreign_detail_response.status_code == 404
+        assert foreign_code_search_response.status_code == 200
+        assert foreign_code_search_response.data["data"]["results"] == []
+
+        admin = create_admin(email="room-auditor@example.com", phone="0912223312")
+        self.client.force_authenticate(admin)
+        admin_response = self.client.get("/api/admin/rooms/?page_size=100")
+        assert admin_response.status_code == 200
+        admin_results = {room["id"]: room for room in admin_response.data["data"]["results"]}
+        admin_room = admin_results[own_room.id]
+        assert admin_room["room_code"] == own_room.room_code
+        assert admin_room["created_by"] == landlord.id
+        assert admin_room["created_by_name"] == landlord.full_name
+        assert admin_room["created_by_email"] == landlord.email
+        assert admin_room["created_by_role"] == User.Role.LANDLORD
+        assert admin_room["created_at"]
+
+    def test_landlord_can_create_room_draft_without_internal_fields(self):
+        landlord = create_user(email="landlord-create@example.com", phone="0912223303", role=User.Role.LANDLORD)
+        city, ward, amenity, area_range = create_location_graph()
+        deposit_type = DepositType.objects.create(name="Coc linh hoat")
+        self.client.force_authenticate(landlord)
+
+        response = self.client.post(
+            "/api/landlord/rooms/",
+            {
+                "title": "Studio yen tinh gan bus",
+                "slug": "slug-khong-duoc-tu-dat",
+                "room_type": Room.RoomType.CCMN,
+                "city": city.id,
+                "ward": ward.id,
+                "address": "So 9 Cau Giay",
+                "price": "4200000",
+                "deposit_type": deposit_type.id,
+                "deposit_amount": "4200000",
+                "electricity_price_per_kwh": "4000",
+                "water_billing_type": Room.WaterBillingType.PER_PERSON,
+                "water_price_per_person": "100000",
+                "service_fee": "150000",
+                "actual_area": "24",
+                "area_range": area_range.id,
+                "amenities": [amenity.id],
+                "short_description": "Phong moi, noi that co ban",
+                "description": "Phong phu hop nguoi di lam",
+                "building_code": "SECRET-TOWER",
+                "commission_percent": "99",
+                "commission_base_amount": "99999999",
+                "internal_note": "Khong duoc ghi noi bo",
+                "hero_eligible": True,
+            },
+            format="json",
+        )
+
+        assert response.status_code == 201
+        data = response.data["data"]
+        room = Room.objects.get(pk=data["id"])
+        assert room.created_by == landlord
+        assert room.status == Room.Status.DRAFT
+        assert room.slug != "slug-khong-duoc-tu-dat"
+        assert room.building_code == ""
+        assert room.commission_percent == 0
+        assert room.commission_base_amount == 0
+        assert room.internal_note == ""
+        assert room.hero_eligible is False
+        assert "building_code" not in data
+        assert "commission_percent" not in data
+        assert "internal_note" not in data
+
+    def test_landlord_can_publish_own_room_but_cannot_update_another_landlord_room(self):
+        landlord = create_user(email="landlord-owner@example.com", phone="0912223304", role=User.Role.LANDLORD)
+        other_landlord = create_user(email="landlord-other@example.com", phone="0912223305", role=User.Role.LANDLORD)
+        own_room = create_room(created_by=landlord, status=Room.Status.DRAFT)
+        other_room = create_room(created_by=other_landlord, status=Room.Status.DRAFT)
+        self.client.force_authenticate(landlord)
+
+        publish_response = self.client.patch(
+            f"/api/landlord/rooms/{own_room.id}/",
+            {"status": Room.Status.PUBLISHED},
+            format="json",
+        )
+        other_update_response = self.client.patch(
+            f"/api/landlord/rooms/{other_room.id}/",
+            {"title": "Khong duoc sua"},
+            format="json",
+        )
+
+        own_room.refresh_from_db()
+        assert publish_response.status_code == 200
+        assert own_room.status == Room.Status.PUBLISHED
+        assert other_update_response.status_code == 404
+
+    def test_landlord_can_publish_without_review_and_hide_published_room(self):
+        landlord = create_user(email="landlord-review@example.com", phone="0912223306", role=User.Role.LANDLORD)
+        draft_room = create_room(created_by=landlord, status=Room.Status.DRAFT)
+        published_room = create_room(created_by=landlord, status=Room.Status.PUBLISHED)
+        self.client.force_authenticate(landlord)
+
+        publish_response = self.client.patch(
+            f"/api/landlord/rooms/{draft_room.id}/",
+            {"status": Room.Status.PUBLISHED},
+            format="json",
+        )
+        direct_edit_response = self.client.patch(
+            f"/api/landlord/rooms/{published_room.id}/",
+            {"title": "Sua truc tiep"},
+            format="json",
+        )
+        hidden_response = self.client.patch(
+            f"/api/landlord/rooms/{published_room.id}/",
+            {"status": Room.Status.HIDDEN},
+            format="json",
+        )
+
+        draft_room.refresh_from_db()
+        published_room.refresh_from_db()
+        assert publish_response.status_code == 200
+        assert hidden_response.status_code == 200
+        assert direct_edit_response.status_code == 400
+        assert draft_room.status == Room.Status.PUBLISHED
+        assert published_room.status == Room.Status.HIDDEN
+
+    def test_landlord_cannot_mark_room_as_rented_with_direct_status_patch(self):
+        landlord = create_user(email="landlord-rented@example.com", phone="0912223326", role=User.Role.LANDLORD)
+        published_room = create_room(created_by=landlord, status=Room.Status.PUBLISHED)
+        self.client.force_authenticate(landlord)
+
+        response = self.client.patch(
+            f"/api/landlord/rooms/{published_room.id}/",
+            {"status": Room.Status.RENTED},
+            format="json",
+        )
+
+        published_room.refresh_from_db()
+        assert response.status_code == 400
+        assert published_room.status == Room.Status.PUBLISHED
+
+    def test_landlord_can_only_see_rental_candidates_for_owned_room(self):
+        landlord = create_user(email="landlord-candidates@example.com", phone="0912223327", role=User.Role.LANDLORD)
+        other_landlord = create_user(email="other-candidates@example.com", phone="0912223328", role=User.Role.LANDLORD)
+        own_room = create_room(created_by=landlord, status=Room.Status.PUBLISHED)
+        other_room = create_room(created_by=other_landlord, status=Room.Status.PUBLISHED)
+        own_tenant = create_user(email="own-candidate@example.com", phone="0912223329")
+        other_tenant = create_user(email="other-candidate@example.com", phone="0912223330")
+        own_lead = ViewingRequest.objects.create(
+            user=own_tenant,
+            room=own_room,
+            full_name=own_tenant.full_name,
+            phone=own_tenant.phone,
+            email=own_tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
+        )
+        ViewingRequest.objects.create(
+            user=other_tenant,
+            room=other_room,
+            full_name=other_tenant.full_name,
+            phone=other_tenant.phone,
+            email=other_tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
+        )
+        self.client.force_authenticate(landlord)
+
+        own_response = self.client.get(f"/api/landlord/rooms/{own_room.id}/rental-candidates/")
+        foreign_response = self.client.get(f"/api/landlord/rooms/{other_room.id}/rental-candidates/")
+
+        assert own_response.status_code == 200
+        assert [candidate["id"] for candidate in own_response.data["data"]] == [own_lead.id]
+        assert own_response.data["data"][0]["can_confirm_rental"] is True
+        assert foreign_response.status_code == 404
+
+    def test_landlord_can_confirm_rental_for_scheduled_tenant_of_owned_room(self):
+        landlord = create_user(email="landlord-confirm-rental@example.com", phone="0912223331", role=User.Role.LANDLORD)
+        tenant = create_user(email="confirmed-tenant@example.com", phone="0912223332")
+        room = create_room(created_by=landlord, status=Room.Status.PUBLISHED)
+        lead = ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
+            estimated_commission_amount=room.estimated_commission_amount,
+        )
+        self.client.force_authenticate(landlord)
+
+        response = self.client.post(
+            f"/api/landlord/rooms/{room.id}/confirm-rental/",
+            {"viewing_request_id": lead.id},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        room.refresh_from_db()
+        lead.refresh_from_db()
+        assert room.status == Room.Status.RENTED
+        assert lead.status == ViewingRequest.Status.CONVERTED
+        assert RoomLease.objects.filter(
+            room=room,
+            tenant=tenant,
+            viewing_request=lead,
+            status=RoomLease.Status.ACTIVE,
+        ).exists()
+        assert AuditLog.objects.filter(
+            event="landlord.room_rented",
+            actor=landlord,
+            target_id=str(room.id),
+        ).exists()
+
+    def test_landlord_cannot_confirm_rental_with_foreign_or_unqualified_lead(self):
+        landlord = create_user(email="landlord-rental-denied@example.com", phone="0912223333", role=User.Role.LANDLORD)
+        other_landlord = create_user(email="foreign-rental-owner@example.com", phone="0912223334", role=User.Role.LANDLORD)
+        own_room = create_room(created_by=landlord, status=Room.Status.PUBLISHED)
+        foreign_room = create_room(created_by=other_landlord, status=Room.Status.PUBLISHED)
+        new_tenant = create_user(email="new-rental-candidate@example.com", phone="0912223335")
+        foreign_tenant = create_user(email="foreign-rental-candidate@example.com", phone="0912223336")
+        new_lead = ViewingRequest.objects.create(
+            user=new_tenant,
+            room=own_room,
+            full_name=new_tenant.full_name,
+            phone=new_tenant.phone,
+            email=new_tenant.email,
+            status=ViewingRequest.Status.NEW,
+        )
+        foreign_lead = ViewingRequest.objects.create(
+            user=foreign_tenant,
+            room=foreign_room,
+            full_name=foreign_tenant.full_name,
+            phone=foreign_tenant.phone,
+            email=foreign_tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
+        )
+        self.client.force_authenticate(landlord)
+
+        foreign_response = self.client.post(
+            f"/api/landlord/rooms/{own_room.id}/confirm-rental/",
+            {"viewing_request_id": foreign_lead.id},
+            format="json",
+        )
+        unqualified_response = self.client.post(
+            f"/api/landlord/rooms/{own_room.id}/confirm-rental/",
+            {"viewing_request_id": new_lead.id},
+            format="json",
+        )
+
+        assert foreign_response.status_code == 404
+        assert unqualified_response.status_code == 400
+        own_room.refresh_from_db()
+        assert own_room.status == Room.Status.PUBLISHED
+        assert not RoomLease.objects.filter(room=own_room).exists()
+
+    def test_landlord_must_return_locked_rooms_to_draft_before_editing_content(self):
+        landlord = create_user(email="landlord-locked@example.com", phone="0912223313", role=User.Role.LANDLORD)
+        pending_room = create_room(created_by=landlord, status=Room.Status.PENDING_REVIEW)
+        archived_room = create_room(created_by=landlord, status=Room.Status.ARCHIVED)
+        self.client.force_authenticate(landlord)
+
+        pending_edit_response = self.client.patch(
+            f"/api/landlord/rooms/{pending_room.id}/",
+            {"title": "Khong duoc sua khi dang duyet"},
+            format="json",
+        )
+        archived_edit_response = self.client.patch(
+            f"/api/landlord/rooms/{archived_room.id}/",
+            {"title": "Khong duoc sua khi luu tru"},
+            format="json",
+        )
+        pending_draft_response = self.client.patch(
+            f"/api/landlord/rooms/{pending_room.id}/",
+            {"status": Room.Status.DRAFT},
+            format="json",
+        )
+        archived_draft_response = self.client.patch(
+            f"/api/landlord/rooms/{archived_room.id}/",
+            {"status": Room.Status.DRAFT},
+            format="json",
+        )
+
+        assert pending_edit_response.status_code == 400
+        assert archived_edit_response.status_code == 400
+        assert pending_draft_response.status_code == 200
+        assert archived_draft_response.status_code == 200
+
+    def test_landlord_cannot_mutate_locked_or_foreign_room_media(self):
+        landlord = create_user(email="landlord-media@example.com", phone="0912223314", role=User.Role.LANDLORD)
+        other_landlord = create_user(
+            email="other-landlord-media@example.com",
+            phone="0912223315",
+            role=User.Role.LANDLORD,
+        )
+        published_room = create_room(created_by=landlord, status=Room.Status.PUBLISHED)
+        draft_room = create_room(created_by=landlord, status=Room.Status.DRAFT)
+        other_room = create_room(created_by=other_landlord, status=Room.Status.DRAFT)
+        published_image = RoomImage.objects.create(
+            room=published_room,
+            image_url="https://res.cloudinary.com/demo/image/upload/published-room.jpg",
+        )
+        foreign_image = RoomImage.objects.create(
+            room=other_room,
+            image_url="https://res.cloudinary.com/demo/image/upload/foreign-room.jpg",
+        )
+        self.client.force_authenticate(landlord)
+        self.client.raise_request_exception = False
+
+        locked_response = self.client.patch(
+            f"/api/landlord/rooms/{published_room.id}/images/{published_image.id}/",
+            {"label": RoomImage.Label.KITCHEN},
+            format="json",
+        )
+        foreign_response = self.client.patch(
+            f"/api/landlord/rooms/{draft_room.id}/images/{foreign_image.id}/",
+            {"label": RoomImage.Label.KITCHEN},
+            format="json",
+        )
+
+        assert locked_response.status_code == 409
+        assert foreign_response.status_code == 404
+
+    def test_landlord_cannot_attach_external_media_url_or_replace_existing_media(self):
+        landlord = create_user(email="landlord-media-source@example.com", phone="0912223322", role=User.Role.LANDLORD)
+        room = create_room(created_by=landlord, status=Room.Status.DRAFT)
+        media = RoomImage.objects.create(
+            room=room,
+            image_url="https://res.cloudinary.com/puanhkjp/image/upload/original.jpg",
+        )
+        self.client.force_authenticate(landlord)
+
+        room_response = self.client.patch(
+            f"/api/landlord/rooms/{room.id}/",
+            {"image_urls": ["https://res.cloudinary.com/another-cloud/image/upload/untrusted.jpg"]},
+            format="json",
+        )
+        media_response = self.client.patch(
+            f"/api/landlord/rooms/{room.id}/images/{media.id}/",
+            {"image_url": "https://res.cloudinary.com/another-cloud/image/upload/replaced.jpg"},
+            format="json",
+        )
+
+        media.refresh_from_db()
+        assert room_response.status_code == 400
+        assert "image_urls" in room_response.data["errors"]
+        assert media_response.status_code == 400
+        assert "image_url" in media_response.data["errors"]
+        assert media.image_url.endswith("/original.jpg")
+
+    def test_landlord_cannot_delete_room_while_review_is_pending(self):
+        landlord = create_user(email="landlord-delete@example.com", phone="0912223316", role=User.Role.LANDLORD)
+        room = create_room(created_by=landlord, status=Room.Status.PENDING_REVIEW)
+        self.client.force_authenticate(landlord)
+
+        response = self.client.delete(f"/api/landlord/rooms/{room.id}/")
+
+        assert response.status_code == 409
+        assert Room.objects.filter(pk=room.id).exists()
+
+    def test_landlord_cannot_delete_archived_room_with_history(self):
+        landlord = create_user(email="landlord-history@example.com", phone="0912223319", role=User.Role.LANDLORD)
+        tenant = create_user(email="landlord-history-tenant@example.com", phone="0912223320")
+        room = create_room(created_by=landlord, status=Room.Status.ARCHIVED)
+        ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+        )
+        self.client.force_authenticate(landlord)
+
+        list_response = self.client.get("/api/landlord/rooms/")
+        delete_response = self.client.delete(f"/api/landlord/rooms/{room.id}/")
+
+        assert list_response.status_code == 200
+        assert list_response.data["data"]["results"][0]["can_delete"] is False
+        assert delete_response.status_code == 409
+        assert Room.objects.filter(pk=room.id).exists()
+
+    def test_landlord_room_without_history_is_marked_deletable(self):
+        landlord = create_user(email="landlord-deletable@example.com", phone="0912223321", role=User.Role.LANDLORD)
+        room = create_room(created_by=landlord, status=Room.Status.DRAFT)
+        self.client.force_authenticate(landlord)
+
+        response = self.client.get("/api/landlord/rooms/")
+
+        assert response.status_code == 200
+        assert response.data["data"]["results"][0]["id"] == room.id
+        assert response.data["data"]["results"][0]["can_delete"] is True
+
+    def test_landlord_summary_counts_only_owned_rooms(self):
+        landlord = create_user(email="landlord-summary@example.com", phone="0912223317", role=User.Role.LANDLORD)
+        other_landlord = create_user(
+            email="other-landlord-summary@example.com",
+            phone="0912223318",
+            role=User.Role.LANDLORD,
+        )
+        create_room(created_by=landlord, status=Room.Status.DRAFT)
+        create_room(created_by=landlord, status=Room.Status.PUBLISHED)
+        create_room(created_by=other_landlord, status=Room.Status.PUBLISHED)
+        self.client.force_authenticate(landlord)
+
+        response = self.client.get("/api/landlord/rooms/summary/")
+
+        assert response.status_code == 200
+        assert response.data["data"] == {
+            "total": 2,
+            "draft": 1,
+            "pending_review": 0,
+            "published": 1,
+            "rented": 0,
+            "hidden": 0,
+            "archived": 0,
+        }
 
     def test_admin_can_access_admin_api(self):
         admin = create_admin()

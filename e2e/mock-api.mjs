@@ -82,13 +82,22 @@ const heroRoomWithImage = {
   thumbnail_url: imageDataUrl('#3f7664'),
 };
 const requestCounts = new Map();
+const corsHeaders = {
+  'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-CSRFToken',
+  'Access-Control-Allow-Methods': 'DELETE, GET, OPTIONS, PATCH, POST, PUT',
+  'Access-Control-Allow-Origin': '*',
+};
 
 function envelope(data, message = 'OK') {
   return { success: true, message, data };
 }
 
 function sendJson(response, status, body) {
-  response.writeHead(status, { 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8' });
+  response.writeHead(status, {
+    ...corsHeaders,
+    'Cache-Control': 'no-store',
+    'Content-Type': 'application/json; charset=utf-8',
+  });
   response.end(JSON.stringify(body));
 }
 
@@ -115,7 +124,7 @@ const server = http.createServer((request, response) => {
   requestCounts.set(requestCountKey, (requestCounts.get(requestCountKey) ?? 0) + 1);
 
   if (request.method === 'OPTIONS') {
-    response.writeHead(204).end();
+    response.writeHead(204, corsHeaders).end();
     return;
   }
   if (url.pathname === '/api/health/') {

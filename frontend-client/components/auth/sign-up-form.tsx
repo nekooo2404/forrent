@@ -22,6 +22,7 @@ type SignUpFields = {
   fullName: string;
   phone: string;
   email: string;
+  accountRole: "TENANT" | "LANDLORD";
   otp: string;
   password: string;
   confirmPassword: string;
@@ -31,10 +32,28 @@ const initialFields: SignUpFields = {
   fullName: "",
   phone: "",
   email: "",
+  accountRole: "TENANT",
   otp: "",
   password: "",
   confirmPassword: "",
 };
+
+const accountRoleOptions: Array<{
+  value: SignUpFields["accountRole"];
+  title: string;
+  description: string;
+}> = [
+  {
+    value: "TENANT",
+    title: "Người thuê",
+    description: "Tìm phòng, đặt lịch xem và theo dõi yêu cầu của bạn.",
+  },
+  {
+    value: "LANDLORD",
+    title: "Người cho thuê",
+    description: "Tạo, đăng và quản lý phòng của bạn trực tiếp.",
+  },
+];
 
 function firstErrorMessage(payload: AuthApiResponse<unknown>) {
   if (payload.errors && typeof payload.errors === "object") {
@@ -151,18 +170,27 @@ export function SignUpForm() {
           full_name: fields.fullName.trim(),
           phone: fields.phone.trim(),
           email: fields.email.trim(),
+          role: fields.accountRole,
           otp: fields.otp.trim(),
           password: fields.password,
           confirm_password: fields.confirmPassword,
         }),
       });
-      const registerPayload = (await registerResponse.json()) as AuthApiResponse<ApiUser>;
-
-      if (!registerResponse.ok || !registerPayload.success) {
+      if (!registerResponse.ok) {
+        const errorPayload = (await registerResponse.json().catch(() => null)) as AuthApiResponse<unknown> | null;
         toast({
           type: "error",
           title: "Đăng ký thất bại",
-          message: firstErrorMessage(registerPayload),
+          message: errorPayload ? firstErrorMessage(errorPayload) : "Không thể đăng ký tài khoản lúc này.",
+        });
+        return;
+      }
+      const registerPayload = (await registerResponse.json().catch(() => null)) as AuthApiResponse<ApiUser> | null;
+      if (!registerPayload?.success) {
+        toast({
+          type: "error",
+          title: "Đăng ký thất bại",
+          message: registerPayload ? firstErrorMessage(registerPayload) : "Phản hồi đăng ký không hợp lệ.",
         });
         return;
       }
@@ -172,11 +200,13 @@ export function SignUpForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier: fields.email.trim(), password: fields.password }),
       });
-      const loginPayload = (await loginResponse.json()) as AuthApiResponse<BrowserAuthSession>;
+      const loginPayload = loginResponse.ok
+        ? ((await loginResponse.json().catch(() => null)) as AuthApiResponse<BrowserAuthSession> | null)
+        : null;
 
-      if (loginResponse.ok && loginPayload.success && loginPayload.data) {
+      if (loginPayload?.success && loginPayload.data) {
         saveAuthSession(loginPayload.data);
-        router.replace("/");
+        router.replace(loginPayload.data.user.role === "LANDLORD" ? "/landlord/rooms" : "/");
         router.refresh();
         return;
       }
@@ -304,6 +334,30 @@ export function SignUpForm() {
               type="email"
               value={fields.email}
             />
+            <fieldset className="space-y-3">
+              <legend className="text-sm font-semibold text-on-surface">Vai trò tài khoản</legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {accountRoleOptions.map((option) => {
+                  const selected = fields.accountRole === option.value;
+                  return (
+                    <button
+                      aria-pressed={selected}
+                      className={`min-h-24 rounded-md border px-4 py-3 text-left transition-colors duration-200 ${
+                        selected
+                          ? "border-primary bg-primary-container text-on-primary-container"
+                          : "border-outline-variant/70 bg-surface-container-low text-on-surface hover:border-primary/60"
+                      }`}
+                      key={option.value}
+                      onClick={() => setFields((current) => ({ ...current, accountRole: option.value }))}
+                      type="button"
+                    >
+                      <span className="block text-base font-semibold">{option.title}</span>
+                      <span className="mt-2 block text-sm leading-5 text-on-surface-variant">{option.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
             <div>
               <AuthInput
                 autoComplete="new-password"

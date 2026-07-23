@@ -40,6 +40,13 @@ class RegisterAPIView(APIView):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        audit_event(
+            "auth.registered",
+            request=request,
+            actor=user,
+            target=user,
+            metadata={"role": user.role},
+        )
         return success_response(
             data=UserSummarySerializer(user, context={"request": request}).data,
             message="Register successfully.",

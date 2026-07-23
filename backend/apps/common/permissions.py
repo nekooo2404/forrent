@@ -29,6 +29,19 @@ class IsTenant(BasePermission):
         return bool(user and user.is_authenticated and user.role == user.Role.TENANT)
 
 
+class IsLandlord(BasePermission):
+    message = "Only LANDLORD users can access this endpoint."
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and user.is_active
+            and user.role == user.Role.LANDLORD
+        )
+
+
 class IsOwner(BasePermission):
     message = "You do not own this resource."
 

@@ -134,10 +134,12 @@ class ViewingRequestService:
     @staticmethod
     @transaction.atomic
     def confirm_moved_in(*, viewing_request_id, actor):
+        room_id = ViewingRequest.objects.only("room_id").get(pk=viewing_request_id).room_id
+        room = Room.objects.select_for_update().get(pk=room_id)
         viewing_request = (
             ViewingRequest.objects.select_for_update()
-            .select_related("room", "user")
-            .get(pk=viewing_request_id)
+            .select_related("user")
+            .get(pk=viewing_request_id, room_id=room.id)
         )
 
         if viewing_request.status == ViewingRequest.Status.CONVERTED or not ViewingRequest.can_transition(
@@ -148,7 +150,6 @@ class ViewingRequestService:
         if viewing_request.is_commission_counted:
             raise ValidationError({"is_commission_counted": "Commission has already been counted for this lead."})
 
-        room = Room.objects.select_for_update().get(pk=viewing_request.room_id)
         if room.status != Room.Status.PUBLISHED or RoomLease.objects.filter(
             room=room,
             status=RoomLease.Status.ACTIVE,
@@ -159,6 +160,7 @@ class ViewingRequestService:
             ViewingRequest.objects.select_for_update()
             .filter(room=room, status__in=ViewingRequest.ACTIVE_STATUSES)
             .exclude(pk=viewing_request.pk)
+            .order_by("pk")
         )
         if competing_leads:
             competing_ids = [lead.id for lead in competing_leads]

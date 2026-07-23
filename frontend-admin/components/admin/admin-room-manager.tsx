@@ -9,6 +9,7 @@ import {
   adminList,
   adminMessageFrom,
   adminRequest,
+  adminRoleLabel,
   canManuallyTransitionRoom,
   formatAdminDate,
   formatAdminVnd,
@@ -395,10 +396,10 @@ export function AdminRoomManager() {
             <label className="relative min-w-[260px]">
               <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-secondary" size={17} strokeWidth={1.8} />
               <input
-                aria-label="Tìm phòng theo tên, mã tòa hoặc địa chỉ"
+                aria-label="Tìm phòng theo tên, mã phòng, mã tòa hoặc địa chỉ"
                 className={`${adminInputClass} pl-9`}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Tìm phòng, mã tòa, địa chỉ..."
+                placeholder="Tìm phòng, mã phòng, mã tòa, địa chỉ..."
                 type="search"
                 value={search}
               />
@@ -430,7 +431,8 @@ export function AdminRoomManager() {
                     <th className="py-3 pr-5 font-semibold">Giá thuê</th>
                     <th className="py-3 pr-5 font-semibold">Hoa hồng</th>
                     <th className="py-3 pr-5 font-semibold">Trạng thái</th>
-                    <th className="py-3 pr-5 font-semibold">Cập nhật</th>
+                    <th className="py-3 pr-5 font-semibold">Người đăng</th>
+                    <th className="py-3 pr-5 font-semibold">Thời gian</th>
                     <th className="py-3 text-right font-semibold">Thao tác</th>
                   </tr>
                 </thead>
@@ -439,7 +441,8 @@ export function AdminRoomManager() {
                     <tr className="transition hover:bg-surface-container-low/70" key={room.id}>
                       <td className="max-w-[280px] py-4 pr-5">
                         <p className="line-clamp-1 font-semibold text-primary">{room.title}</p>
-                        <p className="mt-1 line-clamp-1 text-xs text-secondary">{room.building_code ? `${room.building_code} · ` : ""}{room.slug}</p>
+                        <p className="mt-1 text-xs font-semibold text-tertiary">{room.room_code}</p>
+                        <p className="mt-1 line-clamp-1 text-xs text-secondary">{room.building_code ? `Mã tòa ${room.building_code} · ` : ""}{room.slug}</p>
                       </td>
                       <td className="py-4 pr-5 text-secondary">
                         <p>{wardById.get(room.ward)?.name ?? `Ward #${room.ward}`}</p>
@@ -456,7 +459,14 @@ export function AdminRoomManager() {
                       <td className="py-4 pr-5">
                         <StatusBadge status={room.status} type="room" />
                       </td>
-                      <td className="py-4 pr-5 text-secondary">{formatAdminDate(room.updated_at)}</td>
+                      <td className="max-w-[220px] py-4 pr-5">
+                        <p className="truncate font-medium text-primary">{room.created_by_name || room.created_by_email}</p>
+                        <p className="mt-1 truncate text-xs text-secondary">{adminRoleLabel(room.created_by_role)} · {room.created_by_email}</p>
+                      </td>
+                      <td className="py-4 pr-5 text-secondary">
+                        <p>Đăng {formatAdminDate(room.created_at)}</p>
+                        <p className="mt-1 text-xs">Sửa {formatAdminDate(room.updated_at)}</p>
+                      </td>
                       <td className="py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <button
@@ -506,7 +516,8 @@ export function AdminRoomManager() {
                   <div className="mb-3 flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate font-semibold text-on-surface">{room.title}</h3>
-                      <p className="mt-1 truncate text-xs text-secondary">{room.building_code ? `${room.building_code} · ` : ""}{room.slug}</p>
+                      <p className="mt-1 text-xs font-semibold text-tertiary">{room.room_code}</p>
+                      <p className="mt-1 truncate text-xs text-secondary">{room.building_code ? `Mã tòa ${room.building_code} · ` : ""}{room.slug}</p>
                     </div>
                     <StatusBadge status={room.status} type="room" />
                   </div>
@@ -528,8 +539,14 @@ export function AdminRoomManager() {
                       <p className="text-xs text-secondary">{room.commission_percent}%</p>
                     </div>
                     <div>
-                      <span className="text-xs text-secondary">Cập nhật</span>
-                      <p className="font-medium text-primary">{formatAdminDate(room.updated_at)}</p>
+                      <span className="text-xs text-secondary">Người đăng</span>
+                      <p className="truncate font-medium text-primary">{room.created_by_name || room.created_by_email}</p>
+                      <p className="truncate text-xs text-secondary">{adminRoleLabel(room.created_by_role)}</p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-secondary">Đăng lúc</span>
+                      <p className="font-medium text-primary">{formatAdminDate(room.created_at)}</p>
+                      <p className="text-xs text-secondary">Sửa {formatAdminDate(room.updated_at)}</p>
                     </div>
                   </div>
 

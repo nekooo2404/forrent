@@ -31,7 +31,7 @@ type UserForm = {
   full_name: string;
   phone: string;
   email: string;
-  role: "SALER" | "TENANT";
+  role: "SALER" | "LANDLORD" | "TENANT";
   is_active: boolean;
   password: string;
   current_password: string;
@@ -94,7 +94,7 @@ export function AdminUserManager() {
       full_name: user.full_name,
       phone: user.phone,
       email: user.email,
-      role: user.role === "SALER" ? "SALER" : "TENANT",
+      role: user.role === "SALER" || user.role === "LANDLORD" ? user.role : "TENANT",
       is_active: user.is_active,
       password: "",
       current_password: "",
@@ -184,6 +184,7 @@ export function AdminUserManager() {
             <Field label="Vai trò">
               <select className={adminSelectClass} onChange={(event) => setForm({ ...form, role: event.target.value as UserForm["role"] })} value={form.role}>
                 <option value="TENANT">Người thuê</option>
+                <option value="LANDLORD">Người cho thuê</option>
                 <option value="SALER">Nhân viên tư vấn</option>
               </select>
             </Field>
@@ -232,6 +233,7 @@ export function AdminUserManager() {
               <select aria-label="Lọc theo vai trò người dùng" className={adminSelectClass} onChange={(event) => setRole(event.target.value)} value={role}>
                 <option value="">Tất cả vai trò</option>
                 <option value="TENANT">Người thuê</option>
+                <option value="LANDLORD">Người cho thuê</option>
                 <option value="SALER">Nhân viên tư vấn</option>
               </select>
               <button className={adminButtonSecondary} type="submit">Lọc</button>

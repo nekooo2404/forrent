@@ -211,6 +211,7 @@ export type RegisterPayload = {
   date_of_birth?: string | null;
   phone: string;
   email: string;
+  role?: "TENANT" | "LANDLORD";
   password: string;
   confirm_password: string;
   otp: string;

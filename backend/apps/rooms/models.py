@@ -1,3 +1,4 @@
+import secrets
 from decimal import Decimal
 
 from django.conf import settings
@@ -9,6 +10,10 @@ from apps.common.models import ActiveQuerySet, TimeStampedModel
 from apps.common.utils import calculate_percent_amount, unique_slugify
 from apps.locations.models import Amenity, AreaRange, City, Ward
 from apps.rooms.public_copy import room_search_document
+
+
+def generate_room_code():
+    return f"FR-{secrets.token_hex(6).upper()}"
 
 
 class RoomQuerySet(models.QuerySet):
@@ -85,6 +90,7 @@ class Room(TimeStampedModel):
     ward = models.ForeignKey(Ward, on_delete=models.PROTECT, related_name="rooms")
     address = models.CharField(max_length=500)
     building_code = models.CharField(max_length=50, blank=True, db_index=True)
+    room_code = models.CharField(max_length=15, unique=True, editable=False, default=generate_room_code)
     price = models.DecimalField(max_digits=14, decimal_places=2, validators=[MinValueValidator(Decimal("0"))])
     deposit_type = models.ForeignKey(DepositType, on_delete=models.PROTECT, related_name="rooms", null=True, blank=True)
     deposit_type_name_snapshot = models.CharField(max_length=255, blank=True)

@@ -199,6 +199,172 @@ test.describe('Public critical flows', () => {
     await expect(page.getByTestId('public-account-actions')).toHaveCount(0);
   });
 
+  test('landlord portal publishes and confirms an owned-room rental without admin access', async ({ page }) => {
+    await mockAuthenticatedSession(page);
+    await page.route('**/api/auth/me', (route) => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        message: 'OK',
+        data: {
+          id: 71,
+          full_name: 'Chủ nhà E2E',
+          date_of_birth: null,
+          email: 'owner-e2e@forrent.io.vn',
+          phone: '0914032771',
+          role: 'LANDLORD',
+          avatar: null,
+        },
+      }),
+    }));
+
+    let status = 'DRAFT';
+    let statusPatchCount = 0;
+    let confirmRentalCount = 0;
+    const ownedRoom = {
+      id: 42,
+      room_code: 'FR-A1B2C3D4E5F6',
+      can_delete: true,
+      title: 'Studio yên tĩnh gần ga metro',
+      public_title: 'Studio yên tĩnh gần ga metro',
+      slug: 'studio-yen-tinh-e2e',
+      room_type: 'CCMN',
+      room_subtype: null,
+      room_subtype_name: '',
+      city: { id: 1, name: 'Hà Nội', slug: 'ha-noi', is_active: true },
+      ward: { id: 1, city: 1, city_name: 'Hà Nội', name: 'Nam Từ Liêm', slug: 'nam-tu-liem', is_active: true },
+      address: 'Khu Sakura, Vinhomes Smart City',
+      price: '4200000',
+      deposit_type: 1,
+      deposit_type_name: 'Cọc 1 tháng',
+      deposit_amount: '4200000',
+      electricity_price_per_kwh: '4000',
+      water_billing_type: 'PER_PERSON',
+      water_price_per_person: '100000',
+      water_price_per_cubic_meter: '0',
+      service_fee: '200000',
+      actual_area: '25.00',
+      area_range: { id: 1, name: '20-30 m2', min_area: '20.00', max_area: '30.00', is_active: true },
+      amenities: [],
+      short_description: 'Phòng sáng và đủ nội thất cơ bản.',
+      description: 'Phòng phù hợp người đi làm.',
+      thumbnail: null,
+      images: [],
+      created_at: '2026-07-20T08:00:00Z',
+      updated_at: '2026-07-20T08:00:00Z',
+    };
+
+    await page.route('**/api/landlord/rooms**', async (route) => {
+      const request = route.request();
+      const pathname = new URL(request.url()).pathname.replace(/\/$/, '');
+      if (request.method() === 'GET' && pathname === '/api/landlord/rooms/42/rental-candidates') {
+        await route.fulfill({
+          json: {
+            success: true,
+            message: 'OK',
+            data: [{
+              id: 501,
+              full_name: 'Nguyễn Minh Anh',
+              phone: '0912345678',
+              email: 'minh-anh@example.com',
+              status: 'SCHEDULED',
+              preferred_viewing_date: '2026-07-28',
+              preferred_viewing_time_slot: 'morning',
+              appointment_date: '2026-07-28',
+              appointment_time_slot: 'morning',
+              can_confirm_rental: true,
+              created_at: '2026-07-21T08:00:00Z',
+            }],
+          },
+        });
+        return;
+      }
+      if (request.method() === 'POST' && pathname === '/api/landlord/rooms/42/confirm-rental') {
+        confirmRentalCount += 1;
+        status = 'RENTED';
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        await route.fulfill({ json: { success: true, message: 'OK', data: { ...ownedRoom, status } } });
+        return;
+      }
+      if (request.method() === 'PATCH' && pathname === '/api/landlord/rooms/42') {
+        statusPatchCount += 1;
+        const payload = request.postDataJSON() as { status: string };
+        status = payload.status;
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        await route.fulfill({ json: { success: true, message: 'OK', data: { ...ownedRoom, status } } });
+        return;
+      }
+      if (request.method() === 'GET' && pathname === '/api/landlord/rooms/summary') {
+        await route.fulfill({
+          json: {
+            success: true,
+            message: 'OK',
+            data: {
+              total: 1,
+              draft: status === 'DRAFT' ? 1 : 0,
+              pending_review: status === 'PENDING_REVIEW' ? 1 : 0,
+              published: status === 'PUBLISHED' ? 1 : 0,
+              rented: status === 'RENTED' ? 1 : 0,
+              hidden: 0,
+              archived: 0,
+            },
+          },
+        });
+        return;
+      }
+      if (request.method() === 'GET' && pathname === '/api/landlord/rooms') {
+        await route.fulfill({
+          json: {
+            success: true,
+            message: 'OK',
+            data: { count: 1, next: null, previous: null, results: [{ ...ownedRoom, status }] },
+          },
+        });
+        return;
+      }
+      await route.fulfill({ status: 404, json: { success: false, message: 'Not found', errors: {} } });
+    });
+
+    await page.goto('/landlord/rooms');
+    await expect(page.getByRole('heading', { name: 'Quản lý phòng của bạn' })).toBeVisible();
+    await expect(page.getByText('Mã phòng FR-A1B2C3D4E5F6')).toBeVisible();
+
+    const publishRoom = page.getByRole('button', { name: 'Đăng phòng' });
+    await publishRoom.evaluate((button: HTMLButtonElement) => {
+      button.click();
+      button.click();
+    });
+
+    await expect(page.getByText('Đang cập nhật')).toBeVisible();
+    await expect.poll(() => statusPatchCount).toBe(1);
+    await expect(page.getByRole('button', { name: 'Ẩn phòng' })).toBeVisible();
+    expect(statusPatchCount).toBe(1);
+
+    await page.getByRole('button', { name: 'Đã cho thuê' }).click();
+    await expect(page.getByRole('heading', { name: 'Đánh dấu phòng đã cho thuê' })).toBeVisible();
+    await expect(page.getByText('Nguyễn Minh Anh')).toBeVisible();
+    const confirmRental = page.getByRole('button', { name: 'Xác nhận đã cho thuê' });
+    await confirmRental.evaluate((button: HTMLButtonElement) => {
+      button.click();
+      button.click();
+    });
+    await expect.poll(() => confirmRentalCount).toBe(1);
+    await expect(page.getByRole('article').getByText('Đã thuê', { exact: true })).toBeVisible();
+    expect(confirmRentalCount).toBe(1);
+
+    await page.getByRole('button', { name: 'Thêm phòng' }).click();
+    await page.getByLabel('Tên phòng').fill('Bản nháp chưa lưu');
+    await page.getByRole('button', { name: 'Đóng', exact: true }).click();
+    await expect(page.getByText('Bỏ các thay đổi chưa lưu?')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Bỏ thay đổi' })).toBeFocused();
+
+    await page.getByRole('button', { name: 'Tiếp tục chỉnh sửa' }).click();
+    await expect(page.getByLabel('Tên phòng')).toHaveValue('Bản nháp chưa lưu');
+    await page.getByRole('button', { name: 'Đóng', exact: true }).click();
+    await page.getByRole('button', { name: 'Bỏ thay đổi' }).click();
+    await expect(page.getByRole('heading', { name: 'Thêm phòng mới' })).toBeHidden();
+  });
+
   test('homepage starts with readable content and touch-sized controls', async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 320, height: 700 });
     await page.goto('/');
@@ -765,6 +931,7 @@ test.describe('Public critical flows', () => {
     page.on('pageerror', (error) => pageErrors.push(error.message));
     await mockAdminRoomInventory(page, [{
       id: 7,
+      room_code: 'FR-7A9C21D4E6F0',
       title: 'Studio S3.02',
       slug: 'studio-s302',
       room_type: 'CCDV',
@@ -797,6 +964,8 @@ test.describe('Public critical flows', () => {
       internal_note: '',
       created_by: 1,
       created_by_name: 'ForRent Admin',
+      created_by_email: 'admin@forrent.io.vn',
+      created_by_role: 'SALER',
       images: [],
       created_at: '2026-07-10T08:00:00Z',
       updated_at: '2026-07-10T08:00:00Z',

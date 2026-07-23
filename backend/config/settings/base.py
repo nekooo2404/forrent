@@ -199,6 +199,7 @@ REST_FRAMEWORK = {
         "password_reset": "5/min",
         "viewing_request": "5/min",
         "contact": "5/min",
+        "landlord_room_write": "60/hour",
     },
 }
 
@@ -218,7 +219,7 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "ENUM_NAME_OVERRIDES": {
-        "UserRoleEnum": [("TENANT", "Tenant"), ("SALER", "Saler/Admin")],
+        "UserRoleEnum": [("TENANT", "Tenant"), ("LANDLORD", "Landlord"), ("SALER", "Saler/Admin")],
         "RoomTypeEnum": [("CCMN", "Chung cu mini"), ("CCDV", "Can ho dich vu"), ("HOUSE", "Nha nguyen can")],
         "RoomStatusEnum": [
             ("DRAFT", "Draft"),

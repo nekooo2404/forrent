@@ -54,8 +54,8 @@ class AdminUserSerializer(serializers.ModelSerializer):
         return value
 
     def validate_role(self, value):
-        if value not in {User.Role.TENANT, User.Role.SALER}:
-            raise serializers.ValidationError("Role must be TENANT or SALER.")
+        if value not in {User.Role.TENANT, User.Role.LANDLORD, User.Role.SALER}:
+            raise serializers.ValidationError("Role must be TENANT, LANDLORD or SALER.")
         return value
 
     def validate(self, attrs):
@@ -72,6 +72,19 @@ class AdminUserSerializer(serializers.ModelSerializer):
                 is_active=True,
             ).exclude(pk=self.instance.pk).exists():
                 raise serializers.ValidationError({"role": "At least one active SALER account is required."})
+            changes_landlord_role = (
+                self.instance.role == User.Role.LANDLORD
+                and next_role != User.Role.LANDLORD
+            )
+            if changes_landlord_role and self.instance.created_rooms.exclude(status="ARCHIVED").exists():
+                raise serializers.ValidationError(
+                    {
+                        "role": (
+                            "Archive all active rooms before changing this landlord's role. "
+                            "The account can still be deactivated immediately when access must be suspended."
+                        )
+                    }
+                )
         return attrs
 
     def create(self, validated_data):
@@ -111,10 +124,13 @@ class AdminUserSerializer(serializers.ModelSerializer):
 
 
 class RegisterSerializer(serializers.Serializer):
+    PUBLIC_REGISTRATION_ROLES = (User.Role.TENANT, User.Role.LANDLORD)
+
     full_name = serializers.CharField(max_length=255)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
     phone = serializers.CharField(max_length=20)
     email = serializers.EmailField()
+    role = serializers.ChoiceField(choices=PUBLIC_REGISTRATION_ROLES, required=False, default=User.Role.TENANT)
     password = serializers.CharField(write_only=True, min_length=8)
     confirm_password = serializers.CharField(write_only=True)
     otp = serializers.CharField(write_only=True, required=False, default="", allow_blank=True, min_length=6, max_length=6)
@@ -127,7 +143,7 @@ class RegisterSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         validated_data.pop("confirm_password")
-        return AuthService.register_tenant(**validated_data)
+        return AuthService.register_user(**validated_data)
 
 
 class LoginSerializer(serializers.Serializer):
