@@ -97,6 +97,7 @@ export type AdminRoomImage = {
 
 export type AdminRoom = {
   id: number;
+  room_code: string;
   title: string;
   slug: string;
   room_type: "CCMN" | "CCDV" | "HOUSE" | string;
@@ -129,6 +130,8 @@ export type AdminRoom = {
   internal_note: string;
   created_by: number;
   created_by_name: string;
+  created_by_email: string;
+  created_by_role: "SALER" | "LANDLORD" | "TENANT" | string;
   images: AdminRoomImage[];
   created_at: string;
   updated_at: string;
@@ -201,7 +204,7 @@ export type AdminUser = {
   date_of_birth: string | null;
   email: string;
   phone: string;
-  role: "SALER" | "TENANT" | string;
+  role: "SALER" | "LANDLORD" | "TENANT" | string;
   is_active: boolean;
   admin_updated_by: number | null;
   admin_updated_by_name: string | null;
@@ -352,7 +355,13 @@ export function formatAdminDate(value?: string | null) {
 }
 
 export function adminRoleLabel(role: string) {
-  return role === "SALER" ? "Nhân viên tư vấn" : role === "TENANT" ? "Người thuê" : role;
+  return role === "SALER"
+    ? "Nhân viên tư vấn"
+    : role === "LANDLORD"
+      ? "Người cho thuê"
+      : role === "TENANT"
+        ? "Người thuê"
+        : role;
 }
 
 export function formatAdminDateOnly(value?: string | null) {

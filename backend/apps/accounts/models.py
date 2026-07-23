@@ -10,6 +10,7 @@ from apps.common.validators import normalize_vietnamese_phone, validate_vietname
 class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
     class Role(models.TextChoices):
         TENANT = "TENANT", "Tenant"
+        LANDLORD = "LANDLORD", "Landlord"
         SALER = "SALER", "Saler/Admin"
 
     full_name = models.CharField(max_length=255)

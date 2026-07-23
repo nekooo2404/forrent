@@ -70,7 +70,7 @@ export default defineConfig({
       },
       url: 'http://localhost:3000',
       reuseExistingServer: false,
-      timeout: 180000,
+      timeout: 300000,
     },
     {
       command: 'cd ../frontend-admin && node -e "require(\'node:fs\').rmSync(\'.next\',{recursive:true,force:true})" && npm run build && node -e "const fs=require(\'node:fs\');fs.cpSync(\'.next/static\',\'.next/standalone/.next/static\',{recursive:true});if(fs.existsSync(\'public\'))fs.cpSync(\'public\',\'.next/standalone/public\',{recursive:true})" && node .next/standalone/server.js',
@@ -83,7 +83,7 @@ export default defineConfig({
       },
       url: adminBaseURL,
       reuseExistingServer: false,
-      timeout: 180000,
+      timeout: 300000,
     },
   ],
 });

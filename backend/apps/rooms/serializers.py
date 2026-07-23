@@ -14,6 +14,7 @@ from apps.common.image_validation import (
 from apps.locations.serializers import AmenitySerializer, AreaRangeSerializer, CitySerializer, WardSerializer
 from apps.rooms.models import DepositType, Room, RoomImage, RoomSubtype
 from apps.rooms.public_copy import public_room_description, public_room_title_for
+from apps.viewing_requests.models import ViewingRequest
 
 
 def allowed_room_image_url_hosts():
@@ -177,6 +178,19 @@ class AdminRoomImageWriteSerializer(serializers.ModelSerializer):
         fields = ("image", "image_url", "media_type", "label", "sort_order")
         read_only_fields = ("media_type",)
 
+    def validate_image_url(self, value):
+        if value:
+            validate_room_image_url(value)
+        return value
+
+    def validate_image(self, value):
+        if not value:
+            return value
+        media_type = validate_uploaded_room_media_file(value, "image")
+        if self.instance and media_type != self.instance.media_type:
+            raise serializers.ValidationError("Replacement media must keep the existing image or video type.")
+        return value
+
     def validate(self, attrs):
         image = attrs.get("image", getattr(self.instance, "image", None))
         image_url = attrs.get("image_url", getattr(self.instance, "image_url", ""))
@@ -185,10 +199,25 @@ class AdminRoomImageWriteSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class LandlordRoomImageWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RoomImage
+        fields = ("label", "sort_order")
+
+    def validate(self, attrs):
+        forbidden_fields = {"image", "image_url", "media_type"}.intersection(self.initial_data)
+        if forbidden_fields:
+            raise serializers.ValidationError(
+                {field: "Upload new media through the room form." for field in sorted(forbidden_fields)}
+            )
+        return attrs
+
+
 class AdminRoomSerializer(serializers.ModelSerializer):
     images = RoomImageSerializer(many=True, read_only=True)
     deposit_type_name = serializers.SerializerMethodField()
     public_title = serializers.SerializerMethodField()
+    room_code = serializers.CharField(read_only=True)
     room_subtype_name = serializers.SerializerMethodField()
     uploaded_images = serializers.ListField(
         child=serializers.FileField(),
@@ -201,11 +230,14 @@ class AdminRoomSerializer(serializers.ModelSerializer):
         required=False,
     )
     created_by_name = serializers.CharField(source="created_by.full_name", read_only=True)
+    created_by_email = serializers.EmailField(source="created_by.email", read_only=True)
+    created_by_role = serializers.CharField(source="created_by.role", read_only=True)
 
     class Meta:
         model = Room
         fields = (
             "id",
+            "room_code",
             "title",
             "public_title",
             "slug",
@@ -239,13 +271,26 @@ class AdminRoomSerializer(serializers.ModelSerializer):
             "internal_note",
             "created_by",
             "created_by_name",
+            "created_by_email",
+            "created_by_role",
             "images",
             "uploaded_images",
             "image_urls",
             "created_at",
             "updated_at",
         )
-        read_only_fields = ("id", "public_title", "created_by", "created_by_name", "estimated_commission_amount", "created_at", "updated_at")
+        read_only_fields = (
+            "id",
+            "room_code",
+            "public_title",
+            "created_by",
+            "created_by_name",
+            "created_by_email",
+            "created_by_role",
+            "estimated_commission_amount",
+            "created_at",
+            "updated_at",
+        )
 
     def validate(self, attrs):
         room_type = attrs.get("room_type") or getattr(self.instance, "room_type", None)
@@ -377,6 +422,130 @@ class AdminRoomSerializer(serializers.ModelSerializer):
                 label=label,
                 sort_order=next_order + offset,
             )
+
+
+class LandlordRoomSerializer(AdminRoomSerializer):
+    CONTENT_EDITABLE_STATUSES = {Room.Status.DRAFT, Room.Status.HIDDEN}
+    DELETABLE_STATUSES = {Room.Status.DRAFT, Room.Status.HIDDEN, Room.Status.ARCHIVED}
+    can_delete = serializers.SerializerMethodField()
+
+    class Meta(AdminRoomSerializer.Meta):
+        fields = (
+            "id",
+            "room_code",
+            "can_delete",
+            "title",
+            "public_title",
+            "slug",
+            "room_type",
+            "room_subtype",
+            "room_subtype_name",
+            "city",
+            "ward",
+            "address",
+            "price",
+            "deposit_type",
+            "deposit_type_name",
+            "deposit_amount",
+            "electricity_price_per_kwh",
+            "water_billing_type",
+            "water_price_per_person",
+            "water_price_per_cubic_meter",
+            "service_fee",
+            "actual_area",
+            "area_range",
+            "amenities",
+            "short_description",
+            "description",
+            "thumbnail",
+            "status",
+            "images",
+            "uploaded_images",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = (
+            "id",
+            "room_code",
+            "can_delete",
+            "public_title",
+            "slug",
+            "created_at",
+            "updated_at",
+        )
+
+    def get_can_delete(self, obj):
+        if obj.status not in self.DELETABLE_STATUSES:
+            return False
+        has_viewing_history = getattr(obj, "has_viewing_history", None)
+        has_lease_history = getattr(obj, "has_lease_history", None)
+        if has_viewing_history is None:
+            has_viewing_history = obj.viewing_requests.exists()
+        if has_lease_history is None:
+            has_lease_history = obj.leases.exists()
+        return not (has_viewing_history or has_lease_history)
+
+    def validate_status(self, value):
+        if value == Room.Status.RENTED:
+            raise serializers.ValidationError("Use confirm rental with an eligible tenant to mark the room as rented.")
+        if self.instance and not Room.can_transition(self.instance.status, value):
+            raise serializers.ValidationError(f"Cannot change room from {self.instance.status} to {value}.")
+        return value
+
+    def validate(self, attrs):
+        if "image_urls" in self.initial_data:
+            raise serializers.ValidationError(
+                {"image_urls": "Landlord accounts must upload media through ForRent storage."}
+            )
+        if self.instance and self.instance.status not in self.CONTENT_EDITABLE_STATUSES:
+            changed_fields = set(attrs)
+            if changed_fields - {"status"}:
+                raise serializers.ValidationError(
+                    {
+                        "status": (
+                            "Rooms under review, published, rented or archived are locked for direct edits. "
+                            "Return the room to draft before changing its details."
+                        )
+                    }
+                )
+        return super().validate(attrs)
+
+    def create(self, validated_data):
+        status = validated_data.get("status", Room.Status.DRAFT)
+        if status not in {Room.Status.DRAFT, Room.Status.PENDING_REVIEW, Room.Status.PUBLISHED}:
+            raise serializers.ValidationError(
+                {"status": "New landlord rooms must be draft, pending review or published."}
+            )
+        validated_data["status"] = status
+        return super().create(validated_data)
+
+
+class LandlordRentalCandidateSerializer(serializers.ModelSerializer):
+    can_confirm_rental = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ViewingRequest
+        fields = (
+            "id",
+            "full_name",
+            "phone",
+            "email",
+            "status",
+            "preferred_viewing_date",
+            "preferred_viewing_time_slot",
+            "appointment_date",
+            "appointment_time_slot",
+            "can_confirm_rental",
+            "created_at",
+        )
+        read_only_fields = fields
+
+    def get_can_confirm_rental(self, obj):
+        return obj.status in {ViewingRequest.Status.SCHEDULED, ViewingRequest.Status.VIEWED}
+
+
+class LandlordConfirmRentalSerializer(serializers.Serializer):
+    viewing_request_id = serializers.IntegerField(min_value=1)
 
 
 class RoomFiltersSerializer(serializers.Serializer):

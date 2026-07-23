@@ -25,7 +25,18 @@ User = get_user_model()
 class AuthService:
     @staticmethod
     @transaction.atomic
-    def register_tenant(*, full_name, date_of_birth, phone, email, password, otp):
+    def register_user(
+        *,
+        full_name,
+        phone,
+        email,
+        password,
+        otp,
+        date_of_birth=None,
+        role=User.Role.TENANT,
+    ):
+        if role not in {User.Role.TENANT, User.Role.LANDLORD}:
+            raise ValidationError({"role": "Public registration only supports TENANT or LANDLORD."})
         email = email.lower()
         phone = normalize_vietnamese_phone(phone)
         if User.objects.filter(email__iexact=email).exists():
@@ -40,10 +51,23 @@ class AuthService:
             password=password,
             full_name=full_name,
             date_of_birth=date_of_birth,
+            role=role,
+        )
+        logger.info("User registered: user_id=%s role=%s", user.id, role)
+        return user
+
+    @staticmethod
+    @transaction.atomic
+    def register_tenant(*, full_name, phone, email, password, otp, date_of_birth=None):
+        return AuthService.register_user(
+            full_name=full_name,
+            phone=phone,
+            email=email,
+            password=password,
+            otp=otp,
+            date_of_birth=date_of_birth,
             role=User.Role.TENANT,
         )
-        logger.info("Tenant registered: user_id=%s", user.id)
-        return user
 
     @staticmethod
     def login(*, identifier, password):
