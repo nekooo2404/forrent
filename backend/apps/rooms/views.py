@@ -278,6 +278,13 @@ class LandlordRoomViewSet(StandardResponseReadOnlyMixin, ModelViewSet):
             has_lease_history=Exists(RoomLease.objects.filter(room_id=OuterRef("pk"))),
         )
 
+    def _lock_owned_room(self):
+        return get_object_or_404(
+            Room.objects.select_for_update(),
+            pk=self.kwargs["pk"],
+            created_by=self.request.user,
+        )
+
     @action(detail=False, methods=["get"])
     def summary(self, request):
         status_counts = {
@@ -405,7 +412,7 @@ class LandlordRoomViewSet(StandardResponseReadOnlyMixin, ModelViewSet):
     @transaction.atomic
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
-        locked_room = self.get_queryset().select_for_update().get(pk=self.get_object().pk)
+        locked_room = self._lock_owned_room()
         serializer = self.get_serializer(locked_room, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         changed_fields = sorted(serializer.validated_data)
@@ -420,7 +427,7 @@ class LandlordRoomViewSet(StandardResponseReadOnlyMixin, ModelViewSet):
 
     @transaction.atomic
     def destroy(self, request, *args, **kwargs):
-        room = self.get_queryset().select_for_update().get(pk=self.get_object().pk)
+        room = self._lock_owned_room()
         if room.status not in self.DELETABLE_STATUSES:
             raise LandlordRoomLocked()
         if room.viewing_requests.exists() or room.leases.exists():
