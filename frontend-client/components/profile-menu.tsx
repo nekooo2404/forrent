@@ -6,14 +6,16 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   clearAuthSession,
-  getAuthSession,
+  getAuthSessionDetails,
 } from "@/lib/auth-storage";
+import type { ApiUser } from "@/lib/api";
 
 type AuthState = "loading" | "anonymous" | "authenticated";
 
 export function ProfileMenu() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [authState, setAuthState] = useState<AuthState>("loading");
+  const [userRole, setUserRole] = useState<ApiUser["role"] | null>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -21,12 +23,16 @@ export function ProfileMenu() {
 
     async function refreshAuthState() {
       try {
-        const authenticated = await getAuthSession();
+        const session = await getAuthSessionDetails();
         if (isMounted) {
-          setAuthState(authenticated ? "authenticated" : "anonymous");
+          setUserRole(session.role);
+          setAuthState(session.authenticated ? "authenticated" : "anonymous");
         }
       } catch {
-        if (isMounted) setAuthState("anonymous");
+        if (isMounted) {
+          setUserRole(null);
+          setAuthState("anonymous");
+        }
       }
     }
 
@@ -75,6 +81,7 @@ export function ProfileMenu() {
     }).catch(() => null);
 
     clearAuthSession();
+    setUserRole(null);
     setAuthState("anonymous");
     setIsProfileMenuOpen(false);
     window.location.assign("/");
@@ -131,6 +138,16 @@ export function ProfileMenu() {
           >
             Thông tin người dùng
           </Link>
+          {userRole === "LANDLORD" ? (
+            <Link
+              className="block min-h-11 px-4 py-3 font-body-md text-body-md text-primary transition-colors hover:bg-surface-container"
+              data-testid="landlord-profile-link"
+              href="/landlord/rooms"
+              onClick={() => setIsProfileMenuOpen(false)}
+            >
+              Đăng phòng
+            </Link>
+          ) : null}
           <Link
             className="block min-h-11 px-4 py-3 font-body-md text-body-md text-primary transition-colors hover:bg-surface-container"
             href="/forget-password"

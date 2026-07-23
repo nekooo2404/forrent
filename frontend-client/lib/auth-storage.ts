@@ -11,7 +11,15 @@ type ApiResponse<T> = {
 };
 
 type RefreshResponse = Record<string, never>;
-type SessionResponse = { authenticated: boolean };
+export type AuthSessionDetails = {
+  authenticated: boolean;
+  role: ApiUser["role"] | null;
+};
+
+type SessionResponse = {
+  authenticated: boolean;
+  role?: ApiUser["role"] | null;
+};
 
 const accessTokenKey = "access";
 const refreshTokenKey = "refresh";
@@ -88,10 +96,19 @@ export async function refreshStoredAuthSession() {
   return "cookie-session";
 }
 
-export async function getAuthSession() {
+export async function getAuthSessionDetails(): Promise<AuthSessionDetails> {
   const response = await fetch("/api/auth/session", { cache: "no-store" });
   const payload = (await response.json().catch(() => null)) as ApiResponse<SessionResponse> | null;
-  return Boolean(response.ok && payload?.success && payload.data?.authenticated);
+  const authenticated = Boolean(response.ok && payload?.success && payload.data?.authenticated);
+  return {
+    authenticated,
+    role: authenticated ? payload?.data?.role ?? null : null,
+  };
+}
+
+export async function getAuthSession() {
+  const session = await getAuthSessionDetails();
+  return session.authenticated;
 }
 
 export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}) {

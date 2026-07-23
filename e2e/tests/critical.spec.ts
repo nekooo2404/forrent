@@ -188,15 +188,40 @@ test.describe('Public critical flows', () => {
     await expect(signup).toHaveCSS('white-space', 'nowrap');
   });
 
-  test('authenticated navigation keeps the account menu', async ({ page }) => {
+  test('tenant account menu does not expose landlord room management', async ({ page }) => {
     await page.route('**/api/auth/session', (route) => route.fulfill({
       contentType: 'application/json',
-      body: JSON.stringify({ success: true, message: 'Success', data: { authenticated: true } }),
+      body: JSON.stringify({ success: true, message: 'Success', data: { authenticated: true, role: 'TENANT' } }),
     }));
     await page.goto('/');
 
-    await expect(page.getByRole('button', { name: 'Tài khoản' })).toBeVisible();
+    await page.getByRole('button', { name: 'Tài khoản' }).click();
+    const menu = page.locator('#profile-popover');
+
+    await expect(menu.getByRole('link', { name: 'Thông tin người dùng' })).toBeVisible();
+    await expect(menu.getByTestId('landlord-profile-link')).toHaveCount(0);
     await expect(page.getByTestId('public-account-actions')).toHaveCount(0);
+  });
+
+  test('landlord room management follows user information in the account menu', async ({ page }) => {
+    await page.route('**/api/auth/session', (route) => route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, message: 'Success', data: { authenticated: true, role: 'LANDLORD' } }),
+    }));
+    await page.goto('/');
+
+    const primaryNavigation = page.getByRole('navigation', { name: 'Điều hướng chính' });
+    await expect(primaryNavigation.getByRole('link', { name: 'Đăng phòng' })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Tài khoản' }).click();
+    const menuLinks = page.locator('#profile-popover').getByRole('link');
+
+    await expect(page.getByTestId('landlord-profile-link')).toBeVisible();
+    await expect(menuLinks).toHaveText([
+      'Thông tin người dùng',
+      'Đăng phòng',
+      'Quên mật khẩu',
+    ]);
   });
 
   test('landlord portal publishes and confirms an owned-room rental without admin access', async ({ page }) => {
