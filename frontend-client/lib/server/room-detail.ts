@@ -1,17 +1,10 @@
 import "server-only";
 
-import { unstable_cache } from "next/cache";
 import { cache } from "react";
 
-import { AVAILABILITY_REVALIDATE_SECONDS, getRoomDetail } from "@/lib/api";
+import { getRoomDetail } from "@/lib/api";
 
-const getRevalidatedRoomDetail = unstable_cache(
-  async (slug: string) => getRoomDetail(slug),
-  ["public-room-detail"],
-  {
-    revalidate: AVAILABILITY_REVALIDATE_SECONDS,
-    tags: ["public-room-detail"],
-  },
-);
-
-export const getCachedRoomDetail = cache(getRevalidatedRoomDetail);
+// Django caches the serialized public detail in Redis. React cache only
+// deduplicates generateMetadata and page rendering within the same request,
+// avoiding Next Data Cache locks on this dynamic, nonce-bearing route.
+export const getCachedRoomDetail = cache(getRoomDetail);
