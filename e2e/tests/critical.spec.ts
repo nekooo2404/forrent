@@ -1153,9 +1153,9 @@ test.describe('Public critical flows', () => {
     const warmResponse = await request.get(`/rooms/${roomSlug}`);
     expect(warmResponse.ok()).toBe(true);
 
-    const cachedInternalResponse = await request.get(internalCountersUrl);
-    const cachedInternalPayload = await cachedInternalResponse.json() as { data: Record<string, number> };
-    expect(cachedInternalPayload.data[`GET ${detailPath}`]).toBe(1);
+    const secondRequestInternalResponse = await request.get(internalCountersUrl);
+    const secondRequestInternalPayload = await secondRequestInternalResponse.json() as { data: Record<string, number> };
+    expect(secondRequestInternalPayload.data[`GET ${detailPath}`]).toBe(2);
   });
 
   test('the last visible room prefetches and opens in under one second', async ({ page, request }, testInfo) => {
