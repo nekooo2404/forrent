@@ -95,6 +95,50 @@ class ViewingRequestActivity(TimeStampedModel):
         return f"{self.viewing_request_id} - {self.action}"
 
 
+class LandlordNotification(TimeStampedModel):
+    class Type(models.TextChoices):
+        NEW_VIEWING_REQUEST = "NEW_VIEWING_REQUEST", "New viewing request"
+
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="landlord_notifications",
+    )
+    viewing_request = models.ForeignKey(
+        ViewingRequest,
+        on_delete=models.CASCADE,
+        related_name="landlord_notifications",
+    )
+    type = models.CharField(max_length=40, choices=Type.choices)
+    read_at = models.DateTimeField(null=True, blank=True)
+    email_sent_at = models.DateTimeField(null=True, blank=True)
+    telegram_sent_at = models.DateTimeField(null=True, blank=True)
+    delivery_attempted_at = models.DateTimeField(null=True, blank=True)
+    last_delivery_error = models.CharField(max_length=120, blank=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("recipient", "viewing_request", "type"),
+                name="unique_landlord_notification_event",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=("recipient", "read_at", "created_at"),
+                name="landlord_notification_feed_idx",
+            ),
+        ]
+
+    @property
+    def is_read(self):
+        return self.read_at is not None
+
+    def __str__(self):
+        return f"{self.recipient_id} - {self.type} - {self.viewing_request_id}"
+
+
 class RoomLease(TimeStampedModel):
     class Status(models.TextChoices):
         ACTIVE = "ACTIVE", "Active"

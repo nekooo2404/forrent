@@ -8,13 +8,37 @@ from rest_framework.exceptions import ValidationError
 from apps.rooms.models import Room
 from apps.common.audit import audit_event
 from apps.common.tasking import enqueue_task_on_commit
-from apps.viewing_requests.models import RoomLease, ViewingRequest, ViewingRequestActivity
-from apps.viewing_requests.tasks import send_appointment_confirmed_email, send_viewing_request_received_email
+from apps.viewing_requests.models import (
+    LandlordNotification,
+    RoomLease,
+    ViewingRequest,
+    ViewingRequestActivity,
+)
+from apps.viewing_requests.tasks import (
+    send_appointment_confirmed_email,
+    send_landlord_viewing_request_notification,
+    send_viewing_request_received_email,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class ViewingRequestService:
+    @staticmethod
+    def _create_landlord_notification(viewing_request):
+        owner = viewing_request.room.created_by
+        if owner and owner.is_active and owner.role == owner.Role.LANDLORD:
+            notification, _created = LandlordNotification.objects.get_or_create(
+                recipient=owner,
+                viewing_request=viewing_request,
+                type=LandlordNotification.Type.NEW_VIEWING_REQUEST,
+            )
+            enqueue_task_on_commit(
+                send_landlord_viewing_request_notification,
+                notification.id,
+                priority=8,
+            )
+
     @staticmethod
     @transaction.atomic
     def bulk_update(*, ids, updates, actor, request=None):
@@ -71,7 +95,12 @@ class ViewingRequestService:
     @staticmethod
     @transaction.atomic
     def create_viewing_request(*, user, room_id, preferred_viewing_date=None, preferred_viewing_time_slot=""):
-        room = Room.objects.select_for_update().filter(pk=room_id, status=Room.Status.PUBLISHED).first()
+        room = (
+            Room.objects.select_for_update()
+            .select_related("created_by")
+            .filter(pk=room_id, status=Room.Status.PUBLISHED)
+            .first()
+        )
         if room is None:
             raise ValidationError({"room_id": "Room does not exist or is not available for viewing."})
 
@@ -103,13 +132,19 @@ class ViewingRequestService:
             actual_commission_amount=0,
         )
         logger.info("Viewing request created: id=%s user_id=%s room_id=%s", viewing_request.id, user.id, room.id)
+        ViewingRequestService._create_landlord_notification(viewing_request)
         enqueue_task_on_commit(send_viewing_request_received_email, viewing_request.id)
         return viewing_request
 
     @staticmethod
     @transaction.atomic
     def create_contact_viewing_request(*, user, room, full_name, phone, email):
-        room = Room.objects.select_for_update().filter(pk=room.pk, status=Room.Status.PUBLISHED).first()
+        room = (
+            Room.objects.select_for_update()
+            .select_related("created_by")
+            .filter(pk=room.pk, status=Room.Status.PUBLISHED)
+            .first()
+        )
         if room is None:
             raise ValidationError({"room": "Room does not exist or is not available for viewing."})
 
@@ -128,6 +163,7 @@ class ViewingRequestService:
             actual_commission_amount=0,
         )
         logger.info("Viewing request converted from contact: id=%s user_id=%s room_id=%s", viewing_request.id, user.id, room.id)
+        ViewingRequestService._create_landlord_notification(viewing_request)
         enqueue_task_on_commit(send_viewing_request_received_email, viewing_request.id)
         return viewing_request
 

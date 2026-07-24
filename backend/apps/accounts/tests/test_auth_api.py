@@ -630,6 +630,69 @@ class TestAuthAPI:
         assert created_landlord.is_staff is False
         assert created_landlord.is_superuser is False
 
+    def test_saler_admin_can_configure_valid_telegram_chat_id_for_landlord_only(self):
+        saler = create_admin()
+        landlord = create_user(
+            email="telegram-landlord@example.com",
+            phone="0987654398",
+            role=User.Role.LANDLORD,
+        )
+        tenant = create_user(email="telegram-tenant@example.com", phone="0987654399")
+        other_landlord = create_user(
+            email="other-telegram-landlord@example.com",
+            phone="0987654397",
+            role=User.Role.LANDLORD,
+        )
+        self.client.force_authenticate(saler)
+
+        valid_response = self.client.patch(
+            f"/api/admin/users/{landlord.id}/",
+            {
+                "telegram_chat_id": "-1001234567890",
+                "current_password": "Password@123",
+            },
+            format="json",
+        )
+        invalid_response = self.client.patch(
+            f"/api/admin/users/{landlord.id}/",
+            {"telegram_chat_id": "@public-channel"},
+            format="json",
+        )
+        tenant_response = self.client.patch(
+            f"/api/admin/users/{tenant.id}/",
+            {
+                "telegram_chat_id": "123456789",
+                "current_password": "Password@123",
+            },
+            format="json",
+        )
+        duplicate_response = self.client.patch(
+            f"/api/admin/users/{other_landlord.id}/",
+            {
+                "telegram_chat_id": "-1001234567890",
+                "current_password": "Password@123",
+            },
+            format="json",
+        )
+
+        landlord.refresh_from_db()
+        tenant.refresh_from_db()
+        assert valid_response.status_code == 200
+        assert valid_response.data["data"]["telegram_chat_id"] == "-1001234567890"
+        assert landlord.telegram_chat_id == "-1001234567890"
+        assert AuditLog.objects.filter(
+            event="admin.user_telegram_destination_changed",
+            actor=saler,
+            target_id=str(landlord.id),
+        ).exists()
+        assert invalid_response.status_code == 400
+        assert "telegram_chat_id" in invalid_response.data["errors"]
+        assert tenant_response.status_code == 400
+        assert "telegram_chat_id" in tenant_response.data["errors"]
+        assert tenant.telegram_chat_id == ""
+        assert duplicate_response.status_code == 400
+        assert "telegram_chat_id" in duplicate_response.data["errors"]
+
     def test_creating_saler_requires_current_admin_password(self):
         saler = create_admin()
         self.client.force_authenticate(saler)

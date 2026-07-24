@@ -34,6 +34,33 @@ Sua `backend/.env` tren server:
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` de upload anh len Cloudinary
 - Tao mailbox tren Email Pro, vi du `noreply@forrent.io.vn`, roi dien `EMAIL_HOST_USER` va `EMAIL_HOST_PASSWORD`
 - Email Pro Mat Bao: `EMAIL_HOST=s129d209.emailserver.vn`, `EMAIL_PORT=465`, `EMAIL_USE_SSL=True`, `EMAIL_USE_TLS=False`
+- Email Sendify: dat `EMAIL_BACKEND=apps.common.email.SendifyEmailBackend`, `SENDIFY_API_KEY` va `DEFAULT_FROM_EMAIL=no-reply@forrent.io.vn`
+- Telegram: tao bot bang BotFather, dat `TELEGRAM_BOT_TOKEN` trong `backend/.env`; khong commit token vao Git
+- Moi landlord phai nhan `/start` cho bot. Admin sau do nhap Chat ID cua landlord tai `Quan ly nguoi dung`; khong dung chung mot Chat ID cho nhieu landlord
+
+Lay Chat ID sau khi landlord da gui `/start` (lenh khong ghi token that vao shell history):
+
+```bash
+read -s TELEGRAM_BOT_TOKEN
+curl -fsS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates" | jq
+unset TELEGRAM_BOT_TOKEN
+```
+
+Sau khi cap nhat `.env`, restart backend va worker de nap cau hinh moi:
+
+```bash
+docker compose -f backend/docker-compose.yml up -d --build backend celery_worker
+docker compose -f backend/docker-compose.yml exec backend python manage.py migrate
+```
+
+Kiem tra kenh Telegram bang so dien thoai tai khoan ForRent (so dien thoai chi dung de tim user; Telegram van gui bang Chat ID da lien ket):
+
+```bash
+docker compose -f backend/docker-compose.yml exec backend \
+  python manage.py send_test_telegram --phone 0382912254
+```
+
+Neu lenh bao `has not linked Telegram`, landlord can gui `/start` cho bot va admin cap nhat dung Chat ID truoc khi thu lai.
 
 ## 4. Build va chay app
 

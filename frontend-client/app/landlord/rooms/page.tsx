@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
 import { LandlordRoomManager } from "@/components/landlord/landlord-room-manager";
-import { PublicShell } from "@/components/public-shell";
 
 export const metadata: Metadata = {
   title: "Quản lý phòng cho thuê - ForRent",
@@ -13,9 +12,5 @@ export const metadata: Metadata = {
 };
 
 export default function LandlordRoomsPage() {
-  return (
-    <PublicShell active="landlord">
-      <LandlordRoomManager />
-    </PublicShell>
-  );
+  return <LandlordRoomManager />;
 }

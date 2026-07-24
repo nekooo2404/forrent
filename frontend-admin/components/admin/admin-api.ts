@@ -205,6 +205,7 @@ export type AdminUser = {
   email: string;
   phone: string;
   role: "SALER" | "LANDLORD" | "TENANT" | string;
+  telegram_chat_id: string;
   is_active: boolean;
   admin_updated_by: number | null;
   admin_updated_by_name: string | null;

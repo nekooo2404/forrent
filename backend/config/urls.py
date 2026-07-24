@@ -13,6 +13,7 @@ from rest_framework.routers import DefaultRouter
 from apps.accounts.views import AdminUserViewSet
 from apps.blogs.views import AdminBlogViewSet, PublicBlogViewSet
 from apps.common.views import SendifyTemplatesAPIView
+from apps.commissions.views import LandlordCommissionPayoutViewSet
 from apps.common.tasks import CELERY_PIPELINE_HEARTBEAT_KEY
 from apps.contacts.views import ContactCreateAPIView, AdminContactMessageViewSet
 from apps.locations.views import (
@@ -29,7 +30,11 @@ from apps.rooms.views import (
     PublicRoomFiltersAPIView,
     PublicRoomViewSet,
 )
-from apps.viewing_requests.views import AdminViewingRequestViewSet
+from apps.viewing_requests.views import (
+    AdminViewingRequestViewSet,
+    LandlordNotificationViewSet,
+    LandlordViewingRequestViewSet,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +53,9 @@ admin_router.register("users", AdminUserViewSet, basename="admin-user")
 
 landlord_router = DefaultRouter()
 landlord_router.register("rooms", LandlordRoomViewSet, basename="landlord-room")
+landlord_router.register("viewing-requests", LandlordViewingRequestViewSet, basename="landlord-viewing-request")
+landlord_router.register("commissions", LandlordCommissionPayoutViewSet, basename="landlord-commission")
+landlord_router.register("notifications", LandlordNotificationViewSet, basename="landlord-notification")
 
 public_router = DefaultRouter()
 public_router.register("rooms", PublicRoomViewSet, basename="room")

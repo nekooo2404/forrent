@@ -134,17 +134,50 @@ jobs:
       - run: npm ci
         working-directory: e2e
         timeout-minutes: 3
-      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npx playwright install --with-deps chromium
         working-directory: e2e
         timeout-minutes: 12
       - run: npm run test:ci
         working-directory: e2e
         timeout-minutes: 10
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+
+  cross-browser:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: frontend
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            frontend-client/package-lock.json
+            frontend-admin/package-lock.json
+            e2e/package-lock.json
+      - run: npm ci
+        working-directory: frontend-client
+        timeout-minutes: 5
+      - run: npm ci
+        working-directory: frontend-admin
+        timeout-minutes: 5
+      - run: npm ci
+        working-directory: e2e
+        timeout-minutes: 3
+      - run: npx playwright install --with-deps chromium firefox webkit
+        working-directory: e2e
+        timeout-minutes: 25
       - run: npm run test:cross-browser
         working-directory: e2e
         timeout-minutes: 12
       - uses: actions/upload-artifact@v6
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-cross-browser-report
           path: e2e/playwright-report/

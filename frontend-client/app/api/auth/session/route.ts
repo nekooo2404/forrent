@@ -12,7 +12,7 @@ function anonymousResponse(clearCookies = false) {
   const response = NextResponse.json({
     success: true,
     message: "Success",
-    data: { authenticated: false },
+    data: { authenticated: false, role: null },
   });
   if (clearCookies) clearSessionCookies(response);
   return response;
@@ -28,11 +28,11 @@ export async function GET(request: Request) {
 
   if (authorization) {
     try {
-      await getCurrentUser(authorization);
+      const user = await getCurrentUser(authorization);
       return NextResponse.json({
         success: true,
         message: "Success",
-        data: { authenticated: true },
+        data: { authenticated: true, role: user.role },
       });
     } catch (error) {
       if (!(error instanceof ApiError) || error.status !== 401) {
@@ -47,11 +47,11 @@ export async function GET(request: Request) {
 
   try {
     const tokens = await refreshTenant(refresh);
-    await getCurrentUser(`Bearer ${tokens.access}`);
+    const user = await getCurrentUser(`Bearer ${tokens.access}`);
     const response = NextResponse.json({
       success: true,
       message: "Success",
-      data: { authenticated: true },
+      data: { authenticated: true, role: user.role },
     });
     setSessionCookies(response, tokens);
     return response;

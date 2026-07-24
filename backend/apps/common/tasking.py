@@ -6,6 +6,7 @@ from kombu.exceptions import OperationalError as KombuOperationalError
 
 from apps.common.email import SendifyEmailTransientError
 from apps.common.request_context import request_id_context
+from apps.common.telegram import TelegramTransientError
 
 
 class ReliableEmailTask(Task):
@@ -20,6 +21,25 @@ class ReliableEmailTask(Task):
     ignore_result = True
     soft_time_limit = 30
     time_limit = 45
+
+
+class ReliableNotificationTask(Task):
+    abstract = True
+    autoretry_for = (
+        OSError,
+        OperationalError,
+        SendifyEmailTransientError,
+        TelegramTransientError,
+    )
+    retry_backoff = 2
+    retry_backoff_max = 60
+    retry_jitter = True
+    max_retries = 5
+    acks_late = True
+    reject_on_worker_lost = True
+    ignore_result = True
+    soft_time_limit = 45
+    time_limit = 60
 
 
 class ReliableMaintenanceTask(Task):
