@@ -22,6 +22,7 @@ env = environ.Env(
     EMAIL_USE_SSL=(bool, True),
     EMAIL_TIMEOUT=(int, 15),
     SENDIFY_API_TIMEOUT=(int, 15),
+    TELEGRAM_API_TIMEOUT=(int, 10),
     CELERY_TASK_ALWAYS_EAGER=(bool, False),
     CELERY_TASK_EAGER_PROPAGATES=(bool, False),
     CELERY_RESULT_EXPIRES=(int, 3600),
@@ -200,6 +201,7 @@ REST_FRAMEWORK = {
         "viewing_request": "5/min",
         "contact": "5/min",
         "landlord_room_write": "60/hour",
+        "landlord_workflow_write": "120/hour",
     },
 }
 
@@ -292,6 +294,10 @@ CELERY_TASK_ROUTES = {
         "queue": "notifications",
         "priority": 5,
     },
+    "apps.viewing_requests.tasks.send_landlord_viewing_request_notification": {
+        "queue": "notifications",
+        "priority": 8,
+    },
     "apps.viewing_requests.tasks.send_appointment_confirmed_email": {
         "queue": "notifications",
         "priority": 7,
@@ -374,6 +380,9 @@ SENDIFY_API_URL = env("SENDIFY_API_URL", default="https://sendify.vn/api/emails"
 SENDIFY_ACCOUNT_KEY = env("SENDIFY_ACCOUNT_KEY", default="")
 SENDIFY_TEMPLATES_URL = env("SENDIFY_TEMPLATES_URL", default="https://sendify.vn/api/templates")
 SENDIFY_API_TIMEOUT = env("SENDIFY_API_TIMEOUT")
+TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", default="")
+TELEGRAM_API_BASE_URL = env("TELEGRAM_API_BASE_URL", default="https://api.telegram.org")
+TELEGRAM_API_TIMEOUT = env("TELEGRAM_API_TIMEOUT")
 OTP_REQUEST_COOLDOWN_SECONDS = env("OTP_REQUEST_COOLDOWN_SECONDS")
 OTP_MAX_ATTEMPTS = env("OTP_MAX_ATTEMPTS")
 OTP_ATTEMPT_WINDOW_SECONDS = env("OTP_ATTEMPT_WINDOW_SECONDS")

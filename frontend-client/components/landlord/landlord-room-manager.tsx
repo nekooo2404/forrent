@@ -457,12 +457,11 @@ export function LandlordRoomManager() {
   }
 
   return (
-    <section className="px-margin-mobile pb-20 pt-28 md:px-margin-desktop">
+    <section className="px-margin-mobile py-10 md:px-margin-desktop md:py-12">
       <div className="mx-auto max-w-container-max">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-tertiary">Khu vực người cho thuê</p>
-            <h1 className="mt-3 font-headline-md text-4xl leading-tight text-on-surface">Quản lý phòng của bạn</h1>
+            <h2 className="font-headline-md text-4xl leading-tight text-on-surface">Quản lý phòng của bạn</h2>
             <p className="mt-4 max-w-2xl text-base leading-7 text-on-surface-variant">
               Tạo bản nháp, tự đăng phòng khi sẵn sàng và theo dõi trạng thái hiển thị. Mã tòa, hoa hồng và ghi chú nội bộ chỉ thuộc khu vực admin.
             </p>

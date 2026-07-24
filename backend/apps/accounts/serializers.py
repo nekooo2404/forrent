@@ -1,4 +1,5 @@
 from django.contrib.auth import password_validation
+from django.core.validators import RegexValidator
 from rest_framework import serializers
 
 from apps.accounts.models import PasswordResetToken, User
@@ -17,6 +18,17 @@ class UserSummarySerializer(serializers.ModelSerializer):
 class AdminUserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False, min_length=8, allow_blank=True)
     current_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    telegram_chat_id = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=32,
+        validators=[
+            RegexValidator(
+                regex=r"^-?\d{1,20}$",
+                message="Telegram Chat ID must contain only an optional leading minus sign and digits.",
+            )
+        ],
+    )
 
     class Meta:
         model = User
@@ -27,6 +39,7 @@ class AdminUserSerializer(serializers.ModelSerializer):
             "email",
             "phone",
             "role",
+            "telegram_chat_id",
             "is_active",
             "password",
             "current_password",
@@ -53,14 +66,33 @@ class AdminUserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This phone is already registered.")
         return value
 
+    def validate_telegram_chat_id(self, value):
+        value = value.strip()
+        if not value:
+            return ""
+        queryset = User.objects.filter(telegram_chat_id=value)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("This Telegram Chat ID is already assigned to another account.")
+        return value
+
     def validate_role(self, value):
         if value not in {User.Role.TENANT, User.Role.LANDLORD, User.Role.SALER}:
             raise serializers.ValidationError("Role must be TENANT, LANDLORD or SALER.")
         return value
 
     def validate(self, attrs):
+        next_role = attrs.get("role", self.instance.role if self.instance else User.Role.TENANT)
+        telegram_chat_id = attrs.get(
+            "telegram_chat_id",
+            self.instance.telegram_chat_id if self.instance else "",
+        )
+        if telegram_chat_id and next_role != User.Role.LANDLORD:
+            raise serializers.ValidationError(
+                {"telegram_chat_id": "Telegram notifications can only be configured for LANDLORD accounts."}
+            )
         if self.instance:
-            next_role = attrs.get("role", self.instance.role)
             next_is_active = attrs.get("is_active", self.instance.is_active)
             removes_active_saler = (
                 self.instance.role == User.Role.SALER
@@ -92,7 +124,8 @@ class AdminUserSerializer(serializers.ModelSerializer):
         current_password = validated_data.pop("current_password", "")
         role = validated_data.get("role", User.Role.TENANT)
         actor = self.context["request"].user
-        if role == User.Role.SALER and not actor.check_password(current_password):
+        configures_telegram = bool(validated_data.get("telegram_chat_id"))
+        if (role == User.Role.SALER or configures_telegram) and not actor.check_password(current_password):
             raise serializers.ValidationError({"current_password": "Current admin password is required."})
         if password:
             password_validation.validate_password(password)
@@ -108,13 +141,23 @@ class AdminUserSerializer(serializers.ModelSerializer):
         password = validated_data.pop("password", None)
         current_password = validated_data.pop("current_password", "")
         actor = self.context["request"].user
-        sensitive_change = password or (validated_data.get("role") and validated_data.get("role") != instance.role)
+        changes_telegram_destination = (
+            "telegram_chat_id" in validated_data
+            and validated_data["telegram_chat_id"] != instance.telegram_chat_id
+        )
+        sensitive_change = (
+            password
+            or (validated_data.get("role") and validated_data.get("role") != instance.role)
+            or changes_telegram_destination
+        )
         if sensitive_change and not actor.check_password(current_password):
             raise serializers.ValidationError({"current_password": "Current admin password is required."})
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.is_staff = instance.role == User.Role.SALER
         instance.is_superuser = False
+        if instance.role != User.Role.LANDLORD:
+            instance.telegram_chat_id = ""
         instance.admin_updated_by = actor
         if password:
             password_validation.validate_password(password, user=instance)

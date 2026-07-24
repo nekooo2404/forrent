@@ -4,7 +4,7 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.common.audit import audit_event
 from apps.rooms.serializers import PublicRoomListSerializer
-from apps.viewing_requests.models import ViewingRequest
+from apps.viewing_requests.models import LandlordNotification, ViewingRequest
 from apps.viewing_requests.services import ViewingRequestService
 
 
@@ -44,6 +44,40 @@ class ViewingRequestCreateResponseSerializer(serializers.ModelSerializer):
             "preferred_viewing_time_slot",
             "created_at",
             "appointment_confirmed_at",
+        )
+        read_only_fields = fields
+
+
+class LandlordNotificationSerializer(serializers.ModelSerializer):
+    room_id = serializers.IntegerField(source="viewing_request.room_id", read_only=True)
+    room_title = serializers.CharField(source="viewing_request.room.title", read_only=True)
+    room_code = serializers.CharField(source="viewing_request.room.room_code", read_only=True)
+    requester_name = serializers.CharField(source="viewing_request.full_name", read_only=True)
+    preferred_viewing_date = serializers.DateField(
+        source="viewing_request.preferred_viewing_date",
+        read_only=True,
+    )
+    preferred_viewing_time_slot = serializers.CharField(
+        source="viewing_request.preferred_viewing_time_slot",
+        read_only=True,
+    )
+    is_read = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = LandlordNotification
+        fields = (
+            "id",
+            "type",
+            "viewing_request",
+            "room_id",
+            "room_title",
+            "room_code",
+            "requester_name",
+            "preferred_viewing_date",
+            "preferred_viewing_time_slot",
+            "is_read",
+            "read_at",
+            "created_at",
         )
         read_only_fields = fields
 
@@ -166,6 +200,72 @@ class AdminViewingRequestSerializer(serializers.ModelSerializer):
                     target=updated,
                     metadata={"from": previous_status, "to": updated.status},
                 )
+        return updated
+
+
+class LandlordViewingRequestSerializer(serializers.ModelSerializer):
+    """Owner-safe lead representation and lifecycle updates."""
+
+    appointment_confirmed_at = serializers.DateTimeField(source="confirmed_at", read_only=True)
+    room_title = serializers.CharField(source="room.title", read_only=True)
+    room_code = serializers.CharField(source="room.room_code", read_only=True)
+    city_name = serializers.CharField(source="room.city.name", read_only=True)
+    ward_name = serializers.CharField(source="room.ward.name", read_only=True)
+
+    class Meta:
+        model = ViewingRequest
+        fields = (
+            "id",
+            "room",
+            "room_title",
+            "room_code",
+            "city_name",
+            "ward_name",
+            "full_name",
+            "phone",
+            "email",
+            "preferred_viewing_date",
+            "preferred_viewing_time_slot",
+            "status",
+            "appointment_confirmed_at",
+            "appointment_date",
+            "appointment_time_slot",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = tuple(field for field in fields if field != "status")
+
+    def validate_status(self, value):
+        if not self.instance or value == self.instance.status:
+            return value
+        if value == ViewingRequest.Status.SCHEDULED:
+            raise serializers.ValidationError("Use confirm appointment to record the date and time slot.")
+        if value == ViewingRequest.Status.CONVERTED:
+            raise serializers.ValidationError("Use the room rental confirmation workflow.")
+        if self.instance.status in {ViewingRequest.Status.CONVERTED, ViewingRequest.Status.CANCELLED, ViewingRequest.Status.NO_SHOW}:
+            raise serializers.ValidationError("Completed requests cannot be changed.")
+        if not ViewingRequest.can_transition(self.instance.status, value):
+            raise serializers.ValidationError(f"Cannot change request from {self.instance.status} to {value}.")
+        return value
+
+    def update(self, instance, validated_data):
+        previous_status = instance.status
+        updated = super().update(instance, validated_data)
+        if updated.status != previous_status:
+            from apps.viewing_requests.models import ViewingRequestActivity
+
+            actor = self.context["request"].user
+            ViewingRequestActivity.objects.create(
+                viewing_request=updated,
+                actor=actor,
+                action="LANDLORD_STATUS_UPDATE",
+            )
+            audit_event(
+                "viewing_request.status_changed",
+                request=self.context.get("request"),
+                target=updated,
+                metadata={"from": previous_status, "to": updated.status, "actor_scope": "landlord"},
+            )
         return updated
 
 

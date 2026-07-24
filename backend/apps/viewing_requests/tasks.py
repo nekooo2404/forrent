@@ -8,8 +8,10 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 
 from apps.common.cache_utils import execute_once
-from apps.common.tasking import ReliableEmailTask, ReliableMaintenanceTask
-from apps.viewing_requests.models import ViewingRequest
+from apps.common.email import SendifyEmailError, SendifyEmailTransientError
+from apps.common.tasking import ReliableEmailTask, ReliableMaintenanceTask, ReliableNotificationTask
+from apps.common.telegram import TelegramTransientError, send_telegram_message
+from apps.viewing_requests.models import LandlordNotification, ViewingRequest
 
 
 logger = logging.getLogger(__name__)
@@ -39,6 +41,200 @@ def _room_label(viewing_request):
     descriptor = room.room_subtype.name if room.room_subtype_id else ROOM_TYPE_LABELS.get(room.room_type, "Phòng thuê")
     location = room.ward.name or room.city.name
     return f"{descriptor} tại {location}"
+
+
+def _landlord_notification(notification_id):
+    return (
+        LandlordNotification.objects.select_related(
+            "recipient",
+            "viewing_request__room",
+            "viewing_request__room__created_by",
+            "viewing_request__room__room_subtype",
+            "viewing_request__room__ward",
+            "viewing_request__room__city",
+        )
+        .get(pk=notification_id)
+    )
+
+
+def _landlord_message(notification):
+    viewing_request = notification.viewing_request
+    date_label = (
+        viewing_request.preferred_viewing_date.strftime("%d/%m/%Y")
+        if viewing_request.preferred_viewing_date
+        else "Chưa chọn ngày"
+    )
+    time_label = TIME_SLOT_LABELS.get(
+        viewing_request.preferred_viewing_time_slot,
+        "Chưa chọn khung giờ",
+    )
+    return (
+        "ForRent - Yêu cầu xem phòng mới\n"
+        f"Khách: {viewing_request.full_name}\n"
+        f"Số điện thoại: {viewing_request.phone}\n"
+        f"Phòng: {viewing_request.room.title}\n"
+        f"Thời gian mong muốn: {date_label} · {time_label}\n"
+        f"Quản lý: {settings.FRONTEND_BASE_URL.rstrip('/')}/landlord/viewing-requests"
+    )
+
+
+@shared_task(base=ReliableNotificationTask, rate_limit="180/m")
+def send_landlord_viewing_request_notification(notification_id):
+    try:
+        notification = _landlord_notification(notification_id)
+    except LandlordNotification.DoesNotExist:
+        return {
+            "notification_id": notification_id,
+            "email_delivered": False,
+            "telegram_delivered": False,
+        }
+    recipient = notification.recipient
+    room = notification.viewing_request.room
+    if (
+        not recipient.is_active
+        or recipient.role != recipient.Role.LANDLORD
+        or room.created_by_id != recipient.id
+    ):
+        logger.warning(
+            "landlord_notification_delivery_skipped",
+            extra={
+                "event": "landlord_notification_delivery",
+                "notification_id": notification.id,
+                "status": "recipient_scope_mismatch",
+            },
+        )
+        return {
+            "notification_id": notification.id,
+            "email_delivered": False,
+            "telegram_delivered": False,
+        }
+
+    LandlordNotification.objects.filter(pk=notification.id).update(
+        delivery_attempted_at=timezone.now(),
+        last_delivery_error="",
+    )
+    errors = []
+    email_delivered = False
+    telegram_delivered = False
+    telegram_configuration_missing = bool(
+        recipient.telegram_chat_id and not settings.TELEGRAM_BOT_TOKEN
+    )
+    context = {
+        "landlord_name": recipient.full_name,
+        "requester_name": notification.viewing_request.full_name,
+        "requester_phone": notification.viewing_request.phone,
+        "room_title": room.title,
+        "date": notification.viewing_request.preferred_viewing_date,
+        "time_slot": TIME_SLOT_LABELS.get(
+            notification.viewing_request.preferred_viewing_time_slot,
+            "Chưa chọn",
+        ),
+        "portal_url": f"{settings.FRONTEND_BASE_URL.rstrip('/')}/landlord/viewing-requests",
+    }
+
+    if notification.email_sent_at is None and recipient.email:
+        def deliver_email():
+            sent = send_mail(
+                subject="ForRent - Yêu cầu xem phòng mới",
+                message=(
+                    f"Xin chào {recipient.full_name},\n\n"
+                    f"{notification.viewing_request.full_name} ({notification.viewing_request.phone}) "
+                    f"vừa gửi yêu cầu xem phòng {room.title}.\n"
+                    "Vui lòng mở cổng quản trị người dùng để liên hệ và xác nhận lịch."
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[recipient.email],
+                html_message=render_to_string("emails/landlord_new_viewing_request.html", context),
+                fail_silently=False,
+            )
+            if sent != 1:
+                raise SendifyEmailError("Email provider did not accept the landlord notification.")
+            sent_at = timezone.now()
+            LandlordNotification.objects.filter(
+                pk=notification.id,
+                email_sent_at__isnull=True,
+            ).update(email_sent_at=sent_at, updated_at=sent_at)
+
+        try:
+            _result, email_delivered = execute_once(
+                f"landlord-notification:{notification.id}:email",
+                deliver_email,
+                done_timeout=60 * 60 * 24 * 30,
+                cache_alias="coordination",
+            )
+        except Exception as exc:
+            errors.append(("email", exc))
+
+    if (
+        notification.telegram_sent_at is None
+        and settings.TELEGRAM_BOT_TOKEN
+        and recipient.telegram_chat_id
+    ):
+        def deliver_telegram():
+            send_telegram_message(
+                chat_id=recipient.telegram_chat_id,
+                text=_landlord_message(notification),
+            )
+            sent_at = timezone.now()
+            LandlordNotification.objects.filter(
+                pk=notification.id,
+                telegram_sent_at__isnull=True,
+            ).update(telegram_sent_at=sent_at, updated_at=sent_at)
+
+        try:
+            _result, telegram_delivered = execute_once(
+                f"landlord-notification:{notification.id}:telegram",
+                deliver_telegram,
+                done_timeout=60 * 60 * 24 * 30,
+                cache_alias="coordination",
+            )
+        except Exception as exc:
+            errors.append(("telegram", exc))
+
+    if errors:
+        safe_errors = [
+            f"{channel}:"
+            f"{'transient' if isinstance(exc, (OSError, SendifyEmailTransientError, TelegramTransientError)) else 'failed'}"
+            for channel, exc in errors
+        ]
+        if telegram_configuration_missing:
+            safe_errors.append("telegram:not_configured")
+        safe_error = ";".join(safe_errors)[:120]
+        LandlordNotification.objects.filter(pk=notification.id).update(
+            last_delivery_error=safe_error,
+            updated_at=timezone.now(),
+        )
+        raise errors[0][1]
+
+    if telegram_configuration_missing:
+        LandlordNotification.objects.filter(pk=notification.id).update(
+            last_delivery_error="telegram:not_configured",
+            updated_at=timezone.now(),
+        )
+        logger.error(
+            "landlord_notification_telegram_not_configured",
+            extra={
+                "event": "landlord_notification_delivery",
+                "notification_id": notification.id,
+                "status": "telegram_not_configured",
+            },
+        )
+
+    logger.info(
+        "landlord_notification_delivery_completed",
+        extra={
+            "event": "landlord_notification_delivery",
+            "notification_id": notification.id,
+            "email_delivered": email_delivered,
+            "telegram_delivered": telegram_delivered,
+        },
+    )
+
+    return {
+        "notification_id": notification.id,
+        "email_delivered": email_delivered,
+        "telegram_delivered": telegram_delivered,
+    }
 
 
 @shared_task(base=ReliableEmailTask, rate_limit="120/m")

@@ -97,3 +97,39 @@ class CommissionPayoutSerializer(serializers.ModelSerializer):
         if next_status == CommissionPayout.Status.CANCELLED and not attrs.get("note") and not self.instance.note:
             raise serializers.ValidationError({"note": "Cancellation reason is required."})
         return attrs
+
+
+class LandlordCommissionPayoutSerializer(serializers.ModelSerializer):
+    room_title = serializers.CharField(source="viewing_request.room.title", read_only=True)
+    room_code = serializers.CharField(source="viewing_request.room.room_code", read_only=True)
+    tenant_name = serializers.CharField(source="viewing_request.full_name", read_only=True)
+
+    class Meta:
+        model = CommissionPayout
+        fields = (
+            "id",
+            "viewing_request",
+            "room_title",
+            "room_code",
+            "tenant_name",
+            "amount",
+            "status",
+            "approved_at",
+            "paid_at",
+            "cancelled_at",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = fields
+
+
+class LandlordCommissionSummarySerializer(serializers.Serializer):
+    total = serializers.IntegerField()
+    pending = serializers.IntegerField()
+    approved = serializers.IntegerField()
+    paid = serializers.IntegerField()
+    cancelled = serializers.IntegerField()
+    total_amount = serializers.DecimalField(max_digits=14, decimal_places=2)
+    pending_amount = serializers.DecimalField(max_digits=14, decimal_places=2)
+    approved_amount = serializers.DecimalField(max_digits=14, decimal_places=2)
+    paid_amount = serializers.DecimalField(max_digits=14, decimal_places=2)

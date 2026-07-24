@@ -4,10 +4,10 @@ import { mockAdminCalendar, mockAdminDashboard, mockAdminRoomInventory } from '.
 
 const adminBaseURL = process.env.ADMIN_BASE_URL || 'http://localhost:3001';
 
-async function mockAuthenticatedSession(page: Page) {
+async function mockAuthenticatedSession(page: Page, role?: string) {
   await page.route('**/api/auth/session', (route) => route.fulfill({
     contentType: 'application/json',
-    body: JSON.stringify({ success: true, message: 'Success', data: { authenticated: true } }),
+    body: JSON.stringify({ success: true, message: 'Success', data: { authenticated: true, role } }),
   }));
 }
 
@@ -201,6 +201,7 @@ test.describe('Public critical flows', () => {
     await expect(menu.getByRole('link', { name: 'Thông tin người dùng' })).toBeVisible();
     await expect(menu.getByTestId('landlord-profile-link')).toHaveCount(0);
     await expect(page.getByTestId('public-account-actions')).toHaveCount(0);
+    await expect(page.getByTestId('landlord-notification-bell')).toHaveCount(0);
   });
 
   test('landlord room management follows user information in the account menu', async ({ page }) => {
@@ -211,21 +212,75 @@ test.describe('Public critical flows', () => {
     await page.goto('/');
 
     const primaryNavigation = page.getByRole('navigation', { name: 'Điều hướng chính' });
-    await expect(primaryNavigation.getByRole('link', { name: 'Đăng phòng' })).toHaveCount(0);
+    await expect(primaryNavigation.getByRole('link', { name: 'Quản trị người dùng' })).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Tài khoản' }).click();
     const menuLinks = page.locator('#profile-popover').getByRole('link');
 
     await expect(page.getByTestId('landlord-profile-link')).toBeVisible();
+    await expect(page.getByTestId('landlord-profile-link')).toHaveAttribute('href', '/landlord/rooms');
     await expect(menuLinks).toHaveText([
       'Thông tin người dùng',
-      'Đăng phòng',
+      'Quản trị người dùng',
       'Quên mật khẩu',
     ]);
   });
 
+  test('landlord receives owner-scoped viewing notifications from the site header', async ({ page }) => {
+    await mockAuthenticatedSession(page, 'LANDLORD');
+    let markAllCount = 0;
+    await page.route('**/api/landlord/notifications**', async (route) => {
+      const request = route.request();
+      const pathname = new URL(request.url()).pathname.replace(/\/$/, '');
+      if (request.method() === 'POST' && pathname.endsWith('/mark-all-read')) {
+        markAllCount += 1;
+        await route.fulfill({
+          json: { success: true, message: 'OK', data: { updated_count: 1, unread_count: 0 } },
+        });
+        return;
+      }
+      await route.fulfill({
+        json: {
+          success: true,
+          message: 'OK',
+          data: {
+            unread_count: 1,
+            results: [{
+              id: 901,
+              type: 'NEW_VIEWING_REQUEST',
+              viewing_request: 501,
+              room_id: 42,
+              room_title: 'Studio yên tĩnh gần ga metro',
+              room_code: 'FR-A1B2C3D4E5F6',
+              requester_name: 'Nguyễn Minh Anh',
+              preferred_viewing_date: '2026-07-28',
+              preferred_viewing_time_slot: 'morning',
+              is_read: false,
+              read_at: null,
+              created_at: '2026-07-23T08:30:00Z',
+            }],
+          },
+        },
+      });
+    });
+
+    await page.goto('/');
+
+    const bell = page.getByTestId('landlord-notification-bell');
+    await expect(bell).toHaveAttribute('aria-label', 'Thông báo, 1 chưa đọc');
+    await bell.click();
+    await expect(page.getByRole('heading', { name: 'Yêu cầu tư vấn' })).toBeVisible();
+    await expect(page.getByText('Nguyễn Minh Anh')).toBeVisible();
+    await expect(page.getByText('Studio yên tĩnh gần ga metro')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Đánh dấu đã đọc' }).click();
+
+    await expect.poll(() => markAllCount).toBe(1);
+    await expect(bell).toHaveAttribute('aria-label', 'Thông báo');
+  });
+
   test('landlord portal publishes and confirms an owned-room rental without admin access', async ({ page }) => {
-    await mockAuthenticatedSession(page);
+    await mockAuthenticatedSession(page, 'LANDLORD');
     await page.route('**/api/auth/me', (route) => route.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({
@@ -388,6 +443,60 @@ test.describe('Public critical flows', () => {
     await page.getByRole('button', { name: 'Đóng', exact: true }).click();
     await page.getByRole('button', { name: 'Bỏ thay đổi' }).click();
     await expect(page.getByRole('heading', { name: 'Thêm phòng mới' })).toBeHidden();
+  });
+
+  test('landlord user administration exposes four owner-scoped workflows', async ({ page }) => {
+    await mockAuthenticatedSession(page, 'LANDLORD');
+    await page.route('**/api/landlord/viewing-requests**', (route) => route.fulfill({
+      json: { success: true, message: 'OK', data: { count: 0, next: null, previous: null, results: [] } },
+    }));
+    await page.route('**/api/landlord/commissions**', (route) => {
+      const pathname = new URL(route.request().url()).pathname.replace(/\/$/, '');
+      if (pathname.endsWith('/summary')) {
+        return route.fulfill({
+          json: {
+            success: true,
+            message: 'OK',
+            data: {
+              total: 0,
+              pending: 0,
+              approved: 0,
+              paid: 0,
+              cancelled: 0,
+              total_amount: '0',
+              pending_amount: '0',
+              approved_amount: '0',
+              paid_amount: '0',
+            },
+          },
+        });
+      }
+      return route.fulfill({
+        json: { success: true, message: 'OK', data: { count: 0, next: null, previous: null, results: [] } },
+      });
+    });
+
+    await page.goto('/landlord/viewing-requests');
+    const portalNavigation = page.getByRole('navigation', { name: 'Quản trị người cho thuê' });
+    await expect(portalNavigation.getByRole('link')).toHaveText([
+      'Quản lý phòng',
+      'Yêu cầu xem phòng',
+      'Lịch xem phòng',
+      'Hoa hồng',
+    ]);
+    await expect(page.getByRole('heading', { name: 'Yêu cầu xem phòng' })).toBeVisible();
+
+    await portalNavigation.getByRole('link', { name: 'Lịch xem phòng' }).click();
+    await expect(page.getByRole('heading', { name: 'Lịch xem phòng' })).toBeVisible();
+
+    await page.getByRole('navigation', { name: 'Quản trị người cho thuê' }).getByRole('link', { name: 'Hoa hồng' }).click();
+    await expect(page.getByRole('heading', { name: 'Hoa hồng', exact: true })).toBeVisible();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/landlord/calendar');
+    await expect(page.getByRole('heading', { name: 'Lịch xem phòng' })).toBeVisible();
+    const hasPageOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+    expect(hasPageOverflow).toBe(false);
   });
 
   test('homepage starts with readable content and touch-sized controls', async ({ page }, testInfo) => {

@@ -6,6 +6,7 @@ import { Menu, X } from "@/components/ui/icons";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { ProfileMenu } from "@/components/profile-menu";
+import { LandlordNotificationBell } from "@/components/landlord-notification-bell";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 export type NavKey = "home" | "rooms" | "landlord" | "blogs" | "contact";
@@ -115,6 +116,7 @@ export function SiteNav({ active }: Readonly<{ active?: NavKey }>) {
         </nav>
 
         <div className="flex items-center gap-3 md:gap-4 lg:justify-self-end">
+          <LandlordNotificationBell />
           <button
             aria-expanded={isMobileMenuOpen}
             aria-label="Menu"

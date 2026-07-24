@@ -221,6 +221,7 @@ class AdminUserViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
     def perform_update(self, serializer):
         previous_role = serializer.instance.role
         previous_is_active = serializer.instance.is_active
+        previous_telegram_chat_id = serializer.instance.telegram_chat_id
         password_changed = "password" in serializer.validated_data and bool(serializer.validated_data.get("password"))
         user = serializer.save()
         if user.role != previous_role:
@@ -239,3 +240,10 @@ class AdminUserViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
             )
         if password_changed:
             audit_event("admin.user_password_changed", request=self.request, target=user)
+        if user.telegram_chat_id != previous_telegram_chat_id:
+            audit_event(
+                "admin.user_telegram_destination_changed",
+                request=self.request,
+                target=user,
+                metadata={"configured": bool(user.telegram_chat_id)},
+            )

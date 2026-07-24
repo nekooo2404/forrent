@@ -1,15 +1,25 @@
-from drf_spectacular.utils import extend_schema
+from decimal import Decimal
+
+from django.db.models import Count, Sum
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema
+from rest_framework.decorators import action
 from rest_framework.views import APIView
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from apps.commissions.models import CommissionPayout
 from apps.commissions.selectors import commission_summary, dashboard_summary
-from apps.commissions.serializers import CommissionPayoutSerializer, CommissionSummarySerializer, DashboardSummarySerializer
-from apps.common.permissions import IsAdmin
+from apps.commissions.serializers import (
+    CommissionPayoutSerializer,
+    CommissionSummarySerializer,
+    DashboardSummarySerializer,
+    LandlordCommissionPayoutSerializer,
+    LandlordCommissionSummarySerializer,
+)
+from apps.common.permissions import IsAdmin, IsLandlord
 from apps.common.responses import success_response
 from apps.common.audit import audit_event
-from apps.common.viewsets import StandardResponseModelViewSetMixin
+from apps.common.viewsets import StandardResponseModelViewSetMixin, StandardResponseReadOnlyMixin
 
 
 class CommissionSummaryAPIView(APIView):
@@ -73,3 +83,42 @@ class CommissionPayoutViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
                 target=payout,
                 metadata={"from": previous_status, "to": payout.status, "viewing_request_id": payout.viewing_request_id},
             )
+
+
+class LandlordCommissionPayoutViewSet(StandardResponseReadOnlyMixin, ReadOnlyModelViewSet):
+    serializer_class = LandlordCommissionPayoutSerializer
+    permission_classes = [IsLandlord]
+    filterset_fields = ("status",)
+    search_fields = ("viewing_request__full_name", "viewing_request__room__title", "viewing_request__room__room_code")
+    ordering_fields = ("created_at", "amount", "approved_at", "paid_at")
+    http_method_names = ["get", "head", "options"]
+
+    def get_queryset(self):
+        return CommissionPayout.objects.select_related(
+            "viewing_request",
+            "viewing_request__room",
+        ).filter(viewing_request__room__created_by=self.request.user)
+
+    @extend_schema(responses=LandlordCommissionSummarySerializer)
+    @action(detail=False, methods=["get"])
+    def summary(self, request):
+        rows = self.get_queryset().values("status").annotate(count=Count("id"), amount=Sum("amount"))
+        statuses = {
+            status: {"count": 0, "amount": Decimal("0")}
+            for status in CommissionPayout.Status.values
+        }
+        for row in rows:
+            statuses[row["status"]] = {"count": row["count"], "amount": row["amount"] or Decimal("0")}
+
+        data = {
+            "total": sum(item["count"] for item in statuses.values()),
+            "pending": statuses[CommissionPayout.Status.PENDING]["count"],
+            "approved": statuses[CommissionPayout.Status.APPROVED]["count"],
+            "paid": statuses[CommissionPayout.Status.PAID]["count"],
+            "cancelled": statuses[CommissionPayout.Status.CANCELLED]["count"],
+            "total_amount": sum((item["amount"] for item in statuses.values()), Decimal("0")),
+            "pending_amount": statuses[CommissionPayout.Status.PENDING]["amount"],
+            "approved_amount": statuses[CommissionPayout.Status.APPROVED]["amount"],
+            "paid_amount": statuses[CommissionPayout.Status.PAID]["amount"],
+        }
+        return success_response(data=LandlordCommissionSummarySerializer(data).data)

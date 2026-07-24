@@ -32,6 +32,7 @@ type UserForm = {
   phone: string;
   email: string;
   role: "SALER" | "LANDLORD" | "TENANT";
+  telegram_chat_id: string;
   is_active: boolean;
   password: string;
   current_password: string;
@@ -42,6 +43,7 @@ const emptyForm: UserForm = {
   phone: "",
   email: "",
   role: "TENANT",
+  telegram_chat_id: "",
   is_active: true,
   password: "",
   current_password: "",
@@ -95,6 +97,7 @@ export function AdminUserManager() {
       phone: user.phone,
       email: user.email,
       role: user.role === "SALER" || user.role === "LANDLORD" ? user.role : "TENANT",
+      telegram_chat_id: user.telegram_chat_id || "",
       is_active: user.is_active,
       password: "",
       current_password: "",
@@ -113,6 +116,7 @@ export function AdminUserManager() {
       phone: form.phone.trim(),
       email: form.email.trim(),
       role: form.role,
+      telegram_chat_id: form.role === "LANDLORD" ? form.telegram_chat_id.trim() : "",
       is_active: form.is_active,
     };
     if (form.password) payload.password = form.password;
@@ -182,16 +186,44 @@ export function AdminUserManager() {
               <input className={adminInputClass} onChange={(event) => setForm({ ...form, email: event.target.value })} required type="email" value={form.email} />
             </Field>
             <Field label="Vai trò">
-              <select className={adminSelectClass} onChange={(event) => setForm({ ...form, role: event.target.value as UserForm["role"] })} value={form.role}>
+              <select
+                className={adminSelectClass}
+                onChange={(event) => {
+                  const nextRole = event.target.value as UserForm["role"];
+                  setForm({
+                    ...form,
+                    role: nextRole,
+                    telegram_chat_id: nextRole === "LANDLORD" ? form.telegram_chat_id : "",
+                  });
+                }}
+                value={form.role}
+              >
                 <option value="TENANT">Người thuê</option>
                 <option value="LANDLORD">Người cho thuê</option>
                 <option value="SALER">Nhân viên tư vấn</option>
               </select>
             </Field>
+            {form.role === "LANDLORD" ? (
+              <Field label="Telegram Chat ID">
+                <input
+                  aria-label="Telegram Chat ID"
+                  autoComplete="off"
+                  className={adminInputClass}
+                  inputMode="numeric"
+                  onChange={(event) => setForm({ ...form, telegram_chat_id: event.target.value })}
+                  pattern="-?[0-9]{1,20}"
+                  placeholder="Ví dụ: 123456789 hoặc -1001234567890"
+                  value={form.telegram_chat_id}
+                />
+                <span className="mt-2 block text-xs leading-5 text-secondary">
+                  Chỉ nhập Chat ID đã xác minh của chủ phòng. Thông tin khách sẽ được gửi tới cuộc trò chuyện này.
+                </span>
+              </Field>
+            ) : null}
             <Field label={form.id ? "Mật khẩu mới, để trống nếu không đổi" : "Mật khẩu"}>
               <input className={adminInputClass} minLength={8} onChange={(event) => setForm({ ...form, password: event.target.value })} type="password" value={form.password} />
             </Field>
-            <Field label="Mật khẩu quản trị hiện tại khi tạo nhân viên, đổi vai trò hoặc đổi mật khẩu">
+            <Field label="Mật khẩu quản trị hiện tại khi tạo nhân viên, đổi vai trò, đổi mật khẩu hoặc Telegram Chat ID">
               <input
                 className={adminInputClass}
                 onChange={(event) => setForm({ ...form, current_password: event.target.value })}

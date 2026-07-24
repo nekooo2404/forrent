@@ -6,6 +6,7 @@ from pathlib import Path
 
 ROOTS = [Path("frontend-client"), Path("frontend-admin")]
 EXTENSIONS = {".js", ".jsx", ".ts", ".tsx"}
+IGNORED_DIRECTORIES = {".next", "coverage", "node_modules", "playwright-report", "test-results"}
 SENSITIVE_KEY_PARTS = ("access", "auth", "refresh", "session", "token", "user")
 SET_ITEM = re.compile(r"(?:window\.)?(?:localStorage|sessionStorage)\s*\.\s*setItem\(\s*['\"]([^'\"]+)['\"]")
 BRACKET_WRITE = re.compile(r"(?:window\.)?(?:localStorage|sessionStorage)\s*\[\s*['\"]([^'\"]+)['\"]\s*\]")
@@ -39,7 +40,9 @@ def iter_files() -> list[Path]:
         for root in ROOTS
         if root.exists()
         for path in root.rglob("*")
-        if path.is_file() and path.suffix in EXTENSIONS and "node_modules" not in path.parts
+        if path.is_file()
+        and path.suffix in EXTENSIONS
+        and not IGNORED_DIRECTORIES.intersection(path.parts)
     ]
 
 

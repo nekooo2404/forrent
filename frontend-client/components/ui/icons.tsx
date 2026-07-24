@@ -28,6 +28,7 @@ export {
   DoorOpen,
   Drop as Droplets,
   Barbell as Dumbbell,
+  Bell,
   Eye,
   EyeSlash as EyeOff,
   FileText,

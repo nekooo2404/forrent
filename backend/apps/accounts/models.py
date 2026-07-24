@@ -1,5 +1,7 @@
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+from django.core.validators import RegexValidator
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 from apps.accounts.managers import UserManager
@@ -19,6 +21,16 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.TENANT)
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
+    telegram_chat_id = models.CharField(
+        max_length=32,
+        blank=True,
+        validators=[
+            RegexValidator(
+                regex=r"^-?\d{1,20}$",
+                message="Telegram Chat ID must contain only an optional leading minus sign and digits.",
+            )
+        ],
+    )
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     admin_updated_by = models.ForeignKey(
@@ -36,6 +48,13 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
 
     class Meta:
         ordering = ("-created_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("telegram_chat_id",),
+                condition=~Q(telegram_chat_id=""),
+                name="unique_nonempty_telegram_chat_id",
+            ),
+        ]
         indexes = [
             models.Index(fields=["email"]),
             models.Index(fields=["phone"]),

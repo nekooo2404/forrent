@@ -145,7 +145,7 @@ export function ProfileMenu() {
               href="/landlord/rooms"
               onClick={() => setIsProfileMenuOpen(false)}
             >
-              Đăng phòng
+              Quản trị người dùng
             </Link>
           ) : null}
           <Link
