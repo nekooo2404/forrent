@@ -1136,8 +1136,10 @@ test.describe('Public critical flows', () => {
     const detailPath = `/api/rooms/${roomSlug}/`;
     await Promise.all([request.delete(publicCountersUrl), request.delete(internalCountersUrl)]);
 
+    const startedAt = Date.now();
     await page.goto(`/rooms/${roomSlug}`);
     await expect(page.getByRole('heading', { name: 'Can ho dich vu Nam Tu Liem', level: 1 })).toBeVisible();
+    expect(Date.now() - startedAt).toBeLessThan(3_000);
 
     const [publicResponse, internalResponse] = await Promise.all([
       request.get(publicCountersUrl),

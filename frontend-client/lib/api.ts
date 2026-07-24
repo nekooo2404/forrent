@@ -346,7 +346,11 @@ export async function getRooms(params?: {
 
 export async function getRoomDetail(slug: string) {
   return apiFetch<ApiRoomDetail>(`/api/rooms/${encodeURIComponent(slug)}/`, {
-    next: { revalidate: AVAILABILITY_REVALIDATE_SECONDS },
+    // getCachedRoomDetail owns the revalidation boundary. Nesting Next's fetch
+    // cache inside unstable_cache can make a stale detail wait for both cache
+    // layers before SSR can respond.
+    cache: "no-store",
+    timeoutMs: 2000,
   });
 }
 
