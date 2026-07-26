@@ -921,6 +921,8 @@ test.describe('Public critical flows', () => {
 
     const videoTile = page.getByRole('button', { name: /Xem video/ });
     await expect(videoTile).toBeVisible();
+    await expect(videoTile.locator('img')).toHaveCount(1);
+    await expect(videoTile.locator('video')).toHaveCount(0);
     await videoTile.click();
 
     const video = page.getByRole('dialog').locator('video[controls]');
@@ -1128,7 +1130,7 @@ test.describe('Public critical flows', () => {
     await expect(page.getByText('Phòng này hiện không còn hiển thị')).toHaveCount(0);
   });
 
-  test('room detail uses the internal API once for metadata and page content', async ({ page, request }, testInfo) => {
+  test('room detail bounds its existence probe and fetches content once', async ({ page, request }, testInfo) => {
     const publicCountersUrl = 'http://127.0.0.1:4100/__test__/request-counts/';
     const internalCountersUrl = 'http://127.0.0.1:4101/__test__/request-counts/';
     const projectSlug = testInfo.project.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -1148,6 +1150,7 @@ test.describe('Public critical flows', () => {
     const publicPayload = await publicResponse.json() as { data: Record<string, number> };
     const internalPayload = await internalResponse.json() as { data: Record<string, number> };
     expect(publicPayload.data[`GET ${detailPath}`]).toBeUndefined();
+    expect(internalPayload.data[`HEAD ${detailPath}`]).toBe(1);
     expect(internalPayload.data[`GET ${detailPath}`]).toBe(1);
 
     const warmResponse = await request.get(`/rooms/${roomSlug}`);

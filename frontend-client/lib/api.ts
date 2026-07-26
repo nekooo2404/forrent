@@ -346,9 +346,8 @@ export async function getRooms(params?: {
 
 export async function getRoomDetail(slug: string) {
   return apiFetch<ApiRoomDetail>(`/api/rooms/${encodeURIComponent(slug)}/`, {
-    // getCachedRoomDetail owns the revalidation boundary. Nesting Next's fetch
-    // cache inside unstable_cache can make a stale detail wait for both cache
-    // layers before SSR can respond.
+    // Django/Redis owns cross-request caching. A Next Data Cache layer here can
+    // hold dynamic detail rendering behind a stale-entry revalidation lock.
     cache: "no-store",
     timeoutMs: 2000,
   });

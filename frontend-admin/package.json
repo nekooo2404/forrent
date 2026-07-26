@@ -29,6 +29,7 @@
     "typescript": "^5.7.0"
   },
   "overrides": {
+    "brace-expansion": "^5.0.8",
     "postcss": "$postcss",
     "fast-uri": "^3.1.4",
     "sharp": "^0.35.0"
