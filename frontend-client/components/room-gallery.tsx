@@ -343,7 +343,6 @@ function GalleryTile({ badge, className, index, item, onClick, priority, title }
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const width = priority ? modalMediaWidth : 768;
   const quality = 78;
   const semanticLabel = mediaSemanticLabel(item, index);
@@ -358,10 +357,10 @@ function GalleryTile({ badge, className, index, item, onClick, priority, title }
       return;
     }
 
-    const video = videoRef.current;
-    if (!video) return;
-    if (video.error) setHasError(true);
-    else if (video.readyState >= HTMLMediaElement.HAVE_METADATA) setIsLoaded(true);
+    const poster = imageRef.current;
+    if (!poster?.complete) return;
+    if (poster.naturalWidth > 0) setIsLoaded(true);
+    else setHasError(true);
   }, [item.type]);
 
   return (
@@ -386,18 +385,18 @@ function GalleryTile({ badge, className, index, item, onClick, priority, title }
       </span>
       {item.type === "video" ? (
         <>
-          <video
-            aria-hidden="true"
+          <img
+            alt=""
             className="absolute inset-0 h-full w-full object-cover"
+            decoding="async"
+            fetchPriority={priority ? "high" : "auto"}
             height={900}
-            muted
-            onLoadedData={() => setIsLoaded(true)}
+            loading={priority ? "eager" : "lazy"}
+            onLoad={() => setIsLoaded(true)}
             onError={() => setHasError(true)}
-            playsInline
-            poster={videoPosterUrl(item.src, width)}
-            preload="metadata"
-            ref={videoRef}
-            src={fastVideoUrl(item.src)}
+            ref={imageRef}
+            sizes={priority ? "(min-width: 768px) 50vw, 100vw" : "(min-width: 768px) 25vw, 100vw"}
+            src={videoPosterUrl(item.src, width)}
             width={width}
           />
           <span className="absolute inset-0 grid place-items-center bg-inverse-surface/20 transition-colors group-hover:bg-inverse-surface/30">

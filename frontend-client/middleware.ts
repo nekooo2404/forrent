@@ -64,10 +64,14 @@ async function roomDocumentIsMissing(request: NextRequest) {
     const slug = encodeURIComponent(decodeURIComponent(match[1]));
     const response = await fetch(`${apiBaseUrl.replace(/\/$/, "")}/api/rooms/${slug}/`, {
       cache: "no-store",
+      headers: { Accept: "application/json", "X-Forwarded-Proto": "https" },
       method: "HEAD",
+      redirect: "manual",
+      signal: AbortSignal.timeout(750),
     });
     return response.status === 404;
   } catch {
+    // Availability wins over a perfect 404 status when the existence probe is unavailable.
     return false;
   }
 }

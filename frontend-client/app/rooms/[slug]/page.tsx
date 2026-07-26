@@ -148,6 +148,8 @@ export async function generateStaticParams() {
 }
 
 function galleryFor(room: ApiRoomDetail) {
+  const seenSources = new Set<string>();
+
   return [
     { source: room.thumbnail_url, type: "image" as const, label: "OVERVIEW", labelText: "Toàn cảnh" },
     ...room.images.map((media) => ({
@@ -158,7 +160,9 @@ function galleryFor(room: ApiRoomDetail) {
     })),
   ].flatMap((media) => {
     const src = resolveMediaUrl(media.source);
-    return src ? [{ src, type: media.type, label: media.label, labelText: media.labelText }] : [];
+    if (!src || seenSources.has(src)) return [];
+    seenSources.add(src);
+    return [{ src, type: media.type, label: media.label, labelText: media.labelText }];
   });
 }
 
