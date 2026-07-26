@@ -60,6 +60,38 @@ GitHub Actions cron chỉ là smoke check phụ. Production cần monitor ngoài
 - Người nhận: owner kỹ thuật và vận hành.
 - Ghi lại provider, monitor IDs, escalation channel và ngày test alert.
 
+## Landlord Notification Smoke
+
+Run the command without `--apply` first. It validates the landlord and an owned published room without changing data:
+
+```bash
+docker compose -f backend/docker-compose.yml exec backend \
+  python manage.py smoke_landlord_notifications --phone <landlord-phone> --room-id <room-id>
+```
+
+Create an unread web notification, then sign in as that landlord and open the notification bell:
+
+```bash
+docker compose -f backend/docker-compose.yml exec backend \
+  python manage.py smoke_landlord_notifications --phone <landlord-phone> --room-id <room-id> --apply
+```
+
+Add `--deliver-telegram` only after the landlord has started the bot and a unique `telegram_chat_id` is stored on the account. The command deliberately skips real email delivery:
+
+```bash
+docker compose -f backend/docker-compose.yml exec backend \
+  python manage.py smoke_landlord_notifications --phone <landlord-phone> --room-id <room-id> --apply --deliver-telegram
+```
+
+Remove all notification smoke records owned by that landlord:
+
+```bash
+docker compose -f backend/docker-compose.yml exec backend \
+  python manage.py smoke_landlord_notifications --phone <landlord-phone> --cleanup --apply
+```
+
+Never treat a phone number as a Telegram chat ID. The phone only resolves the ForRent account; Telegram delivery uses the chat ID already linked to that account.
+
 ## Staging Environment
 
 Staging phải tách production:
