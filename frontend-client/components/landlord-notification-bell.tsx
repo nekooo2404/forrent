@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Check, LoaderCircle, RefreshCw } from "@/components/ui/icons";
+import { Bell, Check, LoaderCircle, RefreshCw, X } from "@/components/ui/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -13,6 +13,7 @@ import {
   timeSlotLabels,
 } from "@/components/landlord/landlord-api";
 import { getAuthSessionDetails } from "@/lib/auth-storage";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 
 const POLL_INTERVAL_MS = 5_000;
 const EMPTY_FEED: LandlordNotificationFeed = { results: [], unread_count: 0 };
@@ -29,8 +30,10 @@ export function LandlordNotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [readError, setReadError] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useFocusTrap<HTMLElement>(isOpen);
   const requestInFlightRef = useRef(false);
 
   const refreshFeed = useCallback(async (showLoading = false) => {
@@ -55,7 +58,11 @@ export function LandlordNotificationBell() {
     getAuthSessionDetails()
       .then((session) => {
         if (!active) return;
-        setEligible(session.authenticated && session.role === "LANDLORD");
+        setEligible(
+          session.authenticated
+          && Boolean(session.role)
+          && ["LANDLORD", "INDEPENDENT_SALER"].includes(session.role as string),
+        );
       })
       .catch(() => {
         if (active) setEligible(false);
@@ -120,6 +127,7 @@ export function LandlordNotificationBell() {
     try {
       await landlordRequest(`notifications/${notification.id}/mark-read`, { method: "POST" });
     } catch {
+      setReadError("Không thể đánh dấu thông báo đã đọc. Bạn có thể thử lại sau.");
       void refreshFeed();
     }
   }
@@ -134,7 +142,7 @@ export function LandlordNotificationBell() {
       await landlordRequest("notifications/mark-all-read", { method: "POST" });
     } catch {
       setFeed(previous);
-      setHasError(true);
+      setReadError("Không thể cập nhật trạng thái thông báo. Vui lòng thử lại.");
     }
   }
 
@@ -152,6 +160,7 @@ export function LandlordNotificationBell() {
         data-testid="landlord-notification-bell"
         onClick={() => {
           setIsOpen((current) => !current);
+          setReadError("");
           void refreshFeed();
         }}
         ref={triggerRef}
@@ -171,25 +180,23 @@ export function LandlordNotificationBell() {
       {isOpen ? (
         <section
           aria-label="Thông báo yêu cầu xem phòng"
-          className="fixed inset-x-3 top-[4.5rem] z-[70] max-h-[min(70vh,34rem)] overflow-hidden rounded-lg border border-outline-variant/35 bg-surface-container-lowest shadow-high lg:absolute lg:inset-x-auto lg:right-0 lg:top-full lg:mt-3 lg:w-[24rem]"
+          aria-live="polite"
+          className="fixed inset-x-0 bottom-0 z-[70] max-h-[min(78vh,34rem)] overflow-hidden rounded-t-xl border border-outline-variant/35 bg-surface-container-lowest shadow-high sm:inset-x-3 sm:bottom-auto sm:top-[4.5rem] sm:rounded-lg lg:absolute lg:inset-x-auto lg:right-0 lg:top-full lg:mt-3 lg:w-[24rem]"
           id="landlord-notification-popover"
+          ref={popoverRef}
         >
           <div className="flex min-h-14 items-center justify-between gap-3 border-b border-outline-variant/25 px-4">
             <div>
               <h2 className="font-heading text-lg font-semibold text-primary">Yêu cầu tư vấn</h2>
               <p className="text-xs text-secondary">{feed.unread_count} thông báo chưa đọc</p>
             </div>
-            {feed.unread_count ? (
-              <button
-                className="inline-flex min-h-11 items-center gap-1.5 px-2 text-sm font-semibold text-primary transition-colors hover:text-primary-container"
-                onClick={() => void markAllRead()}
-                type="button"
-              >
-                <Check aria-hidden="true" size={16} />
-                Đánh dấu đã đọc
-              </button>
-            ) : null}
+            <div className="flex items-center gap-1">
+              {feed.unread_count ? <button aria-label="Đánh dấu đã đọc" className="inline-flex min-h-11 items-center gap-1.5 px-2 text-sm font-semibold text-primary transition-colors hover:text-primary-container" onClick={() => void markAllRead()} type="button"><Check aria-hidden="true" size={16} /> Đã đọc</button> : null}
+              <button aria-label="Đóng thông báo" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-primary hover:bg-surface-container" onClick={() => { setIsOpen(false); triggerRef.current?.focus(); }} type="button"><X aria-hidden="true" size={19} /></button>
+            </div>
           </div>
+
+          {readError ? <p className="border-b border-error/30 bg-error-container px-4 py-3 text-sm text-on-error-container" role="alert">{readError}</p> : null}
 
           <div className="max-h-[calc(min(70vh,34rem)-3.5rem)] overflow-y-auto overscroll-contain">
             {isLoading && !feed.results.length ? (
@@ -229,7 +236,7 @@ export function LandlordNotificationBell() {
                       className={`block min-h-11 px-4 py-3 transition-colors hover:bg-surface-container ${
                         notification.is_read ? "bg-surface-container-lowest" : "bg-surface-container-low"
                       }`}
-                      href="/landlord/viewing-requests"
+                      href={`/landlord/viewing-requests?request=${notification.viewing_request}#request-${notification.viewing_request}`}
                       onClick={() => {
                         void markRead(notification);
                         setIsOpen(false);

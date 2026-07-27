@@ -29,10 +29,10 @@ def create_lead(*, room, tenant):
 class TestLandlordCommissionAPI:
     def setup_method(self):
         self.client = APIClient()
-        self.landlord = create_user(
+        self.independent_saler = create_user(
             email="commission-owner@example.com",
             phone="0917100001",
-            role=User.Role.LANDLORD,
+            role=User.Role.INDEPENDENT_SALER,
         )
         self.other_landlord = create_user(
             email="commission-other-owner@example.com",
@@ -41,7 +41,7 @@ class TestLandlordCommissionAPI:
         )
         tenant = create_user(email="commission-tenant@example.com", phone="0917100003")
         other_tenant = create_user(email="commission-other-tenant@example.com", phone="0917100004")
-        own_lead = create_lead(room=create_room(created_by=self.landlord), tenant=tenant)
+        own_lead = create_lead(room=create_room(created_by=self.independent_saler), tenant=tenant)
         foreign_lead = create_lead(room=create_room(created_by=self.other_landlord), tenant=other_tenant)
         self.own_payout = CommissionPayout.objects.create(
             viewing_request=own_lead,
@@ -52,8 +52,8 @@ class TestLandlordCommissionAPI:
             amount=Decimal("4000000"),
         )
 
-    def test_landlord_only_sees_commissions_for_owned_rooms(self):
-        self.client.force_authenticate(self.landlord)
+    def test_independent_saler_only_sees_commissions_for_owned_rooms(self):
+        self.client.force_authenticate(self.independent_saler)
 
         response = self.client.get("/api/landlord/commissions/")
         summary = self.client.get("/api/landlord/commissions/summary/")
@@ -64,15 +64,15 @@ class TestLandlordCommissionAPI:
         assert summary.data["data"]["total"] == 1
         assert Decimal(summary.data["data"]["total_amount"]) == self.own_payout.amount
 
-    def test_landlord_cannot_retrieve_foreign_commission(self):
-        self.client.force_authenticate(self.landlord)
+    def test_independent_saler_cannot_retrieve_foreign_commission(self):
+        self.client.force_authenticate(self.independent_saler)
 
         response = self.client.get(f"/api/landlord/commissions/{self.foreign_payout.id}/")
 
         assert response.status_code == 404
 
-    def test_landlord_commission_endpoint_is_read_only(self):
-        self.client.force_authenticate(self.landlord)
+    def test_independent_saler_commission_endpoint_is_read_only(self):
+        self.client.force_authenticate(self.independent_saler)
 
         response = self.client.patch(
             f"/api/landlord/commissions/{self.own_payout.id}/",
@@ -83,3 +83,10 @@ class TestLandlordCommissionAPI:
         assert response.status_code == 405
         self.own_payout.refresh_from_db()
         assert self.own_payout.status == CommissionPayout.Status.PENDING
+
+    def test_landlord_cannot_access_commissions(self):
+        self.client.force_authenticate(self.other_landlord)
+
+        response = self.client.get("/api/landlord/commissions/")
+
+        assert response.status_code == 403

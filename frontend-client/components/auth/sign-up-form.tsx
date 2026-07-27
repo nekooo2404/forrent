@@ -22,7 +22,7 @@ type SignUpFields = {
   fullName: string;
   phone: string;
   email: string;
-  accountRole: "TENANT" | "LANDLORD";
+  accountRole: "TENANT" | "LANDLORD" | "INDEPENDENT_SALER";
   otp: string;
   password: string;
   confirmPassword: string;
@@ -52,6 +52,11 @@ const accountRoleOptions: Array<{
     value: "LANDLORD",
     title: "Người cho thuê",
     description: "Tạo, đăng và quản lý phòng của bạn trực tiếp.",
+  },
+  {
+    value: "INDEPENDENT_SALER",
+    title: "Tư vấn viên độc lập",
+    description: "Quản lý nguồn phòng riêng, lịch xem và theo dõi hoa hồng.",
   },
 ];
 
@@ -206,7 +211,11 @@ export function SignUpForm() {
 
       if (loginPayload?.success && loginPayload.data) {
         saveAuthSession(loginPayload.data);
-        router.replace(loginPayload.data.user.role === "LANDLORD" ? "/landlord/rooms" : "/");
+        router.replace(
+          ["LANDLORD", "INDEPENDENT_SALER"].includes(loginPayload.data.user.role)
+            ? "/landlord"
+            : "/",
+        );
         router.refresh();
         return;
       }

@@ -80,6 +80,12 @@ export function ProfileMenu() {
       method: "POST",
     }).catch(() => null);
 
+    for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+      const key = window.localStorage.key(index);
+      if (key?.startsWith("forrent:rental-operator-room-draft:")) {
+        window.localStorage.removeItem(key);
+      }
+    }
     clearAuthSession();
     setUserRole(null);
     setAuthState("anonymous");
@@ -138,14 +144,14 @@ export function ProfileMenu() {
           >
             Thông tin người dùng
           </Link>
-          {userRole === "LANDLORD" ? (
+          {userRole && ["LANDLORD", "INDEPENDENT_SALER"].includes(userRole) ? (
             <Link
               className="block min-h-11 px-4 py-3 font-body-md text-body-md text-primary transition-colors hover:bg-surface-container"
               data-testid="landlord-profile-link"
-              href="/landlord/rooms"
+              href="/landlord"
               onClick={() => setIsProfileMenuOpen(false)}
             >
-              Quản trị người dùng
+              Quản lý cho thuê
             </Link>
           ) : null}
           <Link

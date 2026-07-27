@@ -14,7 +14,6 @@ import {
   type LandlordPaginated,
 } from "./landlord-api";
 import { LandlordLoadState, LandlordPageHeader, landlordSecondaryButton } from "./landlord-portal-ui";
-import { LandlordMetric } from "./landlord-room-shared";
 
 const payoutLabels: Record<LandlordCommission["status"], string> = {
   PENDING: "Chờ duyệt",
@@ -33,6 +32,8 @@ const payoutTones: Record<LandlordCommission["status"], string> = {
 export function LandlordCommissions() {
   const [summary, setSummary] = useState<LandlordCommissionSummary | null>(null);
   const [payouts, setPayouts] = useState<LandlordCommission[]>([]);
+  const [count, setCount] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -42,16 +43,19 @@ export function LandlordCommissions() {
     try {
       const [summaryData, payoutData] = await Promise.all([
         landlordRequest<LandlordCommissionSummary>("commissions/summary"),
-        landlordRequest<LandlordPaginated<LandlordCommission>>("commissions?ordering=-created_at&page_size=100"),
+        landlordRequest<LandlordPaginated<LandlordCommission>>(`commissions?ordering=-created_at&page=${page}&page_size=25`),
       ]);
       setSummary(summaryData);
       setPayouts(payoutData.results);
+      setCount(payoutData.count);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Không thể tải dữ liệu hoa hồng.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
+
+  const totalPages = Math.max(1, Math.ceil(count / 25));
 
   useEffect(() => {
     void loadCommissions();
@@ -67,7 +71,6 @@ export function LandlordCommissions() {
             </button>
           )}
           description="Theo dõi khoản hoa hồng phát sinh từ khách đã thuê phòng. ForRent chịu trách nhiệm duyệt và cập nhật thanh toán."
-          eyebrow="Đối soát"
           title="Hoa hồng"
         />
 
@@ -75,17 +78,9 @@ export function LandlordCommissions() {
           <div className="mt-6"><LandlordLoadState error={error} loading={loading} onRetry={() => void loadCommissions()} /></div>
         ) : (
           <>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <LandlordMetric label="Tổng khoản" value={summary?.total ?? 0} />
-              <LandlordMetric label="Chờ duyệt" value={summary?.pending ?? 0} />
-              <LandlordMetric label="Đã duyệt" value={summary?.approved ?? 0} />
-              <LandlordMetric label="Đã thanh toán" value={summary?.paid ?? 0} />
-            </div>
-
-            <div className="mt-6 grid gap-3 md:grid-cols-3">
-              <MoneyMetric icon={<WalletCards size={20} />} label="Đang chờ" value={formatLandlordVnd(summary?.pending_amount ?? 0)} />
-              <MoneyMetric icon={<CircleDollarSign size={20} />} label="Đã duyệt" value={formatLandlordVnd(summary?.approved_amount ?? 0)} />
-              <MoneyMetric icon={<CircleDollarSign size={20} />} label="Đã thanh toán" value={formatLandlordVnd(summary?.paid_amount ?? 0)} />
+            <div className="mt-6 grid gap-3 border-y border-outline-variant/70 py-4 sm:grid-cols-2">
+              <MoneyMetric icon={<WalletCards size={20} />} label={`Đang chờ · ${summary?.pending ?? 0} khoản`} value={formatLandlordVnd(summary?.pending_amount ?? 0)} />
+              <MoneyMetric icon={<CircleDollarSign size={20} />} label={`Đã thanh toán · ${summary?.paid ?? 0} khoản`} value={formatLandlordVnd(summary?.paid_amount ?? 0)} />
             </div>
 
             <div className="mt-8 border-y border-outline-variant/70">
@@ -114,6 +109,15 @@ export function LandlordCommissions() {
                 </div>
               )}
             </div>
+            {totalPages > 1 ? (
+              <nav aria-label="Phân trang hoa hồng" className="mt-5 flex items-center justify-between gap-3">
+                <p className="text-sm text-on-surface-variant">Trang {page}/{totalPages} · {count} khoản</p>
+                <div className="flex gap-2">
+                  <button className={landlordSecondaryButton} disabled={page <= 1 || loading} onClick={() => setPage((current) => current - 1)} type="button">Trang trước</button>
+                  <button className={landlordSecondaryButton} disabled={page >= totalPages || loading} onClick={() => setPage((current) => current + 1)} type="button">Trang sau</button>
+                </div>
+              </nav>
+            ) : null}
           </>
         )}
       </div>

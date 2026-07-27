@@ -1,9 +1,10 @@
 from urllib.parse import urlparse
 
 from django.db import transaction
-from django.db.models import Count, Exists, OuterRef
+from django.db.models import Count, Exists, OuterRef, Q, Sum
 from django.db.models.deletion import ProtectedError
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_control
 from drf_spectacular.types import OpenApiTypes
@@ -11,6 +12,7 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException, ValidationError
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -18,7 +20,8 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from apps.common.models import AuditLog
-from apps.common.permissions import IsAdmin, IsLandlord
+from apps.accounts.models import User
+from apps.common.permissions import IsAdmin, IsRentalOperator
 from apps.common.responses import success_response
 from apps.common.audit import audit_event
 from apps.common.cache_utils import (
@@ -33,7 +36,7 @@ from apps.locations.models import Amenity, AreaRange, City, Ward
 from apps.locations.serializers import AmenitySerializer, AreaRangeSerializer, CitySerializer, WardSerializer
 from apps.locations.services import ActiveFlagDeleteMixin
 from apps.rooms.filters import PublicRoomFilter, RoomFilter
-from apps.rooms.models import DepositType, Room, RoomSubtype
+from apps.rooms.models import DepositType, Room, RoomImage, RoomSubtype
 from apps.rooms.selectors import admin_rooms_queryset, public_room_details_queryset, public_rooms_queryset
 from apps.rooms.serializers import (
     AdminRoomImageWriteSerializer,
@@ -51,6 +54,7 @@ from apps.rooms.serializers import (
 )
 from apps.rooms.services import RoomService
 from apps.viewing_requests.models import RoomLease, ViewingRequest
+from apps.viewing_requests.serializers import LandlordViewingRequestSerializer
 from apps.viewing_requests.services import ViewingRequestService
 
 
@@ -62,6 +66,11 @@ class RoomHistoryConflict(APIException):
 class LandlordRoomLocked(APIException):
     status_code = status.HTTP_409_CONFLICT
     default_detail = "Phòng đang ở trạng thái khóa. Hãy đưa phòng về bản nháp trước khi chỉnh sửa hoặc xóa."
+
+
+class ActiveLeaseConflict(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "Record the tenant move-out before deleting or archiving this room."
 
 
 @method_decorator(cache_control(public=True, max_age=30), name="list")
@@ -209,14 +218,29 @@ class AdminRoomViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
     def perform_update(self, serializer):
         RoomService.update_room(serializer=serializer, request=self.request)
 
-    def perform_destroy(self, instance):
+    def destroy(self, request, *args, **kwargs):
         with transaction.atomic():
-            room = Room.objects.select_for_update().get(pk=instance.pk)
-            if room.viewing_requests.exists() or room.leases.exists():
-                raise RoomHistoryConflict()
+            room = Room.objects.select_for_update().get(pk=self.get_object().pk)
+            if RoomLease.objects.select_for_update().filter(
+                room=room,
+                status=RoomLease.Status.ACTIVE,
+            ).exists():
+                raise ActiveLeaseConflict()
+            has_history = room.viewing_requests.exists() or room.leases.exists()
+            if has_history or room.status in {Room.Status.RENTED, Room.Status.ARCHIVED}:
+                previous_status = room.status
+                room.status = Room.Status.ARCHIVED
+                room.save(update_fields=["status", "updated_at"])
+                audit_event(
+                    "room.archived",
+                    request=request,
+                    target=room,
+                    metadata={"from": previous_status, "reason": "safe_delete_with_history"},
+                )
+                return success_response(data={}, message="Room archived successfully.")
             audit_event(
                 "room.deleted",
-                request=self.request,
+                request=request,
                 target=room,
                 metadata={"status": room.status},
             )
@@ -224,6 +248,7 @@ class AdminRoomViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
                 room.delete()
             except ProtectedError as exc:
                 raise RoomHistoryConflict() from exc
+        return success_response(data={}, message="Room deleted successfully.")
 
     @extend_schema(
         parameters=[
@@ -255,7 +280,7 @@ class LandlordRoomViewSet(StandardResponseReadOnlyMixin, ModelViewSet):
     CONTENT_EDITABLE_STATUSES = {Room.Status.DRAFT, Room.Status.HIDDEN}
     DELETABLE_STATUSES = {Room.Status.DRAFT, Room.Status.HIDDEN, Room.Status.ARCHIVED}
     serializer_class = LandlordRoomSerializer
-    permission_classes = [IsLandlord]
+    permission_classes = [IsRentalOperator]
     parser_classes = [JSONParser, MultiPartParser, FormParser]
     filterset_class = RoomFilter
     search_fields = ("title", "room_code", "address", "description")
@@ -267,7 +292,7 @@ class LandlordRoomViewSet(StandardResponseReadOnlyMixin, ModelViewSet):
     def get_throttles(self):
         self.throttle_scope = (
             "landlord_room_write"
-            if self.action in {"create", "update", "partial_update", "destroy", "image_detail", "confirm_rental"}
+            if self.action in {"create", "update", "partial_update", "destroy", "image_detail", "confirm_rental", "move_out"}
             else None
         )
         return super().get_throttles()
@@ -278,7 +303,19 @@ class LandlordRoomViewSet(StandardResponseReadOnlyMixin, ModelViewSet):
             has_lease_history=Exists(RoomLease.objects.filter(room_id=OuterRef("pk"))),
         )
 
+    def _lock_active_operator(self):
+        operator = User.objects.select_for_update().only("id", "is_active", "role").get(
+            pk=self.request.user.pk,
+        )
+        if not operator.is_active or operator.role not in {
+            User.Role.LANDLORD,
+            User.Role.INDEPENDENT_SALER,
+        }:
+            raise PermissionDenied("Rental operator access has been revoked.")
+        return operator
+
     def _lock_owned_room(self):
+        self._lock_active_operator()
         return get_object_or_404(
             Room.objects.select_for_update(),
             pk=self.kwargs["pk"],
@@ -302,6 +339,76 @@ class LandlordRoomViewSet(StandardResponseReadOnlyMixin, ModelViewSet):
         }
         return success_response(data=data)
 
+    @action(detail=False, methods=["get"])
+    def dashboard(self, request):
+        rooms = Room.objects.filter(created_by=request.user)
+        requests = ViewingRequest.objects.filter(room__created_by=request.user).select_related("room")
+        status_counts = {
+            row["status"]: row["count"]
+            for row in rooms.order_by().values("status").annotate(count=Count("id"))
+        }
+        room_summary = {
+            "total": sum(status_counts.values()),
+            "draft": status_counts.get(Room.Status.DRAFT, 0),
+            "pending_review": status_counts.get(Room.Status.PENDING_REVIEW, 0),
+            "published": status_counts.get(Room.Status.PUBLISHED, 0),
+            "rented": status_counts.get(Room.Status.RENTED, 0),
+            "hidden": status_counts.get(Room.Status.HIDDEN, 0),
+            "archived": status_counts.get(Room.Status.ARCHIVED, 0),
+        }
+        valid_overview = RoomImage.objects.filter(
+            room_id=OuterRef("pk"),
+            label=RoomImage.Label.OVERVIEW,
+            media_type=RoomImage.MediaType.IMAGE,
+        ).filter((Q(image__isnull=False) & ~Q(image="")) | ~Q(image_url=""))
+        incomplete_rooms = (
+            rooms.filter(status__in=[Room.Status.DRAFT, Room.Status.HIDDEN])
+            .annotate(has_valid_overview=Exists(valid_overview))
+            .filter(
+                Q(title="")
+                | Q(address="")
+                | Q(price__lte=0)
+                | Q(description="")
+                | Q(has_valid_overview=False)
+            )
+            .order_by("-updated_at")
+        )
+        new_requests = requests.filter(status=ViewingRequest.Status.NEW).order_by("-created_at")
+        today_appointments = requests.filter(
+            status=ViewingRequest.Status.SCHEDULED,
+            appointment_date=timezone.localdate(),
+        ).order_by("appointment_time_slot", "created_at")
+
+        commission = None
+        if request.user.role == request.user.Role.INDEPENDENT_SALER:
+            from apps.commissions.models import CommissionPayout
+
+            payouts = CommissionPayout.objects.filter(viewing_request__room__created_by=request.user)
+            pending = payouts.filter(status=CommissionPayout.Status.PENDING)
+            commission = {
+                "pending": pending.count(),
+                "pending_amount": pending.aggregate(total=Sum("amount"))["total"] or 0,
+            }
+
+        return success_response(
+            data={
+                "room_summary": room_summary,
+                "new_request_count": new_requests.count(),
+                "today_appointment_count": today_appointments.count(),
+                "incomplete_room_count": incomplete_rooms.count(),
+                "new_requests": LandlordViewingRequestSerializer(
+                    new_requests[:5], many=True, context={"request": request}
+                ).data,
+                "today_appointments": LandlordViewingRequestSerializer(
+                    today_appointments[:5], many=True, context={"request": request}
+                ).data,
+                "incomplete_rooms": LandlordRoomSerializer(
+                    incomplete_rooms[:6], many=True, context=self.get_serializer_context()
+                ).data,
+                "commission": commission,
+            }
+        )
+
     @extend_schema(responses=LandlordRentalCandidateSerializer(many=True))
     @action(detail=True, methods=["get"], url_path="rental-candidates")
     def rental_candidates(self, request, pk=None):
@@ -318,6 +425,7 @@ class LandlordRoomViewSet(StandardResponseReadOnlyMixin, ModelViewSet):
     @extend_schema(request=LandlordConfirmRentalSerializer, responses=LandlordRoomSerializer)
     @action(detail=True, methods=["post"], url_path="confirm-rental")
     def confirm_rental(self, request, pk=None):
+        self._lock_active_operator()
         room = self.get_object()
         serializer = LandlordConfirmRentalSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -340,6 +448,27 @@ class LandlordRoomViewSet(StandardResponseReadOnlyMixin, ModelViewSet):
         return success_response(
             data=LandlordRoomSerializer(room, context=self.get_serializer_context()).data,
             message="Rental confirmed successfully.",
+        )
+
+    @transaction.atomic
+    @action(detail=True, methods=["post"], url_path="move-out")
+    def move_out(self, request, pk=None):
+        self._lock_active_operator()
+        room = self.get_object()
+        active_lease = get_object_or_404(
+            RoomLease.objects.select_for_update(),
+            room=room,
+            status=RoomLease.Status.ACTIVE,
+        )
+        lease = ViewingRequestService.move_out(
+            viewing_request_id=active_lease.viewing_request_id,
+            actor=request.user,
+            note=str(request.data.get("note", "")).strip(),
+        )
+        room.refresh_from_db(fields=("status",))
+        return success_response(
+            data={"lease_id": lease.id, "status": lease.status, "room_status": room.status},
+            message="Move-out recorded. Review the room before publishing it again.",
         )
 
     def handle_exception(self, exc):
@@ -393,6 +522,7 @@ class LandlordRoomViewSet(StandardResponseReadOnlyMixin, ModelViewSet):
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
+        self._lock_active_operator()
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         RoomService.create_room(serializer=serializer, user=request.user, request=request)
@@ -449,22 +579,48 @@ class LandlordRoomViewSet(StandardResponseReadOnlyMixin, ModelViewSet):
             OpenApiParameter("image_id", OpenApiTypes.INT, OpenApiParameter.PATH),
         ]
     )
+    @transaction.atomic
     @action(detail=True, methods=["delete", "patch"], url_path="images/(?P<image_id>[^/.]+)")
     def image_detail(self, request, pk=None, image_id=None):
+        self._lock_active_operator()
         room = self.get_object()
         if room.status not in self.CONTENT_EDITABLE_STATUSES:
             raise LandlordRoomLocked()
-        image = get_object_or_404(room.images.all(), pk=image_id)
+        image = get_object_or_404(room.images.select_for_update(), pk=image_id)
         if request.method == "PATCH":
             serializer = LandlordRoomImageWriteSerializer(image, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             changed_fields = sorted(serializer.validated_data)
+            replaced_cover_ids = []
+            if serializer.validated_data.get("label") == RoomImage.Label.OVERVIEW:
+                previous_covers = room.images.select_for_update().filter(
+                    label=RoomImage.Label.OVERVIEW,
+                ).exclude(pk=image.pk)
+                replaced_cover_ids = list(previous_covers.values_list("id", flat=True))
+                previous_covers.update(label=RoomImage.Label.OTHER)
+
+            swapped_image = None
+            previous_sort_order = image.sort_order
+            requested_sort_order = serializer.validated_data.get("sort_order")
+            if requested_sort_order is not None and requested_sort_order != previous_sort_order:
+                swapped_image = room.images.select_for_update().filter(
+                    sort_order=requested_sort_order,
+                ).exclude(pk=image.pk).first()
+
             image = serializer.save()
+            if swapped_image:
+                swapped_image.sort_order = previous_sort_order
+                swapped_image.save(update_fields=("sort_order",))
             audit_event(
                 "landlord.room_image_updated",
                 request=request,
                 target=room,
-                metadata={"image_id": image.id, "fields": changed_fields},
+                metadata={
+                    "image_id": image.id,
+                    "fields": changed_fields,
+                    "replaced_cover_ids": replaced_cover_ids,
+                    "swapped_image_id": swapped_image.id if swapped_image else None,
+                },
             )
             return success_response(data=RoomImageSerializer(image, context=self.get_serializer_context()).data)
         image.delete()

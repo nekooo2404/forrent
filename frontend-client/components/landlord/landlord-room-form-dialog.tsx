@@ -1,9 +1,11 @@
 import type { FormEvent, ReactNode, RefObject } from "react";
 
 import { CheckCircle2, LoaderCircle } from "@/components/ui/icons";
-import type { ApiRoomSubtype, ApiWard } from "@/lib/api";
+import type { ApiRoomImage, ApiRoomSubtype, ApiWard } from "@/lib/api";
 
+import { LandlordMediaManager } from "./landlord-media-manager";
 import type { LandlordRoom, RoomFilters, RoomFormState } from "./landlord-room-types";
+import type { LandlordSelectedMedia } from "./landlord-room-types";
 
 type FormFieldChange = <K extends keyof RoomFormState>(field: K, value: RoomFormState[K]) => void;
 
@@ -13,21 +15,27 @@ type LandlordRoomFormDialogProps = {
   dialogRef: RefObject<HTMLDivElement | null>;
   discardButtonRef: RefObject<HTMLButtonElement | null>;
   editingRoom: LandlordRoom | null;
-  fileInputRef: RefObject<HTMLInputElement | null>;
   filters: RoomFilters | null;
   form: RoomFormState;
   formError: string;
   isDiscardPromptOpen: boolean;
   isSaving: boolean;
+  draftSavedAt: string;
+  existingImages: ApiRoomImage[];
   onCityChange: (value: string) => void;
   onCloseRequest: () => void;
   onContinueEditing: () => void;
   onDiscardChanges: () => void;
+  onExistingMediaChange: (image: ApiRoomImage, updates: Partial<Pick<ApiRoomImage, "label" | "sort_order">>) => void;
+  onExistingMediaDelete: (image: ApiRoomImage) => void;
   onFieldChange: FormFieldChange;
   onRoomTypeChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSelectedFilesChange: (files: LandlordSelectedMedia[]) => void;
   onToggleAmenity: (id: number) => void;
   selectedAmenityIds: Set<string>;
+  selectedFiles: LandlordSelectedMedia[];
+  uploadError?: string;
 };
 
 function fieldId(room: LandlordRoom | null, name: keyof RoomFormState) {
@@ -40,21 +48,27 @@ export function LandlordRoomFormDialog({
   dialogRef,
   discardButtonRef,
   editingRoom,
-  fileInputRef,
   filters,
   form,
   formError,
   isDiscardPromptOpen,
   isSaving,
+  draftSavedAt,
+  existingImages,
   onCityChange,
   onCloseRequest,
   onContinueEditing,
   onDiscardChanges,
+  onExistingMediaChange,
+  onExistingMediaDelete,
   onFieldChange,
   onRoomTypeChange,
   onSubmit,
+  onSelectedFilesChange,
   onToggleAmenity,
   selectedAmenityIds,
+  selectedFiles,
+  uploadError,
 }: Readonly<LandlordRoomFormDialogProps>) {
   return (
     <div className="fixed inset-0 z-[70] overflow-y-auto bg-inverse-surface/55 px-4 py-8 backdrop-blur-sm">
@@ -67,7 +81,6 @@ export function LandlordRoomFormDialog({
       >
         <div className="flex flex-col gap-3 border-b border-outline-variant/70 pb-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-tertiary">Phòng cho thuê</p>
             <h2 className="mt-2 font-headline-sm text-2xl text-on-surface" id="landlord-room-form-title">
               {editingRoom ? "Sửa thông tin phòng" : "Thêm phòng mới"}
             </h2>
@@ -92,6 +105,8 @@ export function LandlordRoomFormDialog({
         ) : null}
 
         <form className="mt-6 grid gap-5" onSubmit={onSubmit}>
+          <fieldset className="grid gap-4 border-t border-outline-variant/70 pt-5">
+            <legend className="text-base font-semibold text-on-surface">1. Thông tin phòng</legend>
           <div className="grid gap-4 md:grid-cols-2">
             <TextField id={fieldId(editingRoom, "title")} label="Tên phòng" required value={form.title} onChange={(value) => onFieldChange("title", value)} />
             <TextField id={fieldId(editingRoom, "address")} label="Địa chỉ" required value={form.address} onChange={(value) => onFieldChange("address", value)} />
@@ -140,6 +155,17 @@ export function LandlordRoomFormDialog({
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
+            <TextField id={fieldId(editingRoom, "actual_area")} inputMode="decimal" label="Diện tích thực tế" required value={form.actual_area} onChange={(value) => onFieldChange("actual_area", value)} />
+            <SelectField id={fieldId(editingRoom, "area_range")} label="Khoảng diện tích" required value={form.area_range} onChange={(value) => onFieldChange("area_range", value)}>
+              <option value="">Không chọn</option>
+              {(filters?.area_ranges ?? []).map((range) => <option key={range.id} value={range.id}>{range.name}</option>)}
+            </SelectField>
+          </div>
+          </fieldset>
+
+          <fieldset className="grid gap-4 border-t border-outline-variant/70 pt-5">
+            <legend className="text-base font-semibold text-on-surface">2. Giá và chi phí</legend>
+          <div className="grid gap-4 md:grid-cols-3">
             <TextField id={fieldId(editingRoom, "price")} inputMode="numeric" label="Giá thuê/tháng" required value={form.price} onChange={(value) => onFieldChange("price", value)} />
             <SelectField id={fieldId(editingRoom, "deposit_type")} label="Loại cọc" value={form.deposit_type} onChange={(value) => onFieldChange("deposit_type", value)}>
               <option value="">Không chọn</option>
@@ -165,21 +191,12 @@ export function LandlordRoomFormDialog({
             )}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <TextField id={fieldId(editingRoom, "service_fee")} inputMode="numeric" label="Phí dịch vụ/tháng" value={form.service_fee} onChange={(value) => onFieldChange("service_fee", value)} />
-            <TextField id={fieldId(editingRoom, "actual_area")} inputMode="decimal" label="Diện tích thực tế" required value={form.actual_area} onChange={(value) => onFieldChange("actual_area", value)} />
-            <SelectField id={fieldId(editingRoom, "area_range")} label="Khoảng diện tích" required value={form.area_range} onChange={(value) => onFieldChange("area_range", value)}>
-              <option value="">Không chọn</option>
-              {(filters?.area_ranges ?? []).map((range) => (
-                <option key={range.id} value={range.id}>
-                  {range.name}
-                </option>
-              ))}
-            </SelectField>
-          </div>
+          <div><TextField id={fieldId(editingRoom, "service_fee")} inputMode="numeric" label="Phí dịch vụ/tháng" value={form.service_fee} onChange={(value) => onFieldChange("service_fee", value)} /></div>
+          </fieldset>
 
-          <fieldset>
-            <legend className="mb-3 text-sm font-semibold text-on-surface">Tiện ích</legend>
+          <fieldset className="grid gap-4 border-t border-outline-variant/70 pt-5">
+            <legend className="text-base font-semibold text-on-surface">3. Tiện ích và mô tả</legend>
+            <p className="text-sm text-on-surface-variant">Chọn tiện ích người thuê cần biết và mô tả điều kiện thực tế của phòng.</p>
             <div className="grid max-h-52 gap-2 overflow-y-auto rounded-md border border-outline-variant/70 bg-surface-container-low p-3 sm:grid-cols-2 md:grid-cols-3">
               {(filters?.amenities ?? []).map((amenity) => (
                 <label className="flex min-h-11 items-center gap-2 rounded px-2 text-sm text-on-surface hover:bg-surface-container" key={amenity.id}>
@@ -193,25 +210,19 @@ export function LandlordRoomFormDialog({
                 </label>
               ))}
             </div>
-          </fieldset>
-
           <TextAreaField id={fieldId(editingRoom, "short_description")} label="Mô tả ngắn" value={form.short_description} onChange={(value) => onFieldChange("short_description", value)} />
           <TextAreaField id={fieldId(editingRoom, "description")} label="Mô tả chi tiết" required rows={5} value={form.description} onChange={(value) => onFieldChange("description", value)} />
+          </fieldset>
 
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-on-surface" htmlFor="landlord-room-media">
-              Ảnh hoặc video phòng
-            </label>
-            <input
-              accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
-              className="block min-h-11 w-full rounded-md border border-outline-variant/70 bg-surface-container-low px-3 py-2 text-sm text-on-surface file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-semibold file:text-on-primary"
-              id="landlord-room-media"
-              multiple
-              ref={fileInputRef}
-              type="file"
-            />
-            <p className="mt-2 text-xs text-on-surface-variant">Tối đa 12 mục, tổng dung lượng upload mới không quá 50MB.</p>
-          </div>
+          <LandlordMediaManager
+            existingImages={existingImages}
+            isSaving={isSaving}
+            onExistingChange={onExistingMediaChange}
+            onExistingDelete={onExistingMediaDelete}
+            onFilesChange={onSelectedFilesChange}
+            selectedFiles={selectedFiles}
+            uploadError={uploadError}
+          />
 
           {isDiscardPromptOpen ? (
             <div className="rounded-md border border-warning/40 bg-warning-container p-4" role="alert">
@@ -239,7 +250,8 @@ export function LandlordRoomFormDialog({
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-3 border-t border-outline-variant/70 pt-5 sm:flex-row sm:justify-end">
+          <div className="sticky bottom-0 -mx-5 flex flex-col gap-3 border-t border-outline-variant/70 bg-surface-container-lowest/95 px-5 py-4 backdrop-blur-sm sm:-mx-7 sm:flex-row sm:items-center sm:justify-end sm:px-7">
+            <p className="mr-auto text-xs text-on-surface-variant" role="status">{draftSavedAt || "Bản nháp chỉ được lưu trên thiết bị này"}</p>
             <button
               className="inline-flex min-h-11 items-center justify-center rounded-md border border-outline-variant/70 px-4 font-semibold text-on-surface"
               disabled={isSaving}

@@ -42,6 +42,32 @@ class IsLandlord(BasePermission):
         )
 
 
+class IsRentalOperator(BasePermission):
+    message = "Only landlord or independent saler accounts can access this endpoint."
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and user.is_active
+            and user.role in {user.Role.LANDLORD, user.Role.INDEPENDENT_SALER}
+        )
+
+
+class IsIndependentSaler(BasePermission):
+    message = "Only independent saler accounts can access commission data."
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and user.is_active
+            and user.role == user.Role.INDEPENDENT_SALER
+        )
+
+
 class IsOwner(BasePermission):
     message = "You do not own this resource."
 

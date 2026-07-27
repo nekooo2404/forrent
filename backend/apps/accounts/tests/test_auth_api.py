@@ -10,6 +10,7 @@ from apps.accounts.services import AuthService
 from apps.common.models import AuditLog
 from apps.rooms.models import Room
 from apps.rooms.tests.factories import create_admin, create_room, create_user
+from apps.viewing_requests.models import RoomLease, ViewingRequest
 
 User = get_user_model()
 
@@ -424,6 +425,39 @@ class TestAuthAPI:
         assert response.status_code == 400
         assert "role" in response.data["errors"]
 
+    def test_register_can_create_independent_saler_without_admin_privileges(
+        self,
+        django_capture_on_commit_callbacks,
+    ):
+        email = "independent-saler@example.com"
+        with django_capture_on_commit_callbacks(execute=True):
+            otp_response = self.client.post(
+                "/api/auth/otp/",
+                {"email": email, "purpose": "REGISTER"},
+                format="json",
+            )
+        otp = otp_from_email(mail.outbox[0])
+
+        response = self.client.post(
+            "/api/auth/register/",
+            {
+                **self.payload,
+                "email": email,
+                "phone": "0911111198",
+                "role": User.Role.INDEPENDENT_SALER,
+                "otp": otp,
+            },
+            format="json",
+        )
+
+        assert response.status_code == 201, response.data
+        user = User.objects.get(email=email)
+        assert otp_response.status_code == 200
+        assert response.status_code == 201
+        assert user.role == User.Role.INDEPENDENT_SALER
+        assert user.is_staff is False
+        assert user.is_superuser is False
+
     def test_otp_requests_enforce_an_account_and_purpose_cooldown(
         self,
         django_capture_on_commit_callbacks,
@@ -774,14 +808,14 @@ class TestAuthAPI:
         assert response.status_code == 200
         assert AuditLog.objects.filter(event="admin.user_password_changed", actor=saler, target_id=str(tenant.id)).exists()
 
-    def test_landlord_with_active_rooms_cannot_be_changed_to_another_role(self):
+    def test_changing_landlord_role_archives_active_rooms_before_access_is_removed(self):
         saler = create_admin()
         landlord = create_user(
             email="landlord-with-rooms@example.com",
             phone="0987654391",
             role=User.Role.LANDLORD,
         )
-        create_room(created_by=landlord, status=Room.Status.DRAFT)
+        room = create_room(created_by=landlord, status=Room.Status.DRAFT)
         self.client.force_authenticate(saler)
 
         response = self.client.patch(
@@ -791,9 +825,91 @@ class TestAuthAPI:
         )
 
         landlord.refresh_from_db()
-        assert response.status_code == 400
-        assert "role" in response.data["errors"]
-        assert landlord.role == User.Role.LANDLORD
+        room.refresh_from_db()
+        assert response.status_code == 200
+        assert landlord.role == User.Role.TENANT
+        assert room.status == Room.Status.ARCHIVED
+        audit = AuditLog.objects.get(
+            event="admin.rental_operator_access_revoked",
+            target_id=str(landlord.id),
+        )
+        assert audit.metadata["archived_room_count"] == 1
+
+    def test_disabling_rental_operator_reassigns_unowned_active_leads_to_admin(self):
+        saler = create_admin()
+        landlord = create_user(
+            email="operator-with-leads@example.com",
+            phone="0987654388",
+            role=User.Role.LANDLORD,
+        )
+        tenant = create_user(email="operator-lead-tenant@example.com", phone="0987654389")
+        room = create_room(created_by=landlord, status=Room.Status.PUBLISHED)
+        lead = ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+            status=ViewingRequest.Status.NEW,
+        )
+        self.client.force_authenticate(saler)
+
+        response = self.client.patch(
+            f"/api/admin/users/{landlord.id}/",
+            {"is_active": False},
+            format="json",
+        )
+
+        lead.refresh_from_db()
+        room.refresh_from_db()
+        assert response.status_code == 200
+        assert lead.assigned_to == saler
+        assert room.status == Room.Status.ARCHIVED
+        audit = AuditLog.objects.get(
+            event="admin.rental_operator_access_revoked",
+            target_id=str(landlord.id),
+        )
+        assert audit.metadata["reassigned_lead_count"] == 1
+
+    def test_disabling_rental_operator_preserves_room_with_active_lease(self):
+        saler = create_admin()
+        landlord = create_user(
+            email="leased-disabled-owner@example.com",
+            phone="0987654386",
+            role=User.Role.LANDLORD,
+        )
+        tenant = create_user(email="leased-disabled-tenant@example.com", phone="0987654387")
+        room = create_room(created_by=landlord, status=Room.Status.RENTED)
+        lead = ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+            status=ViewingRequest.Status.CONVERTED,
+        )
+        RoomLease.objects.create(
+            viewing_request=lead,
+            room=room,
+            tenant=tenant,
+            move_in_at=lead.created_at,
+        )
+        self.client.force_authenticate(saler)
+
+        response = self.client.patch(
+            f"/api/admin/users/{landlord.id}/",
+            {"is_active": False},
+            format="json",
+        )
+
+        room.refresh_from_db()
+        assert response.status_code == 200
+        assert room.status == Room.Status.RENTED
+        audit = AuditLog.objects.get(
+            event="admin.rental_operator_access_revoked",
+            target_id=str(landlord.id),
+        )
+        assert audit.metadata["archived_room_count"] == 0
 
     def test_landlord_with_only_archived_rooms_can_be_changed_to_another_role(self):
         saler = create_admin()
@@ -863,3 +979,20 @@ class TestAuthAPI:
         response = self.client.get("/api/admin/users/")
 
         assert response.status_code == 403
+
+    def test_admin_can_assign_independent_saler_without_granting_staff_access(self):
+        admin = create_admin()
+        tenant = create_user(email="promote-independent@example.com", phone="0987654398")
+        self.client.force_authenticate(admin)
+
+        response = self.client.patch(
+            f"/api/admin/users/{tenant.id}/",
+            {"role": User.Role.INDEPENDENT_SALER, "current_password": "Password@123"},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        tenant.refresh_from_db()
+        assert tenant.role == User.Role.INDEPENDENT_SALER
+        assert tenant.is_staff is False
+        assert tenant.is_superuser is False

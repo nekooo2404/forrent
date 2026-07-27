@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 import { LandlordPortalShell } from "@/components/landlord/landlord-portal-shell";
 
 export const metadata: Metadata = {
-  title: "Quản trị người dùng - ForRent",
-  description: "Khu vực quản trị dành cho người cho thuê trên ForRent.",
+  title: "Quản lý cho thuê - ForRent",
+  description: "Theo dõi phòng, lịch xem và yêu cầu thuê thuộc tài khoản của bạn.",
   robots: { index: false, follow: false },
 };
 

@@ -499,11 +499,19 @@ class TestViewingRequestAPI:
             status=ViewingRequest.Status.SCHEDULED,
         )
         self.client.force_authenticate(admin)
-        response = self.client.post(f"/api/admin/viewing-requests/{first_lead.id}/confirm-moved-in/")
+        previous_updated_at = second_lead.updated_at
+        with patch("apps.viewing_requests.services.enqueue_task_on_commit") as enqueue:
+            response = self.client.post(f"/api/admin/viewing-requests/{first_lead.id}/confirm-moved-in/")
 
         assert response.status_code == 200
         second_lead.refresh_from_db()
         assert second_lead.status == ViewingRequest.Status.CANCELLED
+        assert second_lead.updated_at > previous_updated_at
+        assert any(
+            call.args[0].name.endswith("send_viewing_request_cancelled_email")
+            and call.args[1] == second_lead.id
+            for call in enqueue.call_args_list
+        )
         assert ViewingRequestActivity.objects.filter(
             viewing_request=second_lead,
             action="AUTO_CANCELLED",
@@ -544,7 +552,7 @@ class TestViewingRequestAPI:
         assert second_lead.status == ViewingRequest.Status.SCHEDULED
         assert RoomLease.objects.filter(room=room, status=RoomLease.Status.ACTIVE).count() == 1
 
-    def test_admin_move_out_ends_active_lease_and_reopens_room(self):
+    def test_admin_move_out_ends_active_lease_and_hides_room_until_republished(self):
         tenant = create_user()
         admin = create_admin()
         room = create_room(created_by=admin)
@@ -566,10 +574,93 @@ class TestViewingRequestAPI:
         assert response.status_code == 200
         room.refresh_from_db()
         lease = RoomLease.objects.get(viewing_request=lead)
-        assert room.status == Room.Status.PUBLISHED
+        assert room.status == Room.Status.HIDDEN
         assert lease.status == RoomLease.Status.ENDED
         assert lease.move_out_at is not None
         assert AuditLog.objects.filter(event="viewing_request.move_out", target_id=str(lead.id)).exists()
+
+    def test_landlord_can_move_out_tenant_only_for_owned_room(self):
+        landlord = create_user(email="moveout-owner@example.com", phone="0913000901", role="LANDLORD")
+        other_landlord = create_user(email="moveout-other@example.com", phone="0913000902", role="LANDLORD")
+        tenant = create_user(email="moveout-tenant@example.com", phone="0913000903")
+        room = create_room(created_by=landlord)
+        lead = ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
+        )
+        self.client.force_authenticate(landlord)
+        assert self.client.post(f"/api/landlord/rooms/{room.id}/confirm-rental/", {"viewing_request_id": lead.id}).status_code == 200
+
+        self.client.force_authenticate(other_landlord)
+        forbidden = self.client.post(f"/api/landlord/viewing-requests/{lead.id}/move-out/", {}, format="json")
+        self.client.force_authenticate(landlord)
+        accepted = self.client.post(
+            f"/api/landlord/viewing-requests/{lead.id}/move-out/",
+            {"note": "Tenant returned the room."},
+            format="json",
+        )
+
+        assert forbidden.status_code == 404
+        assert accepted.status_code == 200
+        room.refresh_from_db()
+        assert room.status == Room.Status.HIDDEN
+        assert RoomLease.objects.get(viewing_request=lead).status == RoomLease.Status.ENDED
+
+    def test_move_out_preserves_archived_room(self):
+        tenant = create_user(email="archive-moveout-tenant@example.com", phone="0913000904")
+        admin = create_admin()
+        room = create_room(created_by=admin)
+        lead = ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
+        )
+        self.client.force_authenticate(admin)
+        assert self.client.post(f"/api/admin/viewing-requests/{lead.id}/confirm-moved-in/").status_code == 200
+        room.status = Room.Status.ARCHIVED
+        room.save(update_fields=["status", "updated_at"])
+
+        response = self.client.post(f"/api/admin/viewing-requests/{lead.id}/move-out/", {}, format="json")
+
+        assert response.status_code == 200
+        room.refresh_from_db()
+        assert room.status == Room.Status.ARCHIVED
+
+    def test_appointment_conflict_for_same_operator_returns_409(self):
+        landlord = create_user(email="calendar-owner@example.com", phone="0913000905", role="LANDLORD")
+        first_tenant = create_user(email="calendar-one@example.com", phone="0913000906")
+        second_tenant = create_user(email="calendar-two@example.com", phone="0913000907")
+        first_room = create_room(created_by=landlord)
+        second_room = create_room(created_by=landlord)
+        appointment_date = timezone.localdate() + timedelta(days=2)
+        first = ViewingRequest.objects.create(
+            user=first_tenant, room=first_room, full_name=first_tenant.full_name,
+            phone=first_tenant.phone, email=first_tenant.email, status=ViewingRequest.Status.CONTACTED,
+        )
+        second = ViewingRequest.objects.create(
+            user=second_tenant, room=second_room, full_name=second_tenant.full_name,
+            phone=second_tenant.phone, email=second_tenant.email, status=ViewingRequest.Status.CONTACTED,
+        )
+        self.client.force_authenticate(landlord)
+        payload = {"appointment_date": appointment_date.isoformat(), "appointment_time_slot": "morning"}
+        assert self.client.post(f"/api/landlord/viewing-requests/{first.id}/confirm-appointment/", payload, format="json").status_code == 200
+
+        conflict = self.client.post(
+            f"/api/landlord/viewing-requests/{second.id}/confirm-appointment/",
+            payload,
+            format="json",
+        )
+
+        assert conflict.status_code == 409
+        second.refresh_from_db()
+        assert second.status == ViewingRequest.Status.CONTACTED
 
     def test_confirm_moved_in_cannot_run_twice(self):
         tenant = create_user()

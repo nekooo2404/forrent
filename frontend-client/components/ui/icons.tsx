@@ -44,6 +44,7 @@ export {
   Lock,
   SignOut as LogOut,
   Envelope as Mail,
+  DotsThreeVertical as MoreVertical,
   MapPin,
   List as Menu,
   ChatCircle as MessageCircle,

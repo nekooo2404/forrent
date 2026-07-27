@@ -31,7 +31,7 @@ type UserForm = {
   full_name: string;
   phone: string;
   email: string;
-  role: "SALER" | "LANDLORD" | "TENANT";
+  role: "SALER" | "LANDLORD" | "INDEPENDENT_SALER" | "TENANT";
   telegram_chat_id: string;
   is_active: boolean;
   password: string;
@@ -96,7 +96,9 @@ export function AdminUserManager() {
       full_name: user.full_name,
       phone: user.phone,
       email: user.email,
-      role: user.role === "SALER" || user.role === "LANDLORD" ? user.role : "TENANT",
+      role: ["SALER", "LANDLORD", "INDEPENDENT_SALER"].includes(user.role)
+        ? user.role as UserForm["role"]
+        : "TENANT",
       telegram_chat_id: user.telegram_chat_id || "",
       is_active: user.is_active,
       password: "",
@@ -116,7 +118,7 @@ export function AdminUserManager() {
       phone: form.phone.trim(),
       email: form.email.trim(),
       role: form.role,
-      telegram_chat_id: form.role === "LANDLORD" ? form.telegram_chat_id.trim() : "",
+      telegram_chat_id: ["LANDLORD", "INDEPENDENT_SALER"].includes(form.role) ? form.telegram_chat_id.trim() : "",
       is_active: form.is_active,
     };
     if (form.password) payload.password = form.password;
@@ -193,17 +195,18 @@ export function AdminUserManager() {
                   setForm({
                     ...form,
                     role: nextRole,
-                    telegram_chat_id: nextRole === "LANDLORD" ? form.telegram_chat_id : "",
+                    telegram_chat_id: ["LANDLORD", "INDEPENDENT_SALER"].includes(nextRole) ? form.telegram_chat_id : "",
                   });
                 }}
                 value={form.role}
               >
                 <option value="TENANT">Người thuê</option>
                 <option value="LANDLORD">Người cho thuê</option>
+                <option value="INDEPENDENT_SALER">Tư vấn viên độc lập</option>
                 <option value="SALER">Nhân viên tư vấn</option>
               </select>
             </Field>
-            {form.role === "LANDLORD" ? (
+            {["LANDLORD", "INDEPENDENT_SALER"].includes(form.role) ? (
               <Field label="Telegram Chat ID">
                 <input
                   aria-label="Telegram Chat ID"
@@ -266,6 +269,7 @@ export function AdminUserManager() {
                 <option value="">Tất cả vai trò</option>
                 <option value="TENANT">Người thuê</option>
                 <option value="LANDLORD">Người cho thuê</option>
+                <option value="INDEPENDENT_SALER">Tư vấn viên độc lập</option>
                 <option value="SALER">Nhân viên tư vấn</option>
               </select>
               <button className={adminButtonSecondary} type="submit">Lọc</button>

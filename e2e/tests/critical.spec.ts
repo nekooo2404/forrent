@@ -212,16 +212,16 @@ test.describe('Public critical flows', () => {
     await page.goto('/');
 
     const primaryNavigation = page.getByRole('navigation', { name: 'Điều hướng chính' });
-    await expect(primaryNavigation.getByRole('link', { name: 'Quản trị người dùng' })).toHaveCount(0);
+    await expect(primaryNavigation.getByRole('link', { name: 'Quản lý cho thuê' })).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Tài khoản' }).click();
     const menuLinks = page.locator('#profile-popover').getByRole('link');
 
     await expect(page.getByTestId('landlord-profile-link')).toBeVisible();
-    await expect(page.getByTestId('landlord-profile-link')).toHaveAttribute('href', '/landlord/rooms');
+    await expect(page.getByTestId('landlord-profile-link')).toHaveAttribute('href', '/landlord');
     await expect(menuLinks).toHaveText([
       'Thông tin người dùng',
-      'Quản trị người dùng',
+      'Quản lý cho thuê',
       'Quên mật khẩu',
     ]);
   });
@@ -272,6 +272,7 @@ test.describe('Public critical flows', () => {
     await expect(page.getByRole('heading', { name: 'Yêu cầu tư vấn' })).toBeVisible();
     await expect(page.getByText('Nguyễn Minh Anh')).toBeVisible();
     await expect(page.getByText('Studio yên tĩnh gần ga metro')).toBeVisible();
+    await expect(page.getByRole('link', { name: /Nguyễn Minh Anh cần tư vấn phòng/ })).toHaveAttribute('href', '/landlord/viewing-requests?request=501#request-501');
 
     await page.getByRole('button', { name: 'Đánh dấu đã đọc' }).click();
 
@@ -409,6 +410,7 @@ test.describe('Public critical flows', () => {
     await expect(page.getByRole('heading', { name: 'Quản lý phòng của bạn' })).toBeVisible();
     await expect(page.getByText('Mã phòng FR-A1B2C3D4E5F6')).toBeVisible();
 
+    await page.getByText('Thêm thao tác', { exact: true }).click();
     const publishRoom = page.getByRole('button', { name: 'Đăng phòng' });
     await publishRoom.evaluate((button: HTMLButtonElement) => {
       button.click();
@@ -417,7 +419,7 @@ test.describe('Public critical flows', () => {
 
     await expect(page.getByText('Đang cập nhật')).toBeVisible();
     await expect.poll(() => statusPatchCount).toBe(1);
-    await expect(page.getByRole('button', { name: 'Ẩn phòng' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Đã cho thuê' })).toBeVisible();
     expect(statusPatchCount).toBe(1);
 
     await page.getByRole('button', { name: 'Đã cho thuê' }).click();
@@ -445,58 +447,50 @@ test.describe('Public critical flows', () => {
     await expect(page.getByRole('heading', { name: 'Thêm phòng mới' })).toBeHidden();
   });
 
-  test('landlord user administration exposes four owner-scoped workflows', async ({ page }) => {
+  test('landlord portal exposes owner workflows without commission access', async ({ page }) => {
     await mockAuthenticatedSession(page, 'LANDLORD');
     await page.route('**/api/landlord/viewing-requests**', (route) => route.fulfill({
       json: { success: true, message: 'OK', data: { count: 0, next: null, previous: null, results: [] } },
     }));
-    await page.route('**/api/landlord/commissions**', (route) => {
-      const pathname = new URL(route.request().url()).pathname.replace(/\/$/, '');
-      if (pathname.endsWith('/summary')) {
-        return route.fulfill({
-          json: {
-            success: true,
-            message: 'OK',
-            data: {
-              total: 0,
-              pending: 0,
-              approved: 0,
-              paid: 0,
-              cancelled: 0,
-              total_amount: '0',
-              pending_amount: '0',
-              approved_amount: '0',
-              paid_amount: '0',
-            },
-          },
-        });
-      }
-      return route.fulfill({
-        json: { success: true, message: 'OK', data: { count: 0, next: null, previous: null, results: [] } },
-      });
-    });
-
     await page.goto('/landlord/viewing-requests');
-    const portalNavigation = page.getByRole('navigation', { name: 'Quản trị người cho thuê' });
+    const portalNavigation = page.getByRole('navigation', { name: 'Điều hướng quản lý cho thuê' });
     await expect(portalNavigation.getByRole('link')).toHaveText([
+      'Việc cần xử lý',
       'Quản lý phòng',
       'Yêu cầu xem phòng',
       'Lịch xem phòng',
-      'Hoa hồng',
     ]);
     await expect(page.getByRole('heading', { name: 'Yêu cầu xem phòng' })).toBeVisible();
 
     await portalNavigation.getByRole('link', { name: 'Lịch xem phòng' }).click();
     await expect(page.getByRole('heading', { name: 'Lịch xem phòng' })).toBeVisible();
 
-    await page.getByRole('navigation', { name: 'Quản trị người cho thuê' }).getByRole('link', { name: 'Hoa hồng' }).click();
-    await expect(page.getByRole('heading', { name: 'Hoa hồng', exact: true })).toBeVisible();
-
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/landlord/calendar');
     await expect(page.getByRole('heading', { name: 'Lịch xem phòng' })).toBeVisible();
     const hasPageOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
     expect(hasPageOverflow).toBe(false);
+  });
+
+  test('independent saler portal includes commission access', async ({ page }) => {
+    await mockAuthenticatedSession(page, 'INDEPENDENT_SALER');
+    await page.route('**/api/landlord/commissions**', (route) => {
+      const pathname = new URL(route.request().url()).pathname.replace(/\/$/, '');
+      return route.fulfill({
+        json: {
+          success: true,
+          message: 'OK',
+          data: pathname.endsWith('/summary')
+            ? { total: 0, pending: 0, approved: 0, paid: 0, cancelled: 0, total_amount: '0', pending_amount: '0', approved_amount: '0', paid_amount: '0' }
+            : { count: 0, next: null, previous: null, results: [] },
+        },
+      });
+    });
+
+    await page.goto('/landlord/commissions');
+    const portalNavigation = page.getByRole('navigation', { name: 'Điều hướng quản lý cho thuê' });
+    await expect(portalNavigation.getByRole('link', { name: 'Hoa hồng' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hoa hồng', exact: true })).toBeVisible();
   });
 
   test('homepage starts with readable content and touch-sized controls', async ({ page }, testInfo) => {

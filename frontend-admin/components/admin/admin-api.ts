@@ -360,6 +360,8 @@ export function adminRoleLabel(role: string) {
     ? "Nhân viên tư vấn"
     : role === "LANDLORD"
       ? "Người cho thuê"
+      : role === "INDEPENDENT_SALER"
+        ? "Tư vấn viên độc lập"
       : role === "TENANT"
         ? "Người thuê"
         : role;

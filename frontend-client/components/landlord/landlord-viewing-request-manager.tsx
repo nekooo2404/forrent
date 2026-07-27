@@ -33,14 +33,17 @@ const statusOptions = [
   ["NO_SHOW", "Không đến"],
 ] as const;
 
-export function LandlordViewingRequestManager() {
+const requestPageSize = 25;
+
+export function LandlordViewingRequestManager({ initialStatus = "", requestToFocus = "" }: Readonly<{ initialStatus?: string; requestToFocus?: string }>) {
   const { toast } = useToast();
   const [requests, setRequests] = useState<LandlordViewingRequest[]>([]);
   const [count, setCount] = useState(0);
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(initialStatus);
   const [appliedSearch, setAppliedSearch] = useState("");
-  const [appliedStatus, setAppliedStatus] = useState("");
+  const [appliedStatus, setAppliedStatus] = useState(initialStatus);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -53,22 +56,39 @@ export function LandlordViewingRequestManager() {
     setLoading(true);
     setError("");
     try {
-      const query = new URLSearchParams({ ordering: "-created_at", page_size: "100" });
+      const query = new URLSearchParams({ ordering: "-created_at", page: String(page), page_size: String(requestPageSize) });
       if (appliedSearch) query.set("search", appliedSearch);
       if (appliedStatus) query.set("status", appliedStatus);
       const data = await landlordRequest<LandlordPaginated<LandlordViewingRequest>>(`viewing-requests?${query}`);
-      setRequests(data.results);
+      let nextRequests = data.results;
+      if (requestToFocus && !nextRequests.some((item) => String(item.id) === requestToFocus)) {
+        const focusedRequest = await landlordRequest<LandlordViewingRequest>(`viewing-requests/${requestToFocus}`).catch(() => null);
+        if (focusedRequest) nextRequests = [focusedRequest, ...nextRequests];
+      }
+      setRequests(nextRequests);
       setCount(data.count);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Không thể tải yêu cầu xem phòng.");
     } finally {
       setLoading(false);
     }
-  }, [appliedSearch, appliedStatus]);
+  }, [appliedSearch, appliedStatus, page, requestToFocus]);
+
+  const totalPages = Math.max(1, Math.ceil(count / requestPageSize));
 
   useEffect(() => {
     void loadRequests();
   }, [loadRequests]);
+
+  useEffect(() => {
+    if (loading || !requestToFocus) return;
+    const target = document.getElementById(`request-${requestToFocus}`);
+    if (!target) return;
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.focus({ preventScroll: true });
+    });
+  }, [loading, requestToFocus, requests]);
 
   async function updateStatus(request: LandlordViewingRequest, nextStatus: LandlordViewingRequest["status"]) {
     setBusyId(request.id);
@@ -131,7 +151,6 @@ export function LandlordViewingRequestManager() {
             </button>
           )}
           description="Liên hệ người thuê, xác nhận thời gian xem phòng và cập nhật kết quả sau buổi hẹn."
-          eyebrow="Khách quan tâm"
           title="Yêu cầu xem phòng"
         />
 
@@ -143,6 +162,7 @@ export function LandlordViewingRequestManager() {
             if (nextSearch === appliedSearch && status === appliedStatus) {
               void loadRequests();
             } else {
+              setPage(1);
               setAppliedSearch(nextSearch);
               setAppliedStatus(status);
             }
@@ -173,7 +193,7 @@ export function LandlordViewingRequestManager() {
         ) : requests.length ? (
           <div className="mt-6 divide-y divide-outline-variant/70 border-y border-outline-variant/70">
             {requests.map((request) => (
-              <article className="grid gap-5 py-6 lg:grid-cols-[minmax(0,1fr)_18rem]" key={request.id}>
+              <article className={`grid gap-5 py-6 lg:grid-cols-[minmax(0,1fr)_18rem] ${String(request.id) === requestToFocus ? "rounded-md bg-primary-container/30 px-3 ring-2 ring-primary/30" : ""}`} id={`request-${request.id}`} key={request.id} tabIndex={String(request.id) === requestToFocus ? -1 : undefined}>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-3">
                     <h3 className="font-headline-sm text-xl text-on-surface">{request.full_name}</h3>
@@ -251,6 +271,15 @@ export function LandlordViewingRequestManager() {
                 ) : null}
               </article>
             ))}
+            {totalPages > 1 ? (
+              <nav aria-label="Phân trang yêu cầu xem phòng" className="flex flex-wrap items-center justify-between gap-3 py-5">
+                <p className="text-sm text-on-surface-variant">Trang {page}/{totalPages} · {count} yêu cầu</p>
+                <div className="flex gap-2">
+                  <button className={landlordSecondaryButton} disabled={page <= 1 || loading} onClick={() => setPage((current) => current - 1)} type="button">Trang trước</button>
+                  <button className={landlordSecondaryButton} disabled={page >= totalPages || loading} onClick={() => setPage((current) => current + 1)} type="button">Trang sau</button>
+                </div>
+              </nav>
+            ) : null}
           </div>
         ) : (
           <div className="mt-6 border-y border-outline-variant/70 py-14 text-center">

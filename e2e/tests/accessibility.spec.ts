@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
 import { mockAdminDashboard, mockAdminRoomInventory, mockAdminWorkspace } from './admin-mocks';
+import { mockLandlordWorkspace } from './landlord-mocks';
 
 const adminBaseURL = process.env.ADMIN_BASE_URL || 'http://localhost:3001';
 const publicPaths = ['/', '/rooms', '/blogs', '/contact', '/privacy', '/terms', '/log-in', '/sign-up', '/forget-password'];
@@ -204,3 +205,44 @@ test('admin mobile routes have no horizontal overflow or undersized controls', a
     }
   }
 });
+
+const landlordAuditViewports = [
+  { name: 'mobile-320', width: 320, height: 844 },
+  { name: 'mobile-390', width: 390, height: 844 },
+  { name: 'tablet-768', width: 768, height: 1024 },
+  { name: 'desktop-1440', width: 1440, height: 1000 },
+] as const;
+
+for (const viewport of landlordAuditViewports) {
+  test(`axe accessibility audit passes on landlord workflows ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', 'Run landlord axe coverage once in Chromium.');
+    await mockLandlordWorkspace(page, 'INDEPENDENT_SALER');
+    await page.setViewportSize(viewport);
+    for (const path of ['/landlord', '/landlord/rooms', '/landlord/viewing-requests', '/landlord/calendar', '/landlord/commissions']) {
+      await page.goto(path);
+      await settleForAxe(page);
+      const results = await new AxeBuilder({ page }).analyze();
+      expect(results.violations, `${path} at ${viewport.width}px`).toEqual([]);
+      if (viewport.width <= 390) {
+        expect(await auditMobileLayout(page), `${path} at ${viewport.width}px`).toEqual({ overflow: [], smallTargets: [] });
+      }
+    }
+  });
+
+  test(`axe accessibility audit passes on landlord form and notifications ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', 'Run landlord axe coverage once in Chromium.');
+    await mockLandlordWorkspace(page);
+    await page.setViewportSize(viewport);
+    await page.goto('/landlord/rooms');
+    await page.getByRole('button', { name: 'Thêm phòng', exact: true }).click();
+    await settleForAxe(page);
+    const formResults = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();
+    expect(formResults.violations).toEqual([]);
+    await page.getByRole('button', { name: 'Hủy', exact: true }).click();
+    await page.goto('/');
+    await page.getByTestId('landlord-notification-bell').click();
+    await settleForAxe(page);
+    const notificationResults = await new AxeBuilder({ page }).include('#landlord-notification-popover').analyze();
+    expect(notificationResults.violations).toEqual([]);
+  });
+}

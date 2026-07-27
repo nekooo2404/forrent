@@ -52,9 +52,20 @@ export function LandlordCalendar() {
         appointment_date_to: dateKey(days[days.length - 1]),
         ordering: "appointment_date",
         page_size: "100",
+        status: "SCHEDULED",
       });
-      const data = await landlordRequest<LandlordPaginated<LandlordViewingRequest>>(`viewing-requests?${query}`);
-      setAppointments(data.results.filter((item) => Boolean(item.appointment_date)));
+      const firstPage = await landlordRequest<LandlordPaginated<LandlordViewingRequest>>(`viewing-requests?${query}`);
+      const pageCount = Math.ceil(firstPage.count / 100);
+      const remainingPages = pageCount > 1
+        ? await Promise.all(Array.from({ length: pageCount - 1 }, (_, index) => {
+          const pageQuery = new URLSearchParams(query);
+          pageQuery.set("page", String(index + 2));
+          return landlordRequest<LandlordPaginated<LandlordViewingRequest>>(`viewing-requests?${pageQuery}`);
+        }))
+        : [];
+      setAppointments(
+        [firstPage, ...remainingPages].flatMap((pageData) => pageData.results).filter((item) => Boolean(item.appointment_date)),
+      );
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Không thể tải lịch xem phòng.");
     } finally {
@@ -100,7 +111,6 @@ export function LandlordCalendar() {
             </button>
           )}
           description="Lịch chỉ bao gồm các buổi xem đã xác nhận cho phòng thuộc tài khoản của bạn."
-          eyebrow="Lịch hẹn"
           title="Lịch xem phòng"
         />
 
@@ -147,10 +157,10 @@ export function LandlordCalendar() {
                   const isToday = key === dateKey(new Date());
                   return (
                     <div className="min-h-32 border-b border-r border-outline-variant/70 bg-surface-container-lowest p-2" key={key}>
-                      <span className={`inline-flex size-7 items-center justify-center rounded-full text-sm ${isToday ? "bg-primary font-semibold text-on-primary" : isCurrentMonth ? "text-on-surface" : "text-outline"}`}>{day.getDate()}</span>
+                      <span className={`inline-flex size-7 items-center justify-center rounded-full text-sm ${isToday ? "bg-primary font-semibold text-on-primary" : isCurrentMonth ? "text-on-surface" : "text-on-surface-variant"}`}>{day.getDate()}</span>
                       <div className="mt-2 space-y-1.5">
                         {items.slice(0, 2).map((item) => (
-                          <Link className="block rounded-md bg-surface-container-low px-2 py-1.5 text-xs leading-4 text-on-surface hover:bg-primary-container" href="/landlord/viewing-requests" key={item.id}>
+                          <Link className="block rounded-md bg-surface-container-low px-2 py-1.5 text-xs leading-4 text-on-surface hover:bg-primary-container" href={`/landlord/viewing-requests?request=${item.id}`} key={item.id}>
                             <span className="block font-semibold">{timeSlotLabels[item.appointment_time_slot]?.split(",")[0]} · {item.full_name}</span>
                             <span className="block truncate text-on-surface-variant">{item.room_code}</span>
                           </Link>

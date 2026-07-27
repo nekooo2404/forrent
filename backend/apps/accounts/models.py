@@ -13,6 +13,7 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
     class Role(models.TextChoices):
         TENANT = "TENANT", "Tenant"
         LANDLORD = "LANDLORD", "Landlord"
+        INDEPENDENT_SALER = "INDEPENDENT_SALER", "Independent saler"
         SALER = "SALER", "Saler/Admin"
 
     full_name = models.CharField(max_length=255)
