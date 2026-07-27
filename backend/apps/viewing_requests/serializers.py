@@ -200,6 +200,11 @@ class AdminViewingRequestSerializer(serializers.ModelSerializer):
                     target=updated,
                     metadata={"from": previous_status, "to": updated.status},
                 )
+                if updated.status == ViewingRequest.Status.CANCELLED:
+                    from apps.common.tasking import enqueue_task_on_commit
+                    from apps.viewing_requests.tasks import send_viewing_request_cancelled_email
+
+                    enqueue_task_on_commit(send_viewing_request_cancelled_email, updated.id)
         return updated
 
 
@@ -266,6 +271,11 @@ class LandlordViewingRequestSerializer(serializers.ModelSerializer):
                 target=updated,
                 metadata={"from": previous_status, "to": updated.status, "actor_scope": "landlord"},
             )
+            if updated.status == ViewingRequest.Status.CANCELLED:
+                from apps.common.tasking import enqueue_task_on_commit
+                from apps.viewing_requests.tasks import send_viewing_request_cancelled_email
+
+                enqueue_task_on_commit(send_viewing_request_cancelled_email, updated.id)
         return updated
 
 

@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function LandlordRoomsPage() {
-  return <LandlordRoomManager />;
+export default async function LandlordRoomsPage({ searchParams }: Readonly<{ searchParams: Promise<{ status?: string }> }>) {
+  const params = await searchParams;
+  return <LandlordRoomManager initialStatus={params.status ?? ""} />;
 }

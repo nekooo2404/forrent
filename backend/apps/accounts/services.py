@@ -35,8 +35,12 @@ class AuthService:
         date_of_birth=None,
         role=User.Role.TENANT,
     ):
-        if role not in {User.Role.TENANT, User.Role.LANDLORD}:
-            raise ValidationError({"role": "Public registration only supports TENANT or LANDLORD."})
+        if role not in {
+            User.Role.TENANT,
+            User.Role.LANDLORD,
+            User.Role.INDEPENDENT_SALER,
+        }:
+            raise ValidationError({"role": "This account role is not available for public registration."})
         email = email.lower()
         phone = normalize_vietnamese_phone(phone)
         if User.objects.filter(email__iexact=email).exists():

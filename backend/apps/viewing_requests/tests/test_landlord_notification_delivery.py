@@ -107,10 +107,12 @@ def test_delivery_sends_branded_email_and_owner_scoped_telegram_once():
     assert viewing_request.full_name in html
     assert viewing_request.phone in html
     assert viewing_request.room.title in html
+    assert f"?request={viewing_request.id}#request-{viewing_request.id}" in html
     send_telegram.assert_called_once()
     assert send_telegram.call_args.kwargs["chat_id"] == landlord.telegram_chat_id
     assert viewing_request.full_name in send_telegram.call_args.kwargs["text"]
     assert viewing_request.room.title in send_telegram.call_args.kwargs["text"]
+    assert f"?request={viewing_request.id}#request-{viewing_request.id}" in send_telegram.call_args.kwargs["text"]
     assert notification.email_sent_at is not None
     assert notification.telegram_sent_at is not None
 

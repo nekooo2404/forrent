@@ -1,6 +1,8 @@
 from unittest import mock
+from io import BytesIO
 
 import pytest
+from PIL import Image
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.cache import cache
@@ -16,6 +18,12 @@ from apps.rooms.serializers import validate_room_image_url
 from apps.viewing_requests.models import RoomLease, ViewingRequest
 
 User = get_user_model()
+
+
+def create_test_jpeg(name="room.jpg"):
+    buffer = BytesIO()
+    Image.new("RGB", (800, 600), color=(232, 224, 210)).save(buffer, format="JPEG")
+    return SimpleUploadedFile(name, buffer.getvalue(), content_type="image/jpeg")
 
 
 @pytest.mark.django_db
@@ -326,6 +334,11 @@ class TestRoomAPI:
         other_landlord = create_user(email="other-landlord@example.com", phone="0912223302", role=User.Role.LANDLORD)
         own_room = create_room(created_by=landlord, status=Room.Status.DRAFT)
         other_room = create_room(created_by=other_landlord, status=Room.Status.DRAFT)
+        RoomImage.objects.create(
+            room=own_room,
+            image_url="https://res.cloudinary.com/demo/image/upload/own-room.jpg",
+            label=RoomImage.Label.OVERVIEW,
+        )
         self.client.force_authenticate(landlord)
 
         response = self.client.get("/api/landlord/rooms/")
@@ -444,6 +457,11 @@ class TestRoomAPI:
         other_landlord = create_user(email="landlord-other@example.com", phone="0912223305", role=User.Role.LANDLORD)
         own_room = create_room(created_by=landlord, status=Room.Status.DRAFT)
         other_room = create_room(created_by=other_landlord, status=Room.Status.DRAFT)
+        RoomImage.objects.create(
+            room=own_room,
+            image_url="https://res.cloudinary.com/demo/image/upload/owned-room.jpg",
+            label=RoomImage.Label.OVERVIEW,
+        )
         self.client.force_authenticate(landlord)
 
         publish_response = self.client.patch(
@@ -466,6 +484,11 @@ class TestRoomAPI:
         landlord = create_user(email="landlord-review@example.com", phone="0912223306", role=User.Role.LANDLORD)
         draft_room = create_room(created_by=landlord, status=Room.Status.DRAFT)
         published_room = create_room(created_by=landlord, status=Room.Status.PUBLISHED)
+        RoomImage.objects.create(
+            room=draft_room,
+            image_url="https://res.cloudinary.com/demo/image/upload/draft-room.jpg",
+            label=RoomImage.Label.OVERVIEW,
+        )
         self.client.force_authenticate(landlord)
 
         publish_response = self.client.patch(
@@ -714,6 +737,225 @@ class TestRoomAPI:
         assert "image_url" in media_response.data["errors"]
         assert media.image_url.endswith("/original.jpg")
 
+    def test_landlord_upload_persists_media_label_and_replaces_cover_atomically(self):
+        landlord = create_user(email="landlord-media-label@example.com", phone="0912223391", role=User.Role.LANDLORD)
+        room = create_room(created_by=landlord, status=Room.Status.DRAFT)
+        previous_cover = RoomImage.objects.create(
+            room=room,
+            image_url="https://res.cloudinary.com/puanhkjp/image/upload/previous-cover.jpg",
+            media_type=RoomImage.MediaType.IMAGE,
+            label=RoomImage.Label.OVERVIEW,
+            sort_order=0,
+        )
+        self.client.force_authenticate(landlord)
+
+        with mock.patch("cloudinary.uploader.upload"):
+            response = self.client.patch(
+                f"/api/landlord/rooms/{room.id}/",
+                {
+                    "uploaded_images": [create_test_jpeg("new-cover.jpg")],
+                    "uploaded_image_labels": [RoomImage.Label.OVERVIEW],
+                },
+                format="multipart",
+            )
+
+        assert response.status_code == 200
+        previous_cover.refresh_from_db()
+        new_cover = room.images.exclude(pk=previous_cover.pk).get()
+        assert previous_cover.label == RoomImage.Label.OTHER
+        assert new_cover.label == RoomImage.Label.OVERVIEW
+        assert new_cover.sort_order == 1
+
+    def test_landlord_upload_rejects_missing_or_incompatible_media_labels(self):
+        landlord = create_user(email="landlord-media-invalid-label@example.com", phone="0912223392", role=User.Role.LANDLORD)
+        room = create_room(created_by=landlord, status=Room.Status.DRAFT)
+        self.client.force_authenticate(landlord)
+        video = SimpleUploadedFile(
+            "tour.mp4",
+            b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 64,
+            content_type="video/mp4",
+        )
+
+        missing_label_response = self.client.patch(
+            f"/api/landlord/rooms/{room.id}/",
+            {
+                "uploaded_images": [create_test_jpeg("kitchen.jpg")],
+                "uploaded_image_labels": [RoomImage.Label.KITCHEN, RoomImage.Label.BATHROOM],
+            },
+            format="multipart",
+        )
+        incompatible_label_response = self.client.patch(
+            f"/api/landlord/rooms/{room.id}/",
+            {
+                "uploaded_images": [video],
+                "uploaded_image_labels": [RoomImage.Label.BATHROOM],
+            },
+            format="multipart",
+        )
+
+        assert missing_label_response.status_code == 400
+        assert "uploaded_image_labels" in missing_label_response.data["errors"]
+        assert incompatible_label_response.status_code == 400
+        assert "uploaded_image_labels" in incompatible_label_response.data["errors"]
+        assert not room.images.exists()
+
+    def test_landlord_cannot_assign_an_image_label_to_existing_video(self):
+        landlord = create_user(email="landlord-video-label@example.com", phone="0912223393", role=User.Role.LANDLORD)
+        room = create_room(created_by=landlord, status=Room.Status.DRAFT)
+        video = RoomImage.objects.create(
+            room=room,
+            image_url="https://res.cloudinary.com/puanhkjp/video/upload/tour.mp4",
+            media_type=RoomImage.MediaType.VIDEO,
+            label=RoomImage.Label.VIDEO_TOUR,
+        )
+        self.client.force_authenticate(landlord)
+
+        response = self.client.patch(
+            f"/api/landlord/rooms/{room.id}/images/{video.id}/",
+            {"label": RoomImage.Label.KITCHEN},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "label" in response.data["errors"]
+        video.refresh_from_db()
+        assert video.label == RoomImage.Label.VIDEO_TOUR
+
+    def test_landlord_existing_media_cover_and_order_are_swapped_atomically(self):
+        landlord = create_user(email="landlord-media-swap@example.com", phone="0912223394", role=User.Role.LANDLORD)
+        room = create_room(created_by=landlord, status=Room.Status.DRAFT)
+        previous_cover = RoomImage.objects.create(
+            room=room,
+            image_url="https://res.cloudinary.com/puanhkjp/image/upload/previous-cover.jpg",
+            media_type=RoomImage.MediaType.IMAGE,
+            label=RoomImage.Label.OVERVIEW,
+            sort_order=0,
+        )
+        kitchen = RoomImage.objects.create(
+            room=room,
+            image_url="https://res.cloudinary.com/puanhkjp/image/upload/kitchen.jpg",
+            media_type=RoomImage.MediaType.IMAGE,
+            label=RoomImage.Label.KITCHEN,
+            sort_order=1,
+        )
+        self.client.force_authenticate(landlord)
+
+        response = self.client.patch(
+            f"/api/landlord/rooms/{room.id}/images/{kitchen.id}/",
+            {"label": RoomImage.Label.OVERVIEW, "sort_order": 0},
+            format="json",
+        )
+
+        assert response.status_code == 200
+        previous_cover.refresh_from_db()
+        kitchen.refresh_from_db()
+        assert (previous_cover.label, previous_cover.sort_order) == (RoomImage.Label.OTHER, 1)
+        assert (kitchen.label, kitchen.sort_order) == (RoomImage.Label.OVERVIEW, 0)
+
+    def test_landlord_room_update_applies_media_edits_and_deletes_in_same_request(self):
+        landlord = create_user(email="landlord-media-save@example.com", phone="0912223395", role=User.Role.LANDLORD)
+        room = create_room(created_by=landlord, status=Room.Status.DRAFT)
+        previous_cover = RoomImage.objects.create(
+            room=room,
+            image_url="https://res.cloudinary.com/puanhkjp/image/upload/previous-cover.jpg",
+            media_type=RoomImage.MediaType.IMAGE,
+            label=RoomImage.Label.OVERVIEW,
+            sort_order=0,
+        )
+        kitchen = RoomImage.objects.create(
+            room=room,
+            image_url="https://res.cloudinary.com/puanhkjp/image/upload/kitchen.jpg",
+            media_type=RoomImage.MediaType.IMAGE,
+            label=RoomImage.Label.KITCHEN,
+            sort_order=1,
+        )
+        self.client.force_authenticate(landlord)
+
+        response = self.client.patch(
+            f"/api/landlord/rooms/{room.id}/",
+            {
+                "title": "Phong da cap nhat media",
+                "existing_media_updates": (
+                    f'{{"{kitchen.id}":{{"label":"OVERVIEW","sort_order":0}}}}'
+                ),
+                "deleted_media_ids": f"[{previous_cover.id}]",
+            },
+            format="multipart",
+        )
+
+        assert response.status_code == 200
+        room.refresh_from_db()
+        kitchen.refresh_from_db()
+        assert room.title == "Phong da cap nhat media"
+        assert not RoomImage.objects.filter(pk=previous_cover.id).exists()
+        assert (kitchen.label, kitchen.sort_order) == (RoomImage.Label.OVERVIEW, 0)
+
+    def test_landlord_room_update_rejects_media_from_another_room_without_partial_save(self):
+        landlord = create_user(email="landlord-media-scope@example.com", phone="0912223396", role=User.Role.LANDLORD)
+        room = create_room(created_by=landlord, status=Room.Status.DRAFT)
+        other_room = create_room(created_by=landlord, status=Room.Status.DRAFT)
+        foreign_media = RoomImage.objects.create(
+            room=other_room,
+            image_url="https://res.cloudinary.com/puanhkjp/image/upload/foreign.jpg",
+            media_type=RoomImage.MediaType.IMAGE,
+            label=RoomImage.Label.OVERVIEW,
+        )
+        original_title = room.title
+        self.client.force_authenticate(landlord)
+
+        response = self.client.patch(
+            f"/api/landlord/rooms/{room.id}/",
+            {
+                "title": "This must roll back",
+                "existing_media_updates": f'{{"{foreign_media.id}":{{"label":"OTHER"}}}}',
+                "deleted_media_ids": "[]",
+            },
+            format="multipart",
+        )
+
+        room.refresh_from_db()
+        assert response.status_code == 400
+        assert room.title == original_title
+
+    def test_landlord_cannot_create_new_pending_review_room(self):
+        landlord = create_user(email="landlord-legacy-state@example.com", phone="0912223397", role=User.Role.LANDLORD)
+        self.client.force_authenticate(landlord)
+        city, ward, amenity, area_range = create_location_graph()
+
+        response = self.client.post(
+            "/api/landlord/rooms/",
+            {
+                "title": "Phong cho duyet khong hop le",
+                "room_type": Room.RoomType.CCMN,
+                "city": city.id,
+                "ward": ward.id,
+                "address": "So 10 Cau Giay",
+                "price": "5000000",
+                "actual_area": "25",
+                "area_range": area_range.id,
+                "amenities": [amenity.id],
+                "description": "Mo ta phong day du toi thieu hai muoi ky tu.",
+                "status": Room.Status.PENDING_REVIEW,
+            },
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert "status" in response.data["errors"]
+
+    def test_landlord_dashboard_counts_all_rooms_beyond_first_page(self):
+        landlord = create_user(email="landlord-dashboard@example.com", phone="0912223398", role=User.Role.LANDLORD)
+        for _ in range(101):
+            create_room(created_by=landlord, status=Room.Status.DRAFT)
+        self.client.force_authenticate(landlord)
+
+        response = self.client.get("/api/landlord/rooms/dashboard/")
+
+        assert response.status_code == 200
+        assert response.data["data"]["room_summary"]["total"] == 101
+        assert response.data["data"]["incomplete_room_count"] == 101
+        assert len(response.data["data"]["incomplete_rooms"]) == 6
+
     def test_landlord_cannot_delete_room_while_review_is_pending(self):
         landlord = create_user(email="landlord-delete@example.com", phone="0912223316", role=User.Role.LANDLORD)
         room = create_room(created_by=landlord, status=Room.Status.PENDING_REVIEW)
@@ -925,6 +1167,26 @@ class TestRoomAPI:
         room.refresh_from_db()
         assert room.status == Room.Status.PUBLISHED
 
+    def test_landlord_must_hide_published_room_before_editing_content(self):
+        landlord = create_user(
+            email="published-edit-owner@example.com",
+            phone="0912345685",
+            role=User.Role.LANDLORD,
+        )
+        room = create_room(created_by=landlord, status=Room.Status.PUBLISHED)
+        original_price = room.price
+        self.client.force_authenticate(landlord)
+
+        response = self.client.patch(
+            f"/api/landlord/rooms/{room.id}/",
+            {"price": "9999999"},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        room.refresh_from_db()
+        assert room.price == original_price
+
     def test_admin_cannot_republish_rented_room_without_move_out(self):
         admin = create_admin()
         room = create_room(created_by=admin, status=Room.Status.RENTED)
@@ -975,8 +1237,153 @@ class TestRoomAPI:
 
         response = self.client.delete(f"/api/admin/rooms/{room.id}/")
 
-        assert response.status_code == 409
+        assert response.status_code == 200
+        room.refresh_from_db()
+        assert room.status == Room.Status.ARCHIVED
         assert Room.objects.filter(pk=room.pk).exists()
+
+    def test_admin_cannot_delete_or_archive_room_with_active_lease(self):
+        admin = create_admin()
+        tenant = create_user(email="active-delete-tenant@example.com", phone="0912345688")
+        room = create_room(created_by=admin, status=Room.Status.RENTED)
+        lead = ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+            status=ViewingRequest.Status.CONVERTED,
+        )
+        RoomLease.objects.create(
+            viewing_request=lead,
+            room=room,
+            tenant=tenant,
+            move_in_at=lead.created_at,
+        )
+        self.client.force_authenticate(admin)
+
+        response = self.client.delete(f"/api/admin/rooms/{room.id}/")
+
+        assert response.status_code == 409
+        room.refresh_from_db()
+        assert room.status == Room.Status.RENTED
+        assert Room.objects.filter(pk=room.pk).exists()
+
+    def test_landlord_room_move_out_ends_lease_and_hides_room(self):
+        landlord = create_user(
+            email="room-move-out-owner@example.com",
+            phone="0912345686",
+            role=User.Role.LANDLORD,
+        )
+        tenant = create_user(email="room-move-out-tenant@example.com", phone="0912345687")
+        room = create_room(created_by=landlord, status=Room.Status.RENTED)
+        lead = ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+            status=ViewingRequest.Status.CONVERTED,
+        )
+        lease = RoomLease.objects.create(
+            viewing_request=lead,
+            room=room,
+            tenant=tenant,
+            move_in_at=lead.created_at,
+        )
+        self.client.force_authenticate(landlord)
+
+        response = self.client.post(f"/api/landlord/rooms/{room.id}/move-out/", {}, format="json")
+
+        assert response.status_code == 200
+        room.refresh_from_db()
+        lease.refresh_from_db()
+        assert room.status == Room.Status.HIDDEN
+        assert lease.status == RoomLease.Status.ENDED
+        assert response.data["data"]["room_status"] == Room.Status.HIDDEN
+
+    def test_active_lease_blocks_landlord_from_reopening_archived_room(self):
+        landlord = create_user(
+            email="leased-owner@example.com",
+            phone="0912000901",
+            role=User.Role.LANDLORD,
+        )
+        tenant = create_user(email="leased-tenant@example.com", phone="0912000902")
+        room = create_room(created_by=landlord, status=Room.Status.ARCHIVED)
+        lead = ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+            status=ViewingRequest.Status.CONVERTED,
+        )
+        RoomLease.objects.create(
+            viewing_request=lead,
+            room=room,
+            tenant=tenant,
+            move_in_at=lead.created_at,
+        )
+        self.client.force_authenticate(landlord)
+
+        response = self.client.patch(
+            f"/api/landlord/rooms/{room.id}/",
+            {"status": Room.Status.DRAFT},
+            format="json",
+        )
+
+        assert response.status_code == 400
+        room.refresh_from_db()
+        assert room.status == Room.Status.ARCHIVED
+        assert "status" in response.data["errors"]
+
+    def test_landlord_cannot_publish_room_without_an_overview_image(self):
+        landlord = create_user(
+            email="publish-owner@example.com",
+            phone="0912000903",
+            role=User.Role.LANDLORD,
+        )
+        room = create_room(created_by=landlord, status=Room.Status.DRAFT)
+        self.client.force_authenticate(landlord)
+
+        rejected = self.client.patch(
+            f"/api/landlord/rooms/{room.id}/",
+            {"status": Room.Status.PUBLISHED},
+            format="json",
+        )
+        RoomImage.objects.create(
+            room=room,
+            image_url="https://res.cloudinary.com/demo/image/upload/sample.jpg",
+            media_type=RoomImage.MediaType.IMAGE,
+            label=RoomImage.Label.OVERVIEW,
+        )
+        accepted = self.client.patch(
+            f"/api/landlord/rooms/{room.id}/",
+            {"status": Room.Status.PUBLISHED},
+            format="json",
+        )
+
+        assert rejected.status_code == 400
+        assert "status" in rejected.data["errors"]
+        assert accepted.status_code == 200
+
+    def test_independent_saler_uses_owner_scoped_room_api_without_admin_access(self):
+        independent_saler = create_user(
+            email="independent-saler@example.com",
+            phone="0912000904",
+            role=User.Role.INDEPENDENT_SALER,
+        )
+        own_room = create_room(created_by=independent_saler, status=Room.Status.DRAFT)
+        foreign_room = create_room(status=Room.Status.DRAFT)
+        self.client.force_authenticate(independent_saler)
+
+        owner_response = self.client.get("/api/landlord/rooms/")
+        admin_response = self.client.get("/api/admin/rooms/")
+
+        assert owner_response.status_code == 200
+        assert [item["id"] for item in owner_response.data["data"]["results"]] == [own_room.id]
+        assert foreign_room.id not in [item["id"] for item in owner_response.data["data"]["results"]]
+        assert admin_response.status_code == 403
 
     def test_room_image_validation_rejects_svg_upload(self):
         image = SimpleUploadedFile("bad.svg", b"<svg></svg>", content_type="image/svg+xml")

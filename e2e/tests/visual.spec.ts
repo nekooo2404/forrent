@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { mockAdminDashboard, mockAdminRoomInventory } from './admin-mocks';
+import { mockLandlordWorkspace } from './landlord-mocks';
 
 const adminBaseURL = process.env.ADMIN_BASE_URL || 'http://localhost:3001';
 
@@ -223,3 +224,59 @@ test('room gallery states visual regression', async ({ page }, testInfo) => {
     });
   }
 });
+
+const landlordViewports = [
+  { name: 'mobile-320', width: 320, height: 844 },
+  { name: 'mobile-390', width: 390, height: 844 },
+  { name: 'tablet-768', width: 768, height: 1024 },
+  { name: 'desktop-1440', width: 1440, height: 1000 },
+] as const;
+
+for (const viewport of landlordViewports) {
+  test(`landlord work queue visual regression ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', 'Landlord snapshots are tracked in Chromium only.');
+    await mockLandlordWorkspace(page);
+    await page.setViewportSize(viewport);
+    await page.goto('/landlord');
+    await expect(page.getByRole('heading', { name: 'Việc cần xử lý' })).toBeVisible();
+    await expect(page.locator('main')).toHaveScreenshot(`landlord-dashboard-${viewport.name}.png`, { maxDiffPixelRatio: 0.01, threshold: 0.2 });
+  });
+
+  for (const [name, path, heading] of [
+    ['rooms', '/landlord/rooms', 'Quản lý phòng của bạn'],
+    ['requests', '/landlord/viewing-requests', 'Yêu cầu xem phòng'],
+    ['calendar', '/landlord/calendar', 'Lịch xem phòng'],
+    ['commissions', '/landlord/commissions', 'Hoa hồng'],
+  ] as const) {
+    test(`landlord ${name} visual regression ${viewport.name}`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== 'chromium', 'Landlord snapshots are tracked in Chromium only.');
+      await mockLandlordWorkspace(page, name === 'commissions' ? 'INDEPENDENT_SALER' : 'LANDLORD');
+      await page.setViewportSize(viewport);
+      await page.goto(path);
+      await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
+      await expect(page.locator('main')).toHaveScreenshot(`landlord-${name}-${viewport.name}.png`, { maxDiffPixelRatio: 0.01, threshold: 0.2 });
+    });
+  }
+
+  test(`landlord room form visual regression ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', 'Landlord snapshots are tracked in Chromium only.');
+    await mockLandlordWorkspace(page);
+    await page.setViewportSize(viewport);
+    await page.goto('/landlord/rooms');
+    await page.getByRole('button', { name: 'Thêm phòng', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Thêm phòng mới' });
+    await expect(dialog).toBeVisible();
+    await expect(page).toHaveScreenshot(`landlord-room-form-${viewport.name}.png`, { maxDiffPixelRatio: 0.01, threshold: 0.2 });
+  });
+
+  test(`landlord notification popover visual regression ${viewport.name}`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium', 'Landlord snapshots are tracked in Chromium only.');
+    await mockLandlordWorkspace(page);
+    await page.setViewportSize(viewport);
+    await page.goto('/');
+    await page.getByTestId('landlord-notification-bell').click();
+    const popover = page.locator('#landlord-notification-popover');
+    await expect(popover).toBeVisible();
+    await expect(popover).toHaveScreenshot(`landlord-notifications-${viewport.name}.png`, { maxDiffPixelRatio: 0.01, threshold: 0.2 });
+  });
+}

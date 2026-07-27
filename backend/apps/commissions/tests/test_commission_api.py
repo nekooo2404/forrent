@@ -4,6 +4,7 @@ import pytest
 from django.utils import timezone
 from rest_framework.test import APIClient
 
+from apps.accounts.models import User
 from apps.rooms.models import Room, RoomImage
 from apps.rooms.tests.factories import create_admin, create_room, create_user
 from apps.viewing_requests.models import ViewingRequest
@@ -15,6 +16,27 @@ from apps.common.models import AuditLog
 class TestCommissionAPI:
     def setup_method(self):
         self.client = APIClient()
+
+    def create_commission_case(self):
+        tenant = create_user()
+        admin = create_admin()
+        owner = create_user(
+            email="independent-saler@example.com",
+            phone="0917999999",
+            role=User.Role.INDEPENDENT_SALER,
+        )
+        room = create_room(created_by=owner)
+        lead = ViewingRequest.objects.create(
+            user=tenant,
+            room=room,
+            full_name=tenant.full_name,
+            phone=tenant.phone,
+            email=tenant.email,
+            status=ViewingRequest.Status.SCHEDULED,
+            confirmed_at=timezone.now(),
+            estimated_commission_amount=room.estimated_commission_amount,
+        )
+        return admin, room, lead
 
     def test_dashboard_summary_exposes_work_queue_counts(self):
         admin = create_admin()
@@ -56,19 +78,7 @@ class TestCommissionAPI:
         assert data["media_needing_review"] == 1
 
     def test_confirm_moved_in_creates_pending_payout_record(self):
-        tenant = create_user()
-        admin = create_admin()
-        room = create_room(created_by=admin)
-        lead = ViewingRequest.objects.create(
-            user=tenant,
-            room=room,
-            full_name=tenant.full_name,
-            phone=tenant.phone,
-            email=tenant.email,
-            status=ViewingRequest.Status.SCHEDULED,
-            confirmed_at=timezone.now(),
-            estimated_commission_amount=room.estimated_commission_amount,
-        )
+        admin, room, lead = self.create_commission_case()
         self.client.force_authenticate(admin)
 
         confirm_response = self.client.post(f"/api/admin/viewing-requests/{lead.id}/confirm-moved-in/")
@@ -82,19 +92,7 @@ class TestCommissionAPI:
         assert payout["status"] == "PENDING"
 
     def test_payout_cannot_skip_approval_before_paid(self):
-        tenant = create_user()
-        admin = create_admin()
-        room = create_room(created_by=admin)
-        lead = ViewingRequest.objects.create(
-            user=tenant,
-            room=room,
-            full_name=tenant.full_name,
-            phone=tenant.phone,
-            email=tenant.email,
-            status=ViewingRequest.Status.SCHEDULED,
-            confirmed_at=timezone.now(),
-            estimated_commission_amount=room.estimated_commission_amount,
-        )
+        admin, _room, lead = self.create_commission_case()
         self.client.force_authenticate(admin)
         self.client.post(f"/api/admin/viewing-requests/{lead.id}/confirm-moved-in/")
         payout = CommissionPayout.objects.get(viewing_request=lead)
@@ -106,19 +104,7 @@ class TestCommissionAPI:
         assert payout.status == CommissionPayout.Status.PENDING
 
     def test_payout_amount_is_immutable(self):
-        tenant = create_user()
-        admin = create_admin()
-        room = create_room(created_by=admin)
-        lead = ViewingRequest.objects.create(
-            user=tenant,
-            room=room,
-            full_name=tenant.full_name,
-            phone=tenant.phone,
-            email=tenant.email,
-            status=ViewingRequest.Status.SCHEDULED,
-            confirmed_at=timezone.now(),
-            estimated_commission_amount=room.estimated_commission_amount,
-        )
+        admin, room, lead = self.create_commission_case()
         self.client.force_authenticate(admin)
         self.client.post(f"/api/admin/viewing-requests/{lead.id}/confirm-moved-in/")
         payout = CommissionPayout.objects.get(viewing_request=lead)
@@ -134,19 +120,7 @@ class TestCommissionAPI:
         assert payout.amount == room.estimated_commission_amount
 
     def test_payout_approval_paid_and_cancel_audit_are_enforced(self):
-        tenant = create_user()
-        admin = create_admin()
-        room = create_room(created_by=admin)
-        lead = ViewingRequest.objects.create(
-            user=tenant,
-            room=room,
-            full_name=tenant.full_name,
-            phone=tenant.phone,
-            email=tenant.email,
-            status=ViewingRequest.Status.SCHEDULED,
-            confirmed_at=timezone.now(),
-            estimated_commission_amount=room.estimated_commission_amount,
-        )
+        admin, _room, lead = self.create_commission_case()
         self.client.force_authenticate(admin)
         self.client.post(f"/api/admin/viewing-requests/{lead.id}/confirm-moved-in/")
         payout = CommissionPayout.objects.get(viewing_request=lead)
@@ -166,19 +140,7 @@ class TestCommissionAPI:
         assert AuditLog.objects.filter(event="commission.payout_status_changed", target_id=str(payout.id)).count() == 2
 
     def test_payout_cancel_requires_reason_and_audits_actor(self):
-        tenant = create_user()
-        admin = create_admin()
-        room = create_room(created_by=admin)
-        lead = ViewingRequest.objects.create(
-            user=tenant,
-            room=room,
-            full_name=tenant.full_name,
-            phone=tenant.phone,
-            email=tenant.email,
-            status=ViewingRequest.Status.SCHEDULED,
-            confirmed_at=timezone.now(),
-            estimated_commission_amount=room.estimated_commission_amount,
-        )
+        admin, _room, lead = self.create_commission_case()
         self.client.force_authenticate(admin)
         self.client.post(f"/api/admin/viewing-requests/{lead.id}/confirm-moved-in/")
         payout = CommissionPayout.objects.get(viewing_request=lead)

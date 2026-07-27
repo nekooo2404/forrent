@@ -8,19 +8,16 @@ import { viewingStatusLabels } from "./landlord-api";
 export function LandlordPageHeader({
   actions,
   description,
-  eyebrow,
   title,
 }: Readonly<{
   actions?: ReactNode;
   description: string;
-  eyebrow: string;
   title: string;
 }>) {
   return (
     <div className="flex flex-col gap-4 border-b border-outline-variant/70 pb-6 md:flex-row md:items-end md:justify-between">
       <div>
-        <p className="text-xs font-semibold uppercase text-tertiary">{eyebrow}</p>
-        <h2 className="mt-2 font-headline-md text-3xl text-on-surface">{title}</h2>
+        <h2 className="font-headline-md text-3xl text-on-surface">{title}</h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-on-surface-variant md:text-base">{description}</p>
       </div>
       {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}

@@ -3,7 +3,7 @@ import logging
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
 
 from apps.rooms.models import Room
 from apps.common.audit import audit_event
@@ -17,17 +17,45 @@ from apps.viewing_requests.models import (
 from apps.viewing_requests.tasks import (
     send_appointment_confirmed_email,
     send_landlord_viewing_request_notification,
+    send_viewing_request_cancelled_email,
     send_viewing_request_received_email,
 )
 
 logger = logging.getLogger(__name__)
 
 
+class AppointmentConflict(APIException):
+    status_code = 409
+    default_detail = "This rental operator already has an appointment in the selected time slot."
+
+
 class ViewingRequestService:
+    @staticmethod
+    def _lock_workflow_owner(*, viewing_request_id, actor):
+        from apps.accounts.models import User
+
+        reference = ViewingRequest.objects.values(
+            "room_id",
+            "room__created_by_id",
+        ).get(pk=viewing_request_id)
+        owner = User.objects.select_for_update().only("id", "is_active", "role").get(
+            pk=reference["room__created_by_id"],
+        )
+        if actor.pk == owner.pk and (
+            not owner.is_active
+            or owner.role not in {
+                User.Role.LANDLORD,
+                User.Role.INDEPENDENT_SALER,
+                User.Role.SALER,
+            }
+        ):
+            raise PermissionDenied("Rental operator access has been revoked.")
+        return reference, owner
+
     @staticmethod
     def _create_landlord_notification(viewing_request):
         owner = viewing_request.room.created_by
-        if owner and owner.is_active and owner.role == owner.Role.LANDLORD:
+        if owner and owner.is_active and owner.role in {owner.Role.LANDLORD, owner.Role.INDEPENDENT_SALER}:
             notification, _created = LandlordNotification.objects.get_or_create(
                 recipient=owner,
                 viewing_request=viewing_request,
@@ -71,6 +99,8 @@ class ViewingRequestService:
                     target=lead,
                     metadata={"from": previous_status, "to": lead.status},
                 )
+                if lead.status == ViewingRequest.Status.CANCELLED:
+                    enqueue_task_on_commit(send_viewing_request_cancelled_email, lead.id)
         updated_count = len(leads) if updates else 0
         audit_event(
             "viewing_request.bulk_updated",
@@ -170,8 +200,11 @@ class ViewingRequestService:
     @staticmethod
     @transaction.atomic
     def confirm_moved_in(*, viewing_request_id, actor):
-        room_id = ViewingRequest.objects.only("room_id").get(pk=viewing_request_id).room_id
-        room = Room.objects.select_for_update().get(pk=room_id)
+        reference, _owner = ViewingRequestService._lock_workflow_owner(
+            viewing_request_id=viewing_request_id,
+            actor=actor,
+        )
+        room = Room.objects.select_for_update().get(pk=reference["room_id"])
         viewing_request = (
             ViewingRequest.objects.select_for_update()
             .select_related("user")
@@ -200,18 +233,16 @@ class ViewingRequestService:
         )
         if competing_leads:
             competing_ids = [lead.id for lead in competing_leads]
-            ViewingRequest.objects.filter(id__in=competing_ids).update(status=ViewingRequest.Status.CANCELLED)
-            ViewingRequestActivity.objects.bulk_create(
-                [
-                    ViewingRequestActivity(
-                        viewing_request=lead,
-                        actor=actor,
-                        action="AUTO_CANCELLED",
-                        note="Room was rented by another lead.",
-                    )
-                    for lead in competing_leads
-                ]
-            )
+            for lead in competing_leads:
+                lead.status = ViewingRequest.Status.CANCELLED
+                lead.save(update_fields=["status", "updated_at"])
+                ViewingRequestActivity.objects.create(
+                    viewing_request=lead,
+                    actor=actor,
+                    action="AUTO_CANCELLED",
+                    note="Room was rented by another lead.",
+                )
+                enqueue_task_on_commit(send_viewing_request_cancelled_email, lead.id)
             audit_event(
                 "viewing_request.competing_leads_cancelled",
                 actor=actor,
@@ -245,10 +276,11 @@ class ViewingRequestService:
 
         from apps.commissions.models import CommissionPayout
 
-        CommissionPayout.objects.get_or_create(
-            viewing_request=viewing_request,
-            defaults={"amount": viewing_request.actual_commission_amount},
-        )
+        if room.created_by.role == room.created_by.Role.INDEPENDENT_SALER:
+            CommissionPayout.objects.get_or_create(
+                viewing_request=viewing_request,
+                defaults={"amount": viewing_request.actual_commission_amount},
+            )
         ViewingRequestActivity.objects.create(
             viewing_request=viewing_request,
             actor=actor,
@@ -272,12 +304,33 @@ class ViewingRequestService:
     @staticmethod
     @transaction.atomic
     def confirm_appointment(*, viewing_request_id, actor, appointment_date, appointment_time_slot, note=""):
-        viewing_request = ViewingRequest.objects.select_for_update().get(pk=viewing_request_id)
+        reference, _owner = ViewingRequestService._lock_workflow_owner(
+            viewing_request_id=viewing_request_id,
+            actor=actor,
+        )
+        viewing_request = ViewingRequest.objects.select_for_update().select_related("room").get(pk=viewing_request_id)
+        if viewing_request.room_id != reference["room_id"]:
+            raise ValidationError({"room": "The viewing request room changed during scheduling."})
+        if viewing_request.room.status != Room.Status.PUBLISHED:
+            raise ValidationError({"room": "Only a published room can accept viewing appointments."})
         if viewing_request.status != ViewingRequest.Status.SCHEDULED and not ViewingRequest.can_transition(
             viewing_request.status,
             ViewingRequest.Status.SCHEDULED,
         ):
             raise ValidationError({"status": f"Lead in {viewing_request.status} status cannot be scheduled."})
+        conflict_exists = (
+            ViewingRequest.objects.select_for_update()
+            .filter(
+                room__created_by_id=viewing_request.room.created_by_id,
+                appointment_date=appointment_date,
+                appointment_time_slot=appointment_time_slot,
+                status=ViewingRequest.Status.SCHEDULED,
+            )
+            .exclude(pk=viewing_request.pk)
+            .exists()
+        )
+        if conflict_exists:
+            raise AppointmentConflict()
         viewing_request.confirmed_at = timezone.now()
         viewing_request.appointment_date = appointment_date
         viewing_request.appointment_time_slot = appointment_time_slot
@@ -301,7 +354,15 @@ class ViewingRequestService:
     @staticmethod
     @transaction.atomic
     def move_out(*, viewing_request_id, actor, note=""):
-        viewing_request = ViewingRequest.objects.select_for_update().select_related("room").get(pk=viewing_request_id)
+        reference, _owner = ViewingRequestService._lock_workflow_owner(
+            viewing_request_id=viewing_request_id,
+            actor=actor,
+        )
+        room = Room.objects.select_for_update().get(pk=reference["room_id"])
+        viewing_request = ViewingRequest.objects.select_for_update().get(
+            pk=viewing_request_id,
+            room_id=room.id,
+        )
         lease = RoomLease.objects.select_for_update().filter(
             viewing_request=viewing_request,
             status=RoomLease.Status.ACTIVE,
@@ -313,8 +374,9 @@ class ViewingRequestService:
         lease.move_out_at = now
         lease.note = note
         lease.save(update_fields=["status", "move_out_at", "note", "updated_at"])
-        viewing_request.room.status = Room.Status.PUBLISHED
-        viewing_request.room.save(update_fields=["status", "updated_at"])
+        if room.status != Room.Status.ARCHIVED:
+            room.status = Room.Status.HIDDEN
+            room.save(update_fields=["status", "updated_at"])
         ViewingRequestActivity.objects.create(
             viewing_request=viewing_request,
             actor=actor,
@@ -325,6 +387,6 @@ class ViewingRequestService:
             "viewing_request.move_out",
             actor=actor,
             target=viewing_request,
-            metadata={"room_id": viewing_request.room_id},
+            metadata={"room_id": viewing_request.room_id, "room_status": room.status},
         )
         return lease

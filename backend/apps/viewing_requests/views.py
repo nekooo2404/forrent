@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 from django.utils import timezone
 
-from apps.common.permissions import IsAdminOrSaler, IsLandlord, IsTenant
+from apps.common.permissions import IsAdminOrSaler, IsRentalOperator, IsTenant
 from apps.common.responses import success_response
 from apps.common.viewsets import StandardResponseUpdateMixin
 from apps.viewing_requests.filters import ViewingRequestAdminFilter
@@ -145,7 +145,7 @@ class LandlordViewingRequestViewSet(
     """Owner-scoped lead workflow without admin assignment or finance controls."""
 
     serializer_class = LandlordViewingRequestSerializer
-    permission_classes = [IsLandlord]
+    permission_classes = [IsRentalOperator]
     filterset_class = ViewingRequestAdminFilter
     search_fields = ("full_name", "email", "phone", "room__title", "room__room_code")
     ordering_fields = ("created_at", "confirmed_at", "appointment_date", "updated_at")
@@ -154,7 +154,7 @@ class LandlordViewingRequestViewSet(
     def get_throttles(self):
         self.throttle_scope = (
             "landlord_workflow_write"
-            if self.action in {"partial_update", "confirm_appointment"}
+            if self.action in {"partial_update", "confirm_appointment", "move_out"}
             else None
         )
         return super().get_throttles()
@@ -184,10 +184,26 @@ class LandlordViewingRequestViewSet(
             message="Appointment confirmed successfully.",
         )
 
+    @extend_schema(request=MoveOutSerializer)
+    @action(detail=True, methods=["post"], url_path="move-out")
+    def move_out(self, request, pk=None):
+        owned_request = self.get_object()
+        serializer = MoveOutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        lease = ViewingRequestService.move_out(
+            viewing_request_id=owned_request.pk,
+            actor=request.user,
+            note=serializer.validated_data.get("note", ""),
+        )
+        return success_response(
+            data={"lease_id": lease.id, "status": lease.status},
+            message="Move-out recorded. The room remains hidden until you publish it again.",
+        )
+
 
 class LandlordNotificationViewSet(mixins.RetrieveModelMixin, GenericViewSet):
     serializer_class = LandlordNotificationSerializer
-    permission_classes = [IsLandlord]
+    permission_classes = [IsRentalOperator]
     http_method_names = ["get", "post", "head", "options"]
 
     def get_throttles(self):

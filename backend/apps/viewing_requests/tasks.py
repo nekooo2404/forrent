@@ -68,7 +68,7 @@ def _landlord_message(notification):
         viewing_request.preferred_viewing_time_slot,
         "Chưa chọn khung giờ",
     )
-    return (
+    message = (
         "ForRent - Yêu cầu xem phòng mới\n"
         f"Khách: {viewing_request.full_name}\n"
         f"Số điện thoại: {viewing_request.phone}\n"
@@ -76,6 +76,7 @@ def _landlord_message(notification):
         f"Thời gian mong muốn: {date_label} · {time_label}\n"
         f"Quản lý: {settings.FRONTEND_BASE_URL.rstrip('/')}/landlord/viewing-requests"
     )
+    return f"{message}?request={viewing_request.id}#request-{viewing_request.id}"
 
 
 @shared_task(base=ReliableNotificationTask, rate_limit="180/m")
@@ -92,7 +93,7 @@ def send_landlord_viewing_request_notification(notification_id):
     room = notification.viewing_request.room
     if (
         not recipient.is_active
-        or recipient.role != recipient.Role.LANDLORD
+        or recipient.role not in {recipient.Role.LANDLORD, recipient.Role.INDEPENDENT_SALER}
         or room.created_by_id != recipient.id
     ):
         logger.warning(
@@ -129,7 +130,10 @@ def send_landlord_viewing_request_notification(notification_id):
             notification.viewing_request.preferred_viewing_time_slot,
             "Chưa chọn",
         ),
-        "portal_url": f"{settings.FRONTEND_BASE_URL.rstrip('/')}/landlord/viewing-requests",
+        "portal_url": (
+            f"{settings.FRONTEND_BASE_URL.rstrip('/')}/landlord/viewing-requests"
+            f"?request={notification.viewing_request_id}#request-{notification.viewing_request_id}"
+        ),
     }
 
     if notification.email_sent_at is None and recipient.email:
@@ -303,6 +307,38 @@ def send_appointment_confirmed_email(viewing_request_id):
     )
     _result, delivered = execute_once(
         f"email:appointment-confirmed:{appointment_key}",
+        deliver,
+        done_timeout=60 * 60 * 24 * 30,
+        cache_alias="coordination",
+    )
+    return {"viewing_request_id": viewing_request.id, "delivered": delivered}
+
+
+@shared_task(base=ReliableEmailTask, rate_limit="120/m")
+def send_viewing_request_cancelled_email(viewing_request_id):
+    try:
+        viewing_request = _viewing_request(viewing_request_id)
+    except ViewingRequest.DoesNotExist:
+        return {"viewing_request_id": viewing_request_id, "delivered": False}
+    if viewing_request.status != ViewingRequest.Status.CANCELLED:
+        return {"viewing_request_id": viewing_request.id, "delivered": False}
+
+    def deliver():
+        return send_mail(
+            subject="ForRent - Yeu cau xem phong da duoc huy",
+            message=(
+                f"Xin chao {viewing_request.full_name},\n\n"
+                f"Yeu cau xem {_room_label(viewing_request)} cua ban da duoc huy. "
+                "Ban co the tim phong khac hoac gui nhu cau moi tren ForRent.\n\n"
+                f"Xem yeu cau: {settings.FRONTEND_BASE_URL.rstrip('/')}/profile"
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[viewing_request.email],
+            fail_silently=False,
+        )
+
+    _result, delivered = execute_once(
+        f"email:viewing-request-cancelled:{viewing_request.id}",
         deliver,
         done_timeout=60 * 60 * 24 * 30,
         cache_alias="coordination",

@@ -66,6 +66,16 @@ export type LandlordRoom = {
   updated_at: string;
 };
 
+export type LandlordMediaLabel = ApiRoomImage["label"];
+
+export type LandlordSelectedMedia = {
+  key: string;
+  file: File;
+  label: LandlordMediaLabel;
+  previewUrl: string;
+  uploadState: "ready" | "uploading" | "complete" | "error";
+};
+
 export type LandlordRentalCandidate = {
   id: number;
   full_name: string;

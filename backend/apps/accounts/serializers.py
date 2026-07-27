@@ -1,10 +1,20 @@
+from functools import partial
+
 from django.contrib.auth import password_validation
 from django.core.validators import RegexValidator
+from django.db import transaction
+from django.db.models import Q
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.accounts.models import PasswordResetToken, User
 from apps.accounts.services import AuthService
 from apps.common.audit import client_ip
+from apps.common.cache_utils import (
+    ROOM_DETAIL_CACHE_NAMESPACE,
+    ROOM_LIST_CACHE_NAMESPACE,
+    invalidate_cache_namespaces,
+)
 from apps.common.validators import normalize_vietnamese_phone, validate_vietnamese_phone
 
 
@@ -78,8 +88,13 @@ class AdminUserSerializer(serializers.ModelSerializer):
         return value
 
     def validate_role(self, value):
-        if value not in {User.Role.TENANT, User.Role.LANDLORD, User.Role.SALER}:
-            raise serializers.ValidationError("Role must be TENANT, LANDLORD or SALER.")
+        if value not in {
+            User.Role.TENANT,
+            User.Role.LANDLORD,
+            User.Role.INDEPENDENT_SALER,
+            User.Role.SALER,
+        }:
+            raise serializers.ValidationError("Unsupported account role.")
         return value
 
     def validate(self, attrs):
@@ -88,9 +103,10 @@ class AdminUserSerializer(serializers.ModelSerializer):
             "telegram_chat_id",
             self.instance.telegram_chat_id if self.instance else "",
         )
-        if telegram_chat_id and next_role != User.Role.LANDLORD:
+        rental_operator_roles = {User.Role.LANDLORD, User.Role.INDEPENDENT_SALER}
+        if telegram_chat_id and next_role not in rental_operator_roles:
             raise serializers.ValidationError(
-                {"telegram_chat_id": "Telegram notifications can only be configured for LANDLORD accounts."}
+                {"telegram_chat_id": "Telegram notifications can only be configured for rental operator accounts."}
             )
         if self.instance:
             next_is_active = attrs.get("is_active", self.instance.is_active)
@@ -104,17 +120,18 @@ class AdminUserSerializer(serializers.ModelSerializer):
                 is_active=True,
             ).exclude(pk=self.instance.pk).exists():
                 raise serializers.ValidationError({"role": "At least one active SALER account is required."})
-            changes_landlord_role = (
-                self.instance.role == User.Role.LANDLORD
-                and next_role != User.Role.LANDLORD
+            removes_operator_access = (
+                self.instance.role in rental_operator_roles
+                and self.instance.is_active
+                and (next_role not in rental_operator_roles or not next_is_active)
             )
-            if changes_landlord_role and self.instance.created_rooms.exclude(status="ARCHIVED").exists():
+            if removes_operator_access and not User.objects.filter(
+                role=User.Role.SALER,
+                is_active=True,
+            ).exclude(pk=self.instance.pk).exists():
                 raise serializers.ValidationError(
                     {
-                        "role": (
-                            "Archive all active rooms before changing this landlord's role. "
-                            "The account can still be deactivated immediately when access must be suspended."
-                        )
+                        "is_active": "An active admin account is required before disabling a rental operator."
                     }
                 )
         return attrs
@@ -152,11 +169,52 @@ class AdminUserSerializer(serializers.ModelSerializer):
         )
         if sensitive_change and not actor.check_password(current_password):
             raise serializers.ValidationError({"current_password": "Current admin password is required."})
+        rental_operator_roles = {User.Role.LANDLORD, User.Role.INDEPENDENT_SALER}
+        next_role = validated_data.get("role", instance.role)
+        next_is_active = validated_data.get("is_active", instance.is_active)
+        removes_operator_access = (
+            instance.role in rental_operator_roles
+            and instance.is_active
+            and (next_role not in rental_operator_roles or not next_is_active)
+        )
+        if removes_operator_access:
+            from apps.rooms.models import Room
+            from apps.viewing_requests.models import ViewingRequest
+
+            fallback_admin = User.objects.filter(
+                role=User.Role.SALER,
+                is_active=True,
+            ).exclude(pk=instance.pk).order_by("id").first()
+            archived_count = instance.created_rooms.exclude(
+                status=Room.Status.ARCHIVED,
+            ).exclude(
+                leases__status="ACTIVE",
+            ).update(
+                status=Room.Status.ARCHIVED,
+                updated_at=timezone.now(),
+            )
+            if archived_count:
+                transaction.on_commit(
+                    partial(
+                        invalidate_cache_namespaces,
+                        ROOM_LIST_CACHE_NAMESPACE,
+                        ROOM_DETAIL_CACHE_NAMESPACE,
+                    )
+                )
+            ViewingRequest.objects.filter(
+                room__created_by=instance,
+                status__in=ViewingRequest.ACTIVE_STATUSES,
+            ).filter(
+                Q(assigned_to__isnull=True)
+                | Q(assigned_to=instance)
+                | Q(assigned_to__is_active=False)
+            ).update(assigned_to=fallback_admin, updated_at=timezone.now())
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.is_staff = instance.role == User.Role.SALER
         instance.is_superuser = False
-        if instance.role != User.Role.LANDLORD:
+        if instance.role not in {User.Role.LANDLORD, User.Role.INDEPENDENT_SALER}:
             instance.telegram_chat_id = ""
         instance.admin_updated_by = actor
         if password:
@@ -167,7 +225,11 @@ class AdminUserSerializer(serializers.ModelSerializer):
 
 
 class RegisterSerializer(serializers.Serializer):
-    PUBLIC_REGISTRATION_ROLES = (User.Role.TENANT, User.Role.LANDLORD)
+    PUBLIC_REGISTRATION_ROLES = (
+        User.Role.TENANT,
+        User.Role.LANDLORD,
+        User.Role.INDEPENDENT_SALER,
+    )
 
     full_name = serializers.CharField(max_length=255)
     date_of_birth = serializers.DateField(required=False, allow_null=True)

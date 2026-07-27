@@ -1,14 +1,5 @@
 import Link from "next/link";
 
-export function LandlordMetric({ label, value }: Readonly<{ label: string; value: number }>) {
-  return (
-    <div className="rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-5 shadow-soft">
-      <p className="text-sm font-semibold text-on-surface-variant">{label}</p>
-      <p className="mt-2 text-3xl font-semibold text-on-surface">{value}</p>
-    </div>
-  );
-}
-
 export function LandlordAccessState({
   actionHref,
   actionLabel,

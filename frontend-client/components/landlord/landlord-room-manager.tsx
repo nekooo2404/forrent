@@ -12,14 +12,14 @@ import {
   Search,
 } from "@/components/ui/icons";
 import { authFetch } from "@/lib/auth-storage";
-import type { ApiUser } from "@/lib/api";
+import type { ApiRoomImage, ApiUser } from "@/lib/api";
 import { getRoomFilters } from "@/lib/api";
 import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useToast } from "@/hooks/use-toast";
 import { LandlordRentalDialog } from "./landlord-rental-dialog";
 import { LandlordRoomCard } from "./landlord-room-card";
 import { LandlordRoomFormDialog } from "./landlord-room-form-dialog";
-import { LandlordAccessState, LandlordMetric } from "./landlord-room-shared";
+import { LandlordAccessState } from "./landlord-room-shared";
 import { useLandlordRental } from "./use-landlord-rental";
 import type {
   ApiResponse,
@@ -28,8 +28,16 @@ import type {
   Paginated,
   RoomFilters,
   RoomFormState,
+  LandlordSelectedMedia,
 } from "./landlord-room-types";
 import { emptyForm, emptySummary, pageSize, statusCopy } from "./landlord-room-types";
+
+const ROOM_DRAFT_SCHEMA_VERSION = 1;
+const ROOM_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+function roomDraftStorageKey(userId: number) {
+  return `forrent:rental-operator-room-draft:${userId}`;
+}
 
 function responseMessage(payload: ApiResponse<unknown>) {
   if (payload.errors && typeof payload.errors === "object") {
@@ -67,7 +75,7 @@ function formFromRoom(room: LandlordRoom): RoomFormState {
   };
 }
 
-export function LandlordRoomManager() {
+export function LandlordRoomManager({ initialStatus = "" }: Readonly<{ initialStatus?: string }>) {
   const { toast } = useToast();
   const [user, setUser] = useState<ApiUser | null>(null);
   const [rooms, setRooms] = useState<LandlordRoom[]>([]);
@@ -75,9 +83,9 @@ export function LandlordRoomManager() {
   const [count, setCount] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [appliedSearch, setAppliedSearch] = useState("");
-  const [appliedStatusFilter, setAppliedStatusFilter] = useState("");
+  const [appliedStatusFilter, setAppliedStatusFilter] = useState(initialStatus);
   const [filters, setFilters] = useState<RoomFilters | null>(null);
   const [authState, setAuthState] = useState<"loading" | "unauthenticated" | "forbidden" | "ready">("loading");
   const [isLoading, setIsLoading] = useState(true);
@@ -88,9 +96,14 @@ export function LandlordRoomManager() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDiscardPromptOpen, setIsDiscardPromptOpen] = useState(false);
   const [form, setForm] = useState<RoomFormState>(emptyForm);
+  const [selectedFiles, setSelectedFiles] = useState<LandlordSelectedMedia[]>([]);
+  const [pendingMediaUpdates, setPendingMediaUpdates] = useState<Record<number, Partial<Pick<ApiRoomImage, "label" | "sort_order">>>>({});
+  const [pendingMediaDeleteIds, setPendingMediaDeleteIds] = useState<number[]>([]);
+  const [uploadError, setUploadError] = useState("");
+  const [draftSavedAt, setDraftSavedAt] = useState("");
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  const [pendingMoveOutId, setPendingMoveOutId] = useState<number | null>(null);
   const [busyRoomId, setBusyRoomId] = useState<number | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const discardButtonRef = useRef<HTMLButtonElement>(null);
   const initialFormRef = useRef<RoomFormState>(emptyForm);
   const isSavingRef = useRef(false);
@@ -113,16 +126,23 @@ export function LandlordRoomManager() {
   const selectedAmenityIds = useMemo(() => new Set(form.amenities), [form.amenities]);
 
   const closeForm = useCallback(() => {
+    selectedFiles.forEach((item) => URL.revokeObjectURL(item.previewUrl));
     setIsDiscardPromptOpen(false);
     setIsFormOpen(false);
     setEditingRoom(null);
+    setSelectedFiles([]);
+    setPendingMediaUpdates({});
+    setPendingMediaDeleteIds([]);
+    setUploadError("");
     setFormError("");
-  }, []);
+  }, [selectedFiles]);
 
   const hasUnsavedFormChanges = useCallback(() => {
-    const hasNewMedia = Boolean(fileInputRef.current?.files?.length);
-    return hasNewMedia || JSON.stringify(form) !== JSON.stringify(initialFormRef.current);
-  }, [form]);
+    return selectedFiles.length > 0
+      || pendingMediaDeleteIds.length > 0
+      || Object.keys(pendingMediaUpdates).length > 0
+      || JSON.stringify(form) !== JSON.stringify(initialFormRef.current);
+  }, [form, pendingMediaDeleteIds.length, pendingMediaUpdates, selectedFiles.length]);
 
   const requestCloseForm = useCallback(() => {
     if (isSaving) return;
@@ -132,6 +152,13 @@ export function LandlordRoomManager() {
     }
     closeForm();
   }, [closeForm, hasUnsavedFormChanges, isSaving]);
+
+  function discardForm() {
+    if (!editingRoom && user) {
+      window.localStorage.removeItem(roomDraftStorageKey(user.id));
+    }
+    closeForm();
+  }
 
   async function loadAll(nextPage = page, nextSearch = appliedSearch, nextStatus = appliedStatusFilter) {
     const requestId = ++loadRequestIdRef.current;
@@ -148,7 +175,7 @@ export function LandlordRoomManager() {
       if (!meResponse.ok || !mePayload?.success || !mePayload.data) {
         throw new Error(mePayload?.message || "Không thể xác minh phiên đăng nhập.");
       }
-      if (mePayload.data.role !== "LANDLORD") {
+      if (!["LANDLORD", "INDEPENDENT_SALER"].includes(mePayload.data.role)) {
         setUser(mePayload.data);
         setAuthState("forbidden");
         return;
@@ -237,12 +264,33 @@ export function LandlordRoomManager() {
   }, [isDiscardPromptOpen]);
 
   function openCreateForm() {
-    initialFormRef.current = emptyForm;
+    let nextForm = emptyForm;
+    try {
+      if (!user) return;
+      const storageKey = roomDraftStorageKey(user.id);
+      const rawDraft = window.localStorage.getItem(storageKey);
+      if (rawDraft) {
+        const savedDraft = JSON.parse(rawDraft) as { form?: RoomFormState; savedAt?: number; version?: number };
+        const isCurrent = savedDraft.version === ROOM_DRAFT_SCHEMA_VERSION;
+        const isFresh = typeof savedDraft.savedAt === "number" && Date.now() - savedDraft.savedAt < ROOM_DRAFT_TTL_MS;
+        if (isCurrent && isFresh && savedDraft.form) nextForm = { ...emptyForm, ...savedDraft.form };
+        else window.localStorage.removeItem(storageKey);
+      }
+    } catch {
+      // Ignore an unavailable or malformed local draft.
+    }
+    initialFormRef.current = nextForm;
     setEditingRoom(null);
-    setForm(emptyForm);
+    setForm(nextForm);
+    setSelectedFiles([]);
+    setPendingMediaUpdates({});
+    setPendingMediaDeleteIds([]);
+    setUploadError("");
+    setDraftSavedAt("");
     setFormError("");
     setIsDiscardPromptOpen(false);
     setPendingDeleteId(null);
+    setPendingMoveOutId(null);
     setIsFormOpen(true);
   }
 
@@ -251,9 +299,15 @@ export function LandlordRoomManager() {
     initialFormRef.current = nextForm;
     setEditingRoom(room);
     setForm(nextForm);
+    setSelectedFiles([]);
+    setPendingMediaUpdates({});
+    setPendingMediaDeleteIds([]);
+    setUploadError("");
+    setDraftSavedAt("");
     setFormError("");
     setIsDiscardPromptOpen(false);
     setPendingDeleteId(null);
+    setPendingMoveOutId(null);
     setIsFormOpen(true);
   }
 
@@ -278,11 +332,71 @@ export function LandlordRoomManager() {
     }
   }
 
+  function updateExistingMedia(image: ApiRoomImage, updates: Partial<Pick<ApiRoomImage, "label" | "sort_order">>) {
+    if (!editingRoom) return;
+    const currentImages = editingRoom.images ?? [];
+    const displacedSortImage = updates.sort_order === undefined
+      ? null
+      : currentImages.find((item) => item.id !== image.id && item.sort_order === updates.sort_order) ?? null;
+    const nextImages = currentImages.map((item) => {
+      if (item.id === image.id) return { ...item, ...updates };
+      if (updates.label === "OVERVIEW" && item.label === "OVERVIEW") {
+        return { ...item, label: "OTHER" as ApiRoomImage["label"] };
+      }
+      if (displacedSortImage?.id === item.id) {
+        return { ...item, sort_order: image.sort_order };
+      }
+      return item;
+    }).sort((a, b) => a.sort_order - b.sort_order);
+    setPendingMediaUpdates((current) => ({
+      ...current,
+      [image.id]: { ...current[image.id], ...updates },
+      ...(displacedSortImage
+        ? { [displacedSortImage.id]: { ...current[displacedSortImage.id], sort_order: image.sort_order } }
+        : {}),
+      ...(updates.label === "OVERVIEW"
+        ? Object.fromEntries(currentImages.filter((item) => item.id !== image.id && item.label === "OVERVIEW").map((item) => [item.id, { ...current[item.id], label: "OTHER" }]))
+        : {}),
+    }));
+    setEditingRoom((current) => current ? { ...current, images: nextImages } : current);
+  }
+
+  function deleteExistingMedia(image: ApiRoomImage) {
+    if (!editingRoom) return;
+    setPendingMediaDeleteIds((current) => current.includes(image.id) ? current : [...current, image.id]);
+    setPendingMediaUpdates((current) => {
+      const next = { ...current };
+      delete next[image.id];
+      return next;
+    });
+    setEditingRoom((current) => current
+      ? { ...current, images: current.images.filter((item) => item.id !== image.id) }
+      : current);
+  }
+
+  useEffect(() => {
+    if (!isFormOpen || editingRoom || !user) return undefined;
+    const timeoutId = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(roomDraftStorageKey(user.id), JSON.stringify({
+          form,
+          savedAt: Date.now(),
+          version: ROOM_DRAFT_SCHEMA_VERSION,
+        }));
+        setDraftSavedAt("Đã lưu tạm trên thiết bị");
+      } catch {
+        setDraftSavedAt("Không thể lưu tạm trên thiết bị");
+      }
+    }, 500);
+    return () => window.clearTimeout(timeoutId);
+  }, [editingRoom, form, isFormOpen, user]);
+
   async function submitRoom(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!filters || isSavingRef.current) return;
     isSavingRef.current = true;
     setFormError("");
+    setUploadError("");
     setIsSaving(true);
 
     try {
@@ -307,10 +421,15 @@ export function LandlordRoomManager() {
         appendNumber(formData, key);
       }
       form.amenities.forEach((amenity) => formData.append("amenities", amenity));
-      const files = fileInputRef.current?.files;
-      if (files) {
-        Array.from(files).forEach((file) => formData.append("uploaded_images", file));
+      selectedFiles.forEach((item) => {
+        formData.append("uploaded_images", item.file);
+        formData.append("uploaded_image_labels", item.label);
+      });
+      if (editingRoom) {
+        formData.append("existing_media_updates", JSON.stringify(pendingMediaUpdates));
+        formData.append("deleted_media_ids", JSON.stringify(pendingMediaDeleteIds));
       }
+      setSelectedFiles((current) => current.map((item) => ({ ...item, uploadState: "uploading" })));
 
       const response = await authFetch(editingRoom ? `/api/landlord/rooms/${editingRoom.id}` : "/api/landlord/rooms", {
         body: formData,
@@ -320,6 +439,8 @@ export function LandlordRoomManager() {
       if (!response.ok || !payload?.success || !payload.data) {
         throw new Error(payload ? responseMessage(payload) : "Không thể lưu phòng.");
       }
+      setSelectedFiles((current) => current.map((item) => ({ ...item, uploadState: "complete" })));
+      if (!editingRoom && user) window.localStorage.removeItem(roomDraftStorageKey(user.id));
       closeForm();
       toast({
         type: "success",
@@ -330,6 +451,8 @@ export function LandlordRoomManager() {
       });
       await loadAll(editingRoom ? page : 1);
     } catch (caughtError) {
+      setSelectedFiles((current) => current.map((item) => ({ ...item, uploadState: "error" })));
+      setUploadError(caughtError instanceof Error ? caughtError.message : "Không thể tải media lên.");
       setFormError(caughtError instanceof Error ? caughtError.message : "Không thể lưu phòng.");
     } finally {
       isSavingRef.current = false;
@@ -343,6 +466,7 @@ export function LandlordRoomManager() {
     setBusyRoomId(room.id);
     setError("");
     setPendingDeleteId(null);
+    setPendingMoveOutId(null);
     try {
       const response = await authFetch(`/api/landlord/rooms/${room.id}`, {
         method: "PATCH",
@@ -392,6 +516,43 @@ export function LandlordRoomManager() {
       await loadAll(rooms.length === 1 && page > 1 ? page - 1 : page);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Không thể xóa phòng.");
+    } finally {
+      if (busyRoomIdRef.current === room.id) {
+        busyRoomIdRef.current = null;
+        setBusyRoomId(null);
+      }
+    }
+  }
+
+  async function moveOutRoom(room: LandlordRoom) {
+    if (pendingMoveOutId !== room.id) {
+      setPendingDeleteId(null);
+      setPendingMoveOutId(room.id);
+      return;
+    }
+    if (busyRoomIdRef.current !== null) return;
+    busyRoomIdRef.current = room.id;
+    setBusyRoomId(room.id);
+    setError("");
+    try {
+      const response = await authFetch(`/api/landlord/rooms/${room.id}/move-out`, {
+        body: JSON.stringify({}),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+      const payload = (await response.json().catch(() => null)) as ApiResponse<Record<string, unknown>> | null;
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload ? responseMessage(payload) : "Không thể ghi nhận trả phòng.");
+      }
+      setPendingMoveOutId(null);
+      toast({
+        type: "success",
+        title: "Đã ghi nhận trả phòng",
+        message: "Phòng đã được ẩn. Hãy kiểm tra thông tin trước khi đăng lại.",
+      });
+      await loadAll(page);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Không thể ghi nhận trả phòng.");
     } finally {
       if (busyRoomIdRef.current === room.id) {
         busyRoomIdRef.current = null;
@@ -463,7 +624,7 @@ export function LandlordRoomManager() {
           <div>
             <h2 className="font-headline-md text-4xl leading-tight text-on-surface">Quản lý phòng của bạn</h2>
             <p className="mt-4 max-w-2xl text-base leading-7 text-on-surface-variant">
-              Tạo bản nháp, tự đăng phòng khi sẵn sàng và theo dõi trạng thái hiển thị. Mã tòa, hoa hồng và ghi chú nội bộ chỉ thuộc khu vực admin.
+              Tạo bản nháp, tự đăng phòng khi sẵn sàng và theo dõi trạng thái hiển thị của từng phòng.
             </p>
           </div>
           <div className="rounded-lg border border-outline-variant/70 bg-surface-container-lowest p-5 shadow-soft">
@@ -476,12 +637,11 @@ export function LandlordRoomManager() {
           </div>
         </div>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <LandlordMetric label="Tổng phòng" value={summary.total} />
-          <LandlordMetric label="Đang hiển thị" value={summary.published} />
-          <LandlordMetric label="Đã cho thuê" value={summary.rented} />
-          <LandlordMetric label="Bản nháp" value={summary.draft} />
-          <LandlordMetric label="Đã ẩn" value={summary.hidden} />
+        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 border-y border-outline-variant/70 py-4 text-sm text-on-surface-variant">
+          <span><strong className="tabular-nums text-on-surface">{summary.total}</strong> phòng</span>
+          <span><strong className="tabular-nums text-on-surface">{summary.published}</strong> đang hiển thị</span>
+          <span><strong className="tabular-nums text-on-surface">{summary.rented}</strong> đã cho thuê</span>
+          <span><strong className="tabular-nums text-on-surface">{summary.draft + summary.hidden}</strong> cần cập nhật</span>
         </div>
 
         <div className="mt-8 flex flex-col gap-3 border-y border-outline-variant/70 py-5 sm:flex-row sm:items-center sm:justify-between">
@@ -570,9 +730,11 @@ export function LandlordRoomManager() {
                 onDelete={() => deleteRoom(room)}
                 onEdit={() => openEditForm(room)}
                 onConfirmRental={() => rental.open(room)}
+                onMoveOut={() => moveOutRoom(room)}
                 onStatus={(statusValue) => patchRoomStatus(room, statusValue)}
                 isBusy={busyRoomId === room.id}
                 pendingDelete={pendingDeleteId === room.id}
+                pendingMoveOut={pendingMoveOutId === room.id}
                 room={room}
               />
             ))}
@@ -643,21 +805,27 @@ export function LandlordRoomManager() {
           dialogRef={dialogRef}
           discardButtonRef={discardButtonRef}
           editingRoom={editingRoom}
-          fileInputRef={fileInputRef}
           filters={filters}
           form={form}
           formError={formError}
           isDiscardPromptOpen={isDiscardPromptOpen}
           isSaving={isSaving}
+          draftSavedAt={draftSavedAt}
+          existingImages={editingRoom?.images ?? []}
           onCityChange={(value) => setForm((current) => ({ ...current, city: value, ward: "" }))}
           onCloseRequest={requestCloseForm}
           onContinueEditing={() => setIsDiscardPromptOpen(false)}
-          onDiscardChanges={closeForm}
+          onDiscardChanges={discardForm}
+          onExistingMediaChange={updateExistingMedia}
+          onExistingMediaDelete={deleteExistingMedia}
           onFieldChange={updateForm}
           onRoomTypeChange={(value) => setForm((current) => ({ ...current, room_type: value, room_subtype: "" }))}
           onSubmit={submitRoom}
+          onSelectedFilesChange={setSelectedFiles}
           onToggleAmenity={toggleAmenity}
           selectedAmenityIds={selectedAmenityIds}
+          selectedFiles={selectedFiles}
+          uploadError={uploadError}
         />
       ) : null}
       {rental.room ? (

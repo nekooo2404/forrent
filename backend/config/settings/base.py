@@ -221,7 +221,12 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "ENUM_NAME_OVERRIDES": {
-        "UserRoleEnum": [("TENANT", "Tenant"), ("LANDLORD", "Landlord"), ("SALER", "Saler/Admin")],
+        "UserRoleEnum": [
+            ("TENANT", "Tenant"),
+            ("LANDLORD", "Landlord"),
+            ("INDEPENDENT_SALER", "Independent saler"),
+            ("SALER", "Saler/Admin"),
+        ],
         "RoomTypeEnum": [("CCMN", "Chung cu mini"), ("CCDV", "Can ho dich vu"), ("HOUSE", "Nha nguyen can")],
         "RoomStatusEnum": [
             ("DRAFT", "Draft"),

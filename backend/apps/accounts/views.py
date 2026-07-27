@@ -1,5 +1,6 @@
 from drf_spectacular.utils import extend_schema
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from rest_framework import status
 from rest_framework.exceptions import APIException
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -218,12 +219,59 @@ class AdminUserViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
             metadata={"role": user.role, "is_active": user.is_active},
         )
 
+    @transaction.atomic
     def perform_update(self, serializer):
-        previous_role = serializer.instance.role
-        previous_is_active = serializer.instance.is_active
-        previous_telegram_chat_id = serializer.instance.telegram_chat_id
+        locked_user = User.objects.select_for_update().get(pk=serializer.instance.pk)
+        serializer.instance = locked_user
+        previous_role = locked_user.role
+        previous_is_active = locked_user.is_active
+        previous_telegram_chat_id = locked_user.telegram_chat_id
+        operator_roles = {User.Role.LANDLORD, User.Role.INDEPENDENT_SALER}
+        next_role = serializer.validated_data.get("role", previous_role)
+        next_is_active = serializer.validated_data.get("is_active", previous_is_active)
+        removes_operator_access = (
+            previous_role in operator_roles
+            and previous_is_active
+            and (next_role not in operator_roles or not next_is_active)
+        )
+        archived_room_count = 0
+        archived_room_ids = []
+        reassigned_lead_count = 0
+        if removes_operator_access:
+            from django.db.models import Q
+
+            from apps.rooms.models import Room
+            from apps.viewing_requests.models import ViewingRequest
+
+            archived_room_ids = list(locked_user.created_rooms.exclude(
+                status=Room.Status.ARCHIVED,
+            ).exclude(
+                leases__status="ACTIVE",
+            ).values_list("id", flat=True))
+            archived_room_count = len(archived_room_ids)
+            reassigned_lead_count = ViewingRequest.objects.filter(
+                room__created_by=locked_user,
+                status__in=ViewingRequest.ACTIVE_STATUSES,
+            ).filter(
+                Q(assigned_to__isnull=True)
+                | Q(assigned_to=locked_user)
+                | Q(assigned_to__is_active=False)
+            ).count()
         password_changed = "password" in serializer.validated_data and bool(serializer.validated_data.get("password"))
         user = serializer.save()
+        if removes_operator_access:
+            audit_event(
+                "admin.rental_operator_access_revoked",
+                request=self.request,
+                target=user,
+                metadata={
+                    "previous_role": previous_role,
+                    "next_role": user.role,
+                    "archived_room_count": archived_room_count,
+                    "archived_room_ids": archived_room_ids,
+                    "reassigned_lead_count": reassigned_lead_count,
+                },
+            )
         if user.role != previous_role:
             audit_event(
                 "admin.user_role_changed",

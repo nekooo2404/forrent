@@ -14,7 +14,7 @@ from apps.common.image_validation import (
 from apps.locations.serializers import AmenitySerializer, AreaRangeSerializer, CitySerializer, WardSerializer
 from apps.rooms.models import DepositType, Room, RoomImage, RoomSubtype
 from apps.rooms.public_copy import public_room_description, public_room_title_for
-from apps.viewing_requests.models import ViewingRequest
+from apps.viewing_requests.models import RoomLease, ViewingRequest
 
 
 def allowed_room_image_url_hosts():
@@ -210,6 +210,14 @@ class LandlordRoomImageWriteSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {field: "Upload new media through the room form." for field in sorted(forbidden_fields)}
             )
+        label = attrs.get("label", getattr(self.instance, "label", RoomImage.Label.OTHER))
+        if self.instance.media_type == RoomImage.MediaType.VIDEO and label not in {
+            RoomImage.Label.VIDEO_TOUR,
+            RoomImage.Label.OTHER,
+        }:
+            raise serializers.ValidationError({"label": "Video labels must be Video tour or Other."})
+        if self.instance.media_type == RoomImage.MediaType.IMAGE and label == RoomImage.Label.VIDEO_TOUR:
+            raise serializers.ValidationError({"label": "Image uploads cannot use the Video tour label."})
         return attrs
 
 
@@ -221,6 +229,11 @@ class AdminRoomSerializer(serializers.ModelSerializer):
     room_subtype_name = serializers.SerializerMethodField()
     uploaded_images = serializers.ListField(
         child=serializers.FileField(),
+        write_only=True,
+        required=False,
+    )
+    uploaded_image_labels = serializers.ListField(
+        child=serializers.ChoiceField(choices=RoomImage.Label.choices),
         write_only=True,
         required=False,
     )
@@ -275,6 +288,7 @@ class AdminRoomSerializer(serializers.ModelSerializer):
             "created_by_role",
             "images",
             "uploaded_images",
+            "uploaded_image_labels",
             "image_urls",
             "created_at",
             "updated_at",
@@ -311,15 +325,36 @@ class AdminRoomSerializer(serializers.ModelSerializer):
         if commission_percent is not None and commission_percent > 100:
             errors["commission_percent"] = "Commission percent cannot exceed 100."
         uploaded_images = attrs.get("uploaded_images") or []
+        uploaded_image_labels = attrs.get("uploaded_image_labels") or []
         image_urls = attrs.get("image_urls") or []
-        existing_count = self.instance.images.count() if self.instance else 0
+        deleted_media_ids = set(attrs.get("deleted_media_ids") or [])
+        existing_count = (
+            self.instance.images.exclude(pk__in=deleted_media_ids).count()
+            if self.instance
+            else 0
+        )
         if existing_count + len(uploaded_images) + len(image_urls) > 12:
             errors["uploaded_images"] = "A room can have at most 12 gallery items."
         if sum(upload.size for upload in uploaded_images) > MAX_ROOM_MEDIA_UPLOAD_BYTES:
             errors["uploaded_images"] = "New gallery uploads must total 50MB or less."
-        for upload in uploaded_images:
+        if uploaded_image_labels and len(uploaded_image_labels) != len(uploaded_images):
+            errors["uploaded_image_labels"] = "Provide exactly one label for each uploaded media item."
+        if uploaded_image_labels.count(RoomImage.Label.OVERVIEW) > 1:
+            errors["uploaded_image_labels"] = "Only one uploaded image can be the room cover."
+        for index, upload in enumerate(uploaded_images):
             try:
-                validate_uploaded_room_media_file(upload, "uploaded_images")
+                media_type = validate_uploaded_room_media_file(upload, "uploaded_images")
+                if uploaded_image_labels:
+                    label = uploaded_image_labels[index]
+                    if media_type == RoomImage.MediaType.VIDEO and label not in {
+                        RoomImage.Label.VIDEO_TOUR,
+                        RoomImage.Label.OTHER,
+                    }:
+                        errors["uploaded_image_labels"] = "Video labels must be Video tour or Other."
+                        break
+                    if media_type == RoomImage.MediaType.IMAGE and label == RoomImage.Label.VIDEO_TOUR:
+                        errors["uploaded_image_labels"] = "Image uploads cannot use the Video tour label."
+                        break
             except serializers.ValidationError as exc:
                 errors.update(exc.detail)
                 break
@@ -339,19 +374,55 @@ class AdminRoomSerializer(serializers.ModelSerializer):
         effective_thumbnail = thumbnail if thumbnail is not None else getattr(self.instance, "thumbnail", None)
         if hero_eligible and not effective_thumbnail:
             errors["hero_eligible"] = "A homepage hero room requires a representative thumbnail."
-        existing_overview = bool(
-            self.instance
-            and self.instance.images.filter(
-                label=RoomImage.Label.OVERVIEW,
-                media_type=RoomImage.MediaType.IMAGE,
-            ).exists()
-        )
-        new_overview = bool(image_urls) or any(
-            uploaded_room_media_type(upload) == RoomImage.MediaType.IMAGE
-            for upload in uploaded_images
-        )
+        existing_media_updates = attrs.get("existing_media_updates") or {}
+        existing_overview = False
+        if self.instance:
+            for media in self.instance.images.exclude(pk__in=deleted_media_ids):
+                updates = existing_media_updates.get(str(media.id), existing_media_updates.get(media.id, {}))
+                effective_label = updates.get("label", media.label)
+                if (
+                    media.media_type == RoomImage.MediaType.IMAGE
+                    and effective_label == RoomImage.Label.OVERVIEW
+                    and bool(media.image or media.image_url)
+                ):
+                    existing_overview = True
+                    break
+        if uploaded_image_labels:
+            uploaded_overview = any(
+                uploaded_room_media_type(upload) == RoomImage.MediaType.IMAGE
+                and uploaded_image_labels[index] == RoomImage.Label.OVERVIEW
+                for index, upload in enumerate(uploaded_images)
+            )
+        else:
+            uploaded_overview = any(
+                uploaded_room_media_type(upload) == RoomImage.MediaType.IMAGE
+                for upload in uploaded_images
+            )
+        new_overview = uploaded_overview or bool(image_urls)
         if hero_eligible and not (existing_overview or new_overview):
             errors["hero_eligible"] = "A homepage hero room requires an overview gallery image."
+        effective_status = attrs.get("status", getattr(self.instance, "status", Room.Status.DRAFT))
+        is_publishing = effective_status == Room.Status.PUBLISHED and (
+            self.instance is None or self.instance.status != Room.Status.PUBLISHED
+        )
+        if is_publishing and not (existing_overview or new_overview):
+            errors["status"] = "Add a valid overview image before publishing the room."
+        if is_publishing:
+            required_publish_values = {
+                "title": attrs.get("title", getattr(self.instance, "title", "")),
+                "city": attrs.get("city", getattr(self.instance, "city", None)),
+                "ward": attrs.get("ward", getattr(self.instance, "ward", None)),
+                "address": attrs.get("address", getattr(self.instance, "address", "")),
+                "price": attrs.get("price", getattr(self.instance, "price", 0)),
+                "description": attrs.get("description", getattr(self.instance, "description", "")),
+            }
+            for field in ("title", "city", "ward", "address"):
+                if not required_publish_values[field]:
+                    errors[field] = "This field is required before publishing the room."
+            if not required_publish_values["price"] or required_publish_values["price"] <= 0:
+                errors["price"] = "Enter a rental price greater than zero before publishing."
+            if len((required_publish_values["description"] or "").strip()) < 20:
+                errors["description"] = "Add a room description of at least 20 characters before publishing."
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
@@ -361,6 +432,12 @@ class AdminRoomSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Room can only become rented through lead conversion.")
         if self.instance and not Room.can_transition(self.instance.status, value):
             raise serializers.ValidationError(f"Cannot change room from {self.instance.status} to {value}.")
+        if (
+            self.instance
+            and value != self.instance.status
+            and RoomLease.objects.filter(room=self.instance, status=RoomLease.Status.ACTIVE).exists()
+        ):
+            raise serializers.ValidationError("Record the tenant move-out before changing the room status.")
         return value
 
     def get_deposit_type_name(self, obj):
@@ -374,15 +451,17 @@ class AdminRoomSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         uploaded_images = validated_data.pop("uploaded_images", [])
+        uploaded_image_labels = validated_data.pop("uploaded_image_labels", [])
         image_urls = validated_data.pop("image_urls", [])
         amenities = validated_data.pop("amenities", [])
         room = Room.objects.create(**validated_data)
         room.amenities.set(amenities)
-        self._create_images(room, uploaded_images, image_urls)
+        self._create_images(room, uploaded_images, image_urls, uploaded_image_labels)
         return room
 
     def update(self, instance, validated_data):
         uploaded_images = validated_data.pop("uploaded_images", [])
+        uploaded_image_labels = validated_data.pop("uploaded_image_labels", [])
         image_urls = validated_data.pop("image_urls", [])
         amenities = validated_data.pop("amenities", None)
         for attr, value in validated_data.items():
@@ -390,20 +469,31 @@ class AdminRoomSerializer(serializers.ModelSerializer):
         instance.save()
         if amenities is not None:
             instance.amenities.set(amenities)
-        self._create_images(instance, uploaded_images, image_urls)
+        self._create_images(instance, uploaded_images, image_urls, uploaded_image_labels)
         return instance
 
-    def _create_images(self, room, uploaded_images, image_urls):
+    def _create_images(self, room, uploaded_images, image_urls, uploaded_image_labels=None):
+        uploaded_image_labels = uploaded_image_labels or []
         next_order = room.images.count()
         has_overview = room.images.filter(
             label=RoomImage.Label.OVERVIEW,
             media_type=RoomImage.MediaType.IMAGE,
         ).exists()
+        if RoomImage.Label.OVERVIEW in uploaded_image_labels and has_overview:
+            previous_overviews = room.images.filter(label=RoomImage.Label.OVERVIEW)
+            for previous_overview in previous_overviews:
+                previous_overview.label = RoomImage.Label.OTHER
+                previous_overview.save(update_fields=("label",))
+            has_overview = False
         for offset, upload in enumerate(uploaded_images):
             media_type = uploaded_room_media_type(upload)
-            label = RoomImage.Label.VIDEO_TOUR
-            if media_type == RoomImage.MediaType.IMAGE:
-                label = RoomImage.Label.OTHER if has_overview else RoomImage.Label.OVERVIEW
+            if uploaded_image_labels:
+                label = uploaded_image_labels[offset]
+            else:
+                label = RoomImage.Label.VIDEO_TOUR
+                if media_type == RoomImage.MediaType.IMAGE:
+                    label = RoomImage.Label.OTHER if has_overview else RoomImage.Label.OVERVIEW
+            if label == RoomImage.Label.OVERVIEW:
                 has_overview = True
             RoomImage.objects.create(
                 room=room,
@@ -428,6 +518,8 @@ class LandlordRoomSerializer(AdminRoomSerializer):
     CONTENT_EDITABLE_STATUSES = {Room.Status.DRAFT, Room.Status.HIDDEN}
     DELETABLE_STATUSES = {Room.Status.DRAFT, Room.Status.HIDDEN, Room.Status.ARCHIVED}
     can_delete = serializers.SerializerMethodField()
+    existing_media_updates = serializers.JSONField(binary=True, required=False, write_only=True)
+    deleted_media_ids = serializers.JSONField(binary=True, required=False, write_only=True)
 
     class Meta(AdminRoomSerializer.Meta):
         fields = (
@@ -461,6 +553,9 @@ class LandlordRoomSerializer(AdminRoomSerializer):
             "status",
             "images",
             "uploaded_images",
+            "uploaded_image_labels",
+            "existing_media_updates",
+            "deleted_media_ids",
             "created_at",
             "updated_at",
         )
@@ -490,6 +585,12 @@ class LandlordRoomSerializer(AdminRoomSerializer):
             raise serializers.ValidationError("Use confirm rental with an eligible tenant to mark the room as rented.")
         if self.instance and not Room.can_transition(self.instance.status, value):
             raise serializers.ValidationError(f"Cannot change room from {self.instance.status} to {value}.")
+        if (
+            self.instance
+            and value != self.instance.status
+            and RoomLease.objects.filter(room=self.instance, status=RoomLease.Status.ACTIVE).exists()
+        ):
+            raise serializers.ValidationError("Record the tenant move-out before changing the room status.")
         return value
 
     def validate(self, attrs):
@@ -497,6 +598,73 @@ class LandlordRoomSerializer(AdminRoomSerializer):
             raise serializers.ValidationError(
                 {"image_urls": "Landlord accounts must upload media through ForRent storage."}
             )
+        if self.instance and self.instance.status not in self.CONTENT_EDITABLE_STATUSES:
+            content_fields = set(attrs) - {"status"}
+            if content_fields:
+                raise serializers.ValidationError(
+                    {
+                        "non_field_errors": (
+                            "Hide the room before editing its content or media. "
+                            "Rented rooms must complete move-out first."
+                        )
+                    }
+                )
+        has_existing_media_updates = "existing_media_updates" in attrs
+        existing_media_updates = attrs.get("existing_media_updates", {})
+        deleted_media_ids = attrs.get("deleted_media_ids", [])
+        media_errors = {}
+        if not isinstance(existing_media_updates, dict):
+            media_errors["existing_media_updates"] = "Media updates must be an object keyed by media ID."
+        if not isinstance(deleted_media_ids, list) or any(
+            not isinstance(media_id, int) or media_id < 1 for media_id in deleted_media_ids
+        ):
+            media_errors["deleted_media_ids"] = "Deleted media IDs must be a list of positive integers."
+        normalized_updates = {}
+        if not media_errors and self.instance:
+            for raw_id, updates in existing_media_updates.items():
+                try:
+                    media_id = int(raw_id)
+                except (TypeError, ValueError):
+                    media_errors["existing_media_updates"] = "Every media update key must be a numeric ID."
+                    break
+                if not isinstance(updates, dict) or set(updates) - {"label", "sort_order"}:
+                    media_errors["existing_media_updates"] = "Only label and sort_order can be updated."
+                    break
+                normalized_updates[media_id] = updates
+            if not media_errors:
+                requested_ids = set(normalized_updates) | set(deleted_media_ids)
+                owned_media = {
+                    media.id: media
+                    for media in self.instance.images.filter(pk__in=requested_ids)
+                }
+                if set(owned_media) != requested_ids:
+                    media_errors["existing_media_updates"] = "One or more media items do not belong to this room."
+                elif set(normalized_updates) & set(deleted_media_ids):
+                    media_errors["existing_media_updates"] = "Deleted media cannot also be updated."
+                else:
+                    for media_id, updates in normalized_updates.items():
+                        media = owned_media[media_id]
+                        label = updates.get("label", media.label)
+                        sort_order = updates.get("sort_order", media.sort_order)
+                        if label not in RoomImage.Label.values:
+                            media_errors["existing_media_updates"] = "A media label is invalid."
+                            break
+                        if media.media_type == RoomImage.MediaType.VIDEO and label not in {
+                            RoomImage.Label.VIDEO_TOUR,
+                            RoomImage.Label.OTHER,
+                        }:
+                            media_errors["existing_media_updates"] = "Video labels must be Video tour or Other."
+                            break
+                        if media.media_type == RoomImage.MediaType.IMAGE and label == RoomImage.Label.VIDEO_TOUR:
+                            media_errors["existing_media_updates"] = "Images cannot use the Video tour label."
+                            break
+                        if not isinstance(sort_order, int) or sort_order < 0:
+                            media_errors["existing_media_updates"] = "Media sort_order must be a non-negative integer."
+                            break
+            if has_existing_media_updates:
+                attrs["existing_media_updates"] = normalized_updates
+        if media_errors:
+            raise serializers.ValidationError(media_errors)
         if self.instance and self.instance.status not in self.CONTENT_EDITABLE_STATUSES:
             changed_fields = set(attrs)
             if changed_fields - {"status"}:
@@ -510,11 +678,48 @@ class LandlordRoomSerializer(AdminRoomSerializer):
                 )
         return super().validate(attrs)
 
+    def update(self, instance, validated_data):
+        existing_media_updates = validated_data.pop("existing_media_updates", {})
+        deleted_media_ids = set(validated_data.pop("deleted_media_ids", []))
+        room = super().update(instance, validated_data)
+        media = list(room.images.select_for_update().order_by("sort_order", "id"))
+        remaining = [item for item in media if item.id not in deleted_media_ids]
+        for item in media:
+            if item.id in deleted_media_ids:
+                item.delete()
+        for item in remaining:
+            updates = existing_media_updates.get(item.id, {})
+            if "label" in updates:
+                item.label = updates["label"]
+            if "sort_order" in updates:
+                item.sort_order = updates["sort_order"]
+        covers = [
+            item for item in remaining
+            if item.label == RoomImage.Label.OVERVIEW and item.media_type == RoomImage.MediaType.IMAGE
+        ]
+        if len(covers) > 1:
+            preferred_cover_id = next(
+                (
+                    media_id for media_id, updates in existing_media_updates.items()
+                    if updates.get("label") == RoomImage.Label.OVERVIEW
+                ),
+                covers[0].id,
+            )
+            for cover in covers:
+                if cover.id != preferred_cover_id:
+                    cover.label = RoomImage.Label.OTHER
+        remaining.sort(key=lambda item: (item.sort_order, item.id))
+        for index, item in enumerate(remaining):
+            item.sort_order = index
+        if remaining:
+            RoomImage.objects.bulk_update(remaining, ("label", "sort_order"))
+        return room
+
     def create(self, validated_data):
         status = validated_data.get("status", Room.Status.DRAFT)
-        if status not in {Room.Status.DRAFT, Room.Status.PENDING_REVIEW, Room.Status.PUBLISHED}:
+        if status not in {Room.Status.DRAFT, Room.Status.PUBLISHED}:
             raise serializers.ValidationError(
-                {"status": "New landlord rooms must be draft, pending review or published."}
+                {"status": "New rental operator rooms must be draft or published."}
             )
         validated_data["status"] = status
         return super().create(validated_data)

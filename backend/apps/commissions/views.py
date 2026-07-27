@@ -16,7 +16,7 @@ from apps.commissions.serializers import (
     LandlordCommissionPayoutSerializer,
     LandlordCommissionSummarySerializer,
 )
-from apps.common.permissions import IsAdmin, IsLandlord
+from apps.common.permissions import IsAdmin, IsIndependentSaler
 from apps.common.responses import success_response
 from apps.common.audit import audit_event
 from apps.common.viewsets import StandardResponseModelViewSetMixin, StandardResponseReadOnlyMixin
@@ -87,7 +87,7 @@ class CommissionPayoutViewSet(StandardResponseModelViewSetMixin, ModelViewSet):
 
 class LandlordCommissionPayoutViewSet(StandardResponseReadOnlyMixin, ReadOnlyModelViewSet):
     serializer_class = LandlordCommissionPayoutSerializer
-    permission_classes = [IsLandlord]
+    permission_classes = [IsIndependentSaler]
     filterset_fields = ("status",)
     search_fields = ("viewing_request__full_name", "viewing_request__room__title", "viewing_request__room__room_code")
     ordering_fields = ("created_at", "amount", "approved_at", "paid_at")
