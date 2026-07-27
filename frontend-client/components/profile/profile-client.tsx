@@ -68,6 +68,18 @@ function timeSlotLabel(value: MyViewingRequest["preferred_viewing_time_slot"]) {
     }[value] ?? "Chưa chọn khung giờ"
   );
 }
+
+function accountRoleLabel(role: string) {
+  return (
+    {
+      TENANT: "Người thuê",
+      LANDLORD: "Người cho thuê",
+      INDEPENDENT_SALER: "Tư vấn viên độc lập",
+      SALER: "Nhân viên tư vấn",
+    }[role] ?? role
+  );
+}
+
 export function ProfileClient() {
   const [user, setUser] = useState<ApiUser | null>(null);
   const [profileFields, setProfileFields] =
@@ -360,7 +372,8 @@ export function ProfileClient() {
             </span>
             <div className="space-y-4 text-sm">
               <p>
-                <span className="opacity-60">Vai trò:</span> Người thuê
+                <span className="opacity-60">Vai trò:</span>{" "}
+                {accountRoleLabel(user.role)}
               </p>
               <p>
                 <span className="opacity-60">Email:</span> {user.email}
